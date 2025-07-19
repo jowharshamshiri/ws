@@ -5,16 +5,18 @@ title: Unscrap Tool Guide
 
 # Unscrap Tool Guide
 
-The `unscrap` tool restores files and directories from the `.scrap` folder back to their original locations or custom destinations. It works in conjunction with the `scrap` tool to provide a complete trash can workflow.
+The `unscrap` tool restores files and directories from the `.scrap` folder back to their original locations or custom destinations. It works in conjunction with the `scrap` tool to provide a trash can workflow.
 
 ## Core Concepts
 
 ### Restoration Types
+
 - **Undo Last**: Restore the most recently scrapped item
 - **Specific Item**: Restore a named file or directory
 - **Custom Destination**: Restore to a different location than the original
 
 ### Metadata Integration
+
 - Uses metadata stored by `scrap` tool to know original locations
 - Maintains file history for intelligent restoration
 - Handles missing metadata gracefully
@@ -32,6 +34,7 @@ unscrap
 ```
 
 Example workflow:
+
 ```bash
 # Accidentally scrap an important file
 scrap important.txt
@@ -151,18 +154,23 @@ unscrap file.txt --to ./recovered_file.txt
 ## Restoration Behavior
 
 ### With Metadata
+
 When metadata exists (file was scrapped with current version):
+
 - Restores to exact original location
 - Recreates directory structure if needed
 - Preserves original timestamps and permissions
 
 ### Without Metadata
+
 When metadata is missing (older .scrap folder or manual additions):
+
 - Restores to current directory by default
 - Uses custom destination if specified
 - Still preserves file attributes
 
 ### Directory Structure Recreation
+
 ```bash
 # Original file: /deep/nested/path/file.txt
 # After scrapping and restoring:
@@ -176,6 +184,7 @@ unscrap file.txt
 ### Common Errors and Solutions
 
 #### File Not Found
+
 ```bash
 unscrap nonexistent.txt
 # Error: 'nonexistent.txt' not found in .scrap folder
@@ -185,6 +194,7 @@ scrap list
 ```
 
 #### Destination Exists
+
 ```bash
 unscrap file.txt
 # Error: Destination '/path/to/file.txt' already exists. Use --force to overwrite.
@@ -195,6 +205,7 @@ unscrap file.txt --to ./recovered_file.txt  # Different location
 ```
 
 #### Permission Denied
+
 ```bash
 unscrap system_file.conf
 # Error: Failed to restore 'system_file.conf' to '/etc/system_file.conf'
@@ -205,6 +216,7 @@ unscrap system_file.conf --to ~/recovered_system_file.conf
 ```
 
 #### Missing Parent Directory
+
 ```bash
 # If original path no longer exists, unscrap creates it
 unscrap file.txt
@@ -215,6 +227,7 @@ unscrap file.txt
 ## Integration with Scrap
 
 ### Typical Workflow
+
 ```bash
 # 1. Scrap files during cleanup
 scrap temp_* debug_* old_*/
@@ -230,6 +243,7 @@ unscrap  # Restores most recent item
 ```
 
 ### Metadata Consistency
+
 - `unscrap` updates metadata when restoring files
 - Removes entries for restored items
 - Keeps metadata clean and accurate
@@ -237,6 +251,7 @@ unscrap  # Restores most recent item
 ## Usage
 
 ### Scripting with Unscrap
+
 ```bash
 #!/bin/bash
 # Restore script for project files
@@ -251,6 +266,7 @@ fi
 ```
 
 ### Batch Restoration
+
 ```bash
 # Restore multiple files (run multiple commands)
 for file in config.json settings.ini database.db; do
@@ -261,6 +277,7 @@ done
 ```
 
 ### Selective Restoration
+
 ```bash
 # Restore only specific types of files
 scrap find "\.txt$" | while read -r file; do
@@ -275,16 +292,19 @@ done
 ## Safety Features
 
 ### Conflict Prevention
+
 - **Existence checking**: Always checks if destination exists
 - **Clear warnings**: Explicit error messages for conflicts
 - **Force option**: Controlled overwriting with `--force` flag
 
 ### Atomic Operations
+
 - **Safe restoration**: Files are moved atomically
 - **No partial states**: Either fully restored or operation fails
 - **Metadata consistency**: Updates metadata only on successful restore
 
 ### Path Validation
+
 - **Security**: Prevents path traversal attacks
 - **Existence**: Creates parent directories as needed
 - **Permissions**: Clear error messages for permission issues
@@ -292,6 +312,7 @@ done
 ## Tips and Best Practices
 
 ### Quick Recovery
+
 ```bash
 # Always try undo first for recent mistakes
 unscrap
@@ -301,6 +322,7 @@ scrap list | grep important
 ```
 
 ### Backup Strategy
+
 ```bash
 # Before major restore operations, archive current .scrap
 scrap archive --output "before-restore-$(date +%s).tar.gz"
@@ -310,6 +332,7 @@ unscrap critical_file.txt
 ```
 
 ### Project Management
+
 ```bash
 # Restore project files to a staging area first
 mkdir staging/

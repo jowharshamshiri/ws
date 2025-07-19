@@ -1,7 +1,7 @@
 # Site settings
 title: Nomion - Command-Line Tool Suite
 description: >-
-  Nomion is a comprehensive tool suite for file operations, version management, 
+  Nomion is a tool suite for file operations, version management, 
   and development workflow automation. Includes refac (string replacement), scrap (local trash folder), 
   unscrap (file restoration), and verbump (automatic versioning).
 author: Bahram Shamshiri

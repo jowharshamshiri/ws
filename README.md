@@ -1,6 +1,6 @@
 # Nomion
 
-A comprehensive tool suite for file operations, version management, and development workflow automation. The suite includes:
+A tool suite for file operations, version management, and development workflow automation. The suite includes:
 
 - **refac**: Recursive string replacement in file/folder names and contents
 - **scrap**: Local trash can using a `.scrap` folder for files you want to delete
