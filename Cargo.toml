@@ -58,7 +58,7 @@ license = "MIT"
 name = "nomion"
 readme = "README.md"
 repository = "https://github.com/jowharshamshiri/nomion"
-version = "0.31.19651"
+version = "0.32.19663"
 
 [profile.dev]
 debug = true
