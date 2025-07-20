@@ -1,8 +1,9 @@
 # Nomion
 
-A tool suite for file operations, version management, and development workflow automation. The suite includes:
+A tool suite for file operations, line analysis, version management, and development workflow automation. The suite includes:
 
 - **refac**: Recursive string replacement in file/folder names and contents
+- **ldiff**: Line difference visualizer for pattern recognition in logs and command output
 - **scrap**: Local trash can using a `.scrap` folder for files you want to delete
 - **unscrap**: Restore files from `.scrap` folder to their original locations
 - **verbump**: Automated version management for projects
@@ -234,6 +235,47 @@ The tool checks for potential naming conflicts before making changes:
 3. **Test on a copy**: Work on a backup of important directories
 4. **Use version control**: Ensure your files are committed before running
 5. **Be specific with patterns**: Use include/exclude patterns to limit scope
+
+### Ldiff Tool
+
+The `ldiff` tool processes input lines, replacing repeated tokens with a substitute character to highlight patterns and differences. Perfect for log analysis and command output examination.
+
+#### Core Features
+
+- **Pattern Recognition**: Automatically identifies repeated tokens between lines
+- **ANSI Preservation**: Maintains terminal colors and formatting
+- **Customizable**: Use any character as a substitute
+- **Real-time**: Works with streaming input like `tail -f`
+
+#### Examples
+
+```bash
+# Basic usage with default substitute character
+echo -e "hello world\nhello universe" | ldiff
+# Output:
+# hello world
+# ░░░░░ universe
+
+# Log analysis
+tail -f /var/log/system.log | ldiff
+
+# Custom substitute character
+find /usr/local -type f | ldiff "*"
+
+# Analyze web server logs
+cat /var/log/nginx/access.log | ldiff "■"
+
+# Monitor processes
+ps aux | ldiff
+```
+
+#### Use Cases
+
+- **Log Analysis**: Find patterns in system and application logs
+- **Security Monitoring**: Identify repeated patterns in auth logs
+- **Performance Monitoring**: Track recurring patterns in metrics
+- **System Administration**: Analyze command output for patterns
+- **Development**: Debug application output patterns
 
 ### Scrap Tool
 

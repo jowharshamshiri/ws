@@ -6,199 +6,224 @@ toc: false
 
 # Nomion
 
-A suite of robust, cross-platform command-line tools for developers and system administrators. The suite includes **refac** for string replacement, **scrap** for local trash functionality, **unscrap** for file restoration, and **verbump** for automatic version management. Designed for safety, reliability, and performance, making them suitable for mission-critical operations and daily development workflows.
+A suite of robust, cross-platform command-line tools for developers and system administrators. Built for safety, reliability, and performance, making them suitable for mission-critical operations and daily development workflows.
 
 ## Tools Overview
 
 ### 🔄 Refac - String Replacement Tool
-- **Dual Operation**: Replace strings in both file/directory names AND file contents
-- **Safety First**: Collision detection, dry-run mode, and binary file protection
-- **High Performance**: Multi-threaded processing with progress tracking
-- **Flexible Filtering**: Include/exclude patterns with glob and regex support
+Replace strings in file/directory names and file contents with safety features and high performance.
+
+```bash
+refac . "oldname" "newname" --dry-run
+```
+
+**Key Features**: Collision detection, multi-threaded processing, binary file protection  
+**[📖 Full Guide]({{ '/refac-guide/' | relative_url }})**
+
+### 📊 Ldiff - Line Difference Visualizer
+Process input lines, replacing repeated tokens with a substitute character for easy pattern recognition.
+
+```bash
+cat /var/log/system.log | tail -n 100 | ldiff
+find / | ldiff
+```
+
+**Key Features**: ANSI color preservation, pattern recognition, customizable substitute characters  
+**[📖 Full Guide]({{ '/ldiff-guide/' | relative_url }})**
 
 ### 🗑️ Scrap - Local Trash Folder
-- **Project Trash**: Move unwanted files to `.scrap` folder instead of deleting
-- **Safe Deletion**: Keep old files you might need later without cluttering workspace
-- **Metadata Tracking**: Remember original locations for easy restoration
-- **Cleanup Operations**: List, search, clean old items, and archive capabilities
+Move unwanted files to a local `.scrap` folder instead of permanent deletion.
+
+```bash
+scrap old_file.txt deprecated_feature/
+scrap list
+scrap clean --days 30
+```
+
+**Key Features**: Metadata tracking, search capabilities, cleanup operations, archiving  
+**[📖 Full Guide]({{ '/scrap-guide/' | relative_url }})**
 
 ### ↩️ Unscrap - File Restoration
-- **Smart Recovery**: Restore files to their original locations
-- **Undo Operations**: Quickly undo the last scrap action
-- **Custom Destinations**: Restore to any location
-- **Conflict Handling**: Safe restoration with overwrite protection
+Restore files from the `.scrap` folder to their original locations or custom destinations.
+
+```bash
+unscrap filename.txt
+unscrap --undo
+unscrap filename.txt --to /new/location/
+```
+
+**Key Features**: Smart recovery, undo operations, conflict handling, custom destinations  
+**[📖 Full Guide]({{ '/unscrap-guide/' | relative_url }})**
 
 ### 🏷️ Verbump - Automatic Version Management
-- **Git Integration**: Automatic version bumping via git hooks
-- **Smart Versioning**: Calculate versions based on tags, commits, and changes
-- **Configuration**: Customizable version files and patterns
-- **Logging**: action logging for audit trails
+Automatic version bumping via git hooks with smart versioning and configuration support.
+
+```bash
+verbump install
+verbump show
+verbump update
+```
+
+**Key Features**: Git integration, smart versioning, customizable patterns, audit logging  
+**[📖 Full Guide]({{ '/verbump-guide/' | relative_url }})**
+
+## Quick Start Examples
+
+### Log Analysis with Ldiff
+```bash
+# Find repeated patterns in log files
+tail -f /var/log/access.log | ldiff
+
+# Use custom substitute character
+journalctl -f | ldiff "*"
+
+# Analyze command output
+ps aux | ldiff
+find /usr/local -type f | ldiff
+```
+
+### Project Refactoring with Refac
+```bash
+# Preview changes first (recommended)
+refac . "oldname" "newname" --dry-run
+
+# Rename class throughout codebase
+refac ./src "OldClassName" "NewClassName"
+
+# Update only file contents, keep names
+refac ./config "old.example.com" "new.example.com" --content-only
+```
+
+### Safe File Management with Scrap/Unscrap
+```bash
+# Move files to .scrap instead of deleting
+scrap old_file.txt deprecated_feature/
+
+# See what you've scrapped
+scrap list --sort date
+
+# Restore the last thing you scrapped
+unscrap --undo
+
+# Find and restore specific files
+scrap find "*.log"
+unscrap access.log
+```
+
+### Automatic Versioning with Verbump
+```bash
+# Set up automatic versioning in your project
+verbump install
+
+# Check current version info
+verbump show
+
+# Manually bump version
+verbump update --patch
+```
 
 ## Key Features
 
 - **Cross-Platform**: Works on Windows, macOS, and Linux
 - **Safety First**: Collision detection, confirmation prompts, and atomic operations
-- **Performance Optimized**: Multi-threaded processing and efficient file handling
-- **User Friendly**: Clear error messages and help
-
-## Quick Start
-
-### Refac - String Replacement
-```bash
-# Basic string replacement
-refac . "oldname" "newname"
-
-# Preview changes first (recommended)
-refac . "oldname" "newname" --dry-run
-
-# Only rename files/directories (skip content)
-refac . "oldname" "newname" --names-only
-```
-
-### Scrap - Local Trash
-```bash
-# Move unwanted files to .scrap instead of deleting
-scrap old_file.txt deprecated_feature/
-
-# List what's in your project trash
-scrap
-
-# Find specific items you scrapped
-scrap find "*.log"
-
-# Clean up old items (30+ days)
-scrap clean
-
-# Archive old items before purging
-scrap archive --remove
-```
-
-### Unscrap - File Restoration
-```bash
-# Restore last scrapped item
-unscrap
-
-# Restore specific file
-unscrap filename.txt
-
-# Restore to custom location
-unscrap filename.txt --to /new/location/
-```
-
-### Verbump - Version Management
-```bash
-# Install git hook for automatic versioning
-verbump install
-
-# Show current version information
-verbump show
-
-# Manually update version
-verbump update
-
-# Check verbump status and configuration
-verbump status
-```
+- **Performance Optimized**: Multi-threaded processing and efficient algorithms
+- **User Friendly**: Clear error messages, help text, and intuitive commands
+- **Integration Ready**: Designed to work well in scripts and automation
 
 ## Installation
 
-### From Source
-
+### Quick Install
 ```bash
 git clone https://github.com/jowharshamshiri/nomion
 cd nomion
-cargo build --release
+./install.sh
+```
 
-# Install all tools
-cargo install --path .
-
-# Or install individual tools
+### Individual Tools
+```bash
+# Install specific tools only
 cargo install --path . --bin refac
+cargo install --path . --bin ldiff
 cargo install --path . --bin scrap
 cargo install --path . --bin unscrap
 cargo install --path . --bin verbump
 ```
 
-## How It Works
+**[📖 Detailed Installation Guide]({{ '/installation/' | relative_url }})**
 
-Refac performs two types of operations:
+## Common Workflows
 
-1. **Name Replacement**: Renames files and directories containing the target string
-2. **Content Replacement**: Replaces strings inside text files (automatically skips binary files)
-
-By default, both operations are performed. Use mode flags to limit the scope:
-
-- `--names-only`: Only rename files/directories
-- `--content-only`: Only replace file contents
-- `--files-only`: Process files but not directories
-- `--dirs-only`: Process directories but not files
-
-## Safety Features
-
-- **Collision Detection**: Prevents overwriting existing files
-- **Binary File Detection**: Automatically skips binary files for content replacement
-- **Dry Run Mode**: Preview all changes before applying them
-- **Backup Support**: Create backups of modified files
-- **Confirmation Prompts**: Interactive confirmation (unless `--force` is used)
-
-## Performance
-
-- **Multi-threaded**: Parallel content processing for large codebases
-- **Streaming**: Efficient handling of large files
-- **Progress Tracking**: Visual progress bars with detailed information
-- **Smart Filtering**: Process only relevant files with include/exclude patterns
-
-## Common Use Cases
-
-### Project Refactoring
-
+### Development Workflow
 ```bash
-# Rename a class throughout a codebase
-refac ./src "OldClassName" "NewClassName"
+# 1. Refactor code safely
+refac ./src "OldApi" "NewApi" --dry-run
+refac ./src "OldApi" "NewApi"
 
-# Rename variables (case-sensitive)
-refac ./project "old_variable" "new_variable"
+# 2. Clean up old files
+scrap legacy_code/ old_tests/
+
+# 3. Update version automatically
+verbump update
 ```
 
-### File Organization
-
+### Log Analysis Workflow
 ```bash
-# Rename files only, skip content
-refac ./docs "draft" "final" --names-only
+# 1. Monitor logs for patterns
+tail -f /var/log/app.log | ldiff
 
-# Update file contents only, keep names
-refac ./config "old.example.com" "new.example.com" --content-only
+# 2. Analyze historical logs
+cat /var/log/app.log.1 | ldiff > patterns.txt
+
+# 3. Compare different log sources
+cat /var/log/nginx/access.log | ldiff "█"
 ```
 
-### Bulk Operations
-
+### File Cleanup Workflow
 ```bash
-# Process specific file types
-refac ./src "oldname" "newname" --include "*.rs" --include "*.toml"
+# 1. Move questionable files to scrap
+scrap temp_files/ *.bak
 
-# Exclude certain directories
-refac ./project "oldname" "newname" --exclude "target/*" --exclude "*.log"
+# 2. Review what was moved
+scrap list
+
+# 3. Restore if needed, or clean up
+unscrap important.bak
+scrap clean --days 7
 ```
-
-## Best Practices
-
-1. **Always test first**: Use `--dry-run` to preview changes
-2. **Use version control**: Commit your code before running refac
-3. **Create backups**: Use `--backup` for important changes
-4. **Be specific**: Use include/exclude patterns to limit scope
-5. **Test after changes**: Run your tests after refactoring
 
 ## Getting Help
 
-- View tool options: `refac --help`, `scrap --help`, `unscrap --help`, `verbump --help`
-- Check versions: `refac --version`, `scrap --version`, `unscrap --version`, `verbump --version`
-- Report issues: [GitHub Issues](https://github.com/jowharshamshiri/nomion/issues)
+Each tool has comprehensive help:
+```bash
+refac --help
+ldiff --help
+scrap --help
+unscrap --help
+verbump --help
+```
+
+**Get versions:**
+```bash
+refac --version
+ldiff --version
+scrap --version
+unscrap --version
+verbump --version
+```
 
 ## Documentation
 
-- [Installation Guide]({{ '/installation/' | relative_url }}) - Detailed installation instructions
-- [Usage Guide]({{ '/usage/' | relative_url }}) - usage examples
-- [Command Reference]({{ '/api-reference/' | relative_url }}) - command-line reference
+- **[📖 Installation Guide]({{ '/installation/' | relative_url }})** - Detailed installation instructions
+- **[📖 Usage Guide]({{ '/usage/' | relative_url }})** - Comprehensive usage examples
+- **[📖 API Reference]({{ '/api-reference/' | relative_url }})** - Complete command-line reference
+- **[📖 Examples]({{ '/examples/' | relative_url }})** - Real-world usage examples
+- **[📖 Contributing]({{ '/contributing/' | relative_url }})** - How to contribute to the project
+
+## Support
+
+- **Issues**: [GitHub Issues](https://github.com/jowharshamshiri/nomion/issues)
+- **Documentation**: [nomion.dev](https://nomion.dev)
+- **Source Code**: [GitHub Repository](https://github.com/jowharshamshiri/nomion)
 
 ## License
 

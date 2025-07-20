@@ -26,7 +26,7 @@ cd nomion
 ```
 
 The installation script will:
-- Build all tools (`refac`, `scrap`, `unscrap`, `verbump`) in release mode
+- Build all tools (`refac`, `ldiff`, `scrap`, `unscrap`, `verbump`) in release mode
 - Install to `~/.local/bin` by default
 - Check for updates on subsequent runs
 
@@ -63,6 +63,7 @@ cargo install --path .
 
 # Or install individual tools
 cargo install --path . --bin refac
+cargo install --path . --bin ldiff
 cargo install --path . --bin scrap
 cargo install --path . --bin unscrap
 cargo install --path . --bin verbump
@@ -93,20 +94,23 @@ Verify your installation:
 ```bash
 # Check versions of all tools
 refac --version
+ldiff --version
 scrap --version
 unscrap --version
 verbump --version
 
 # View help for each tool
 refac --help
+ldiff --help
 scrap --help
 unscrap --help
 verbump --help
 
 # Test basic functionality
-refac . "test" "test" --dry-run    # Test string replacement
-scrap --help                       # Test scrap functionality
-verbump status                     # Test verbump (outside git repo)
+refac . "test" "test" --dry-run          # Test string replacement
+echo "hello world" | ldiff               # Test line difference
+scrap --help                             # Test scrap functionality
+verbump status                           # Test verbump (outside git repo)
 ```
 
 ## Platform-Specific Notes
@@ -177,12 +181,13 @@ To remove Nomion:
 
 # If installed via cargo install (individual tools)
 cargo uninstall refac
+cargo uninstall ldiff
 cargo uninstall scrap
 cargo uninstall unscrap
 cargo uninstall verbump
 
 # If installed manually (remove all binaries)
-sudo rm /usr/local/bin/{refac,scrap,unscrap,verbump}  # Linux/macOS
+sudo rm /usr/local/bin/{refac,ldiff,scrap,unscrap,verbump}  # Linux/macOS
 ```
 
 ## Building from Source (Advanced)

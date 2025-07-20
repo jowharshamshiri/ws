@@ -5,13 +5,18 @@ title: Usage Guide
 
 # Usage Guide
 
-This guide covers all aspects of using the Nomion tool suite for string replacement, project cleanup, and version management.
+This guide covers all aspects of using the Nomion tool suite for string replacement, line analysis, project cleanup, and version management.
 
 ## Tools Overview
 
 ### Refac - String Replacement Tool
 ```bash
 refac <ROOT_DIR> <OLD_STRING> <NEW_STRING> [OPTIONS]
+```
+
+### Ldiff - Line Difference Visualizer
+```bash
+ldiff [SUBSTITUTE_CHAR]
 ```
 
 ### Scrap - Local Trash Tool
@@ -415,6 +420,104 @@ for pattern in "${PATTERNS[@]}"; do
   echo "Replacing $old with $new..."
   refac . "$old" "$new" --force
 done
+```
+
+## Ldiff - Line Difference Visualizer
+
+The `ldiff` tool processes input lines, replacing repeated tokens with a substitute character to highlight patterns and differences.
+
+### Basic Usage
+
+```bash
+# Read from stdin with default substitute character
+echo -e "hello world\nhello universe" | ldiff
+# Output:
+# hello world
+# ░░░░░ universe
+
+# Use custom substitute character
+echo -e "test line\ntest another" | ldiff "*"
+# Output:
+# test line
+# **** another
+```
+
+### Log Analysis
+
+```bash
+# Monitor system logs for patterns
+tail -f /var/log/syslog | ldiff
+
+# Analyze web server logs
+cat /var/log/nginx/access.log | ldiff "■"
+
+# Find patterns in application logs
+journalctl -u myapp | ldiff
+```
+
+### Command Output Analysis
+
+```bash
+# Analyze directory listings
+find /usr/local -type f | ldiff
+
+# Monitor process lists
+ps aux | ldiff
+
+# Analyze network connections
+netstat -tulpn | ldiff "●"
+```
+
+### Real-time Monitoring
+
+```bash
+# Monitor multiple log files
+tail -f /var/log/app1.log /var/log/app2.log | ldiff
+
+# Watch system messages
+dmesg -w | ldiff
+
+# Monitor command output
+watch -n 2 "df -h" | ldiff
+```
+
+### Advanced Usage
+
+```bash
+# Save patterns to file
+cat large.log | ldiff > patterns.txt
+
+# Combine with other tools
+grep "ERROR" /var/log/app.log | ldiff | head -20
+
+# Chain multiple filters
+cat access.log | grep "GET" | ldiff "*" | tee filtered.log
+```
+
+### Use Cases
+
+**Security Analysis:**
+```bash
+# Monitor failed login attempts
+tail -f /var/log/auth.log | grep "Failed" | ldiff
+```
+
+**Performance Monitoring:**
+```bash
+# Track response time patterns
+tail -f /var/log/api.log | grep "response_time" | ldiff
+```
+
+**System Administration:**
+```bash
+# Analyze startup patterns
+dmesg | grep "systemd" | ldiff
+```
+
+**Development Debugging:**
+```bash
+# Monitor application output
+./my_app 2>&1 | ldiff
 ```
 
 ## Scrap - Local Trash Can

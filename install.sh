@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Nomion Tools Installation Script
-# This script builds and installs all nomion tools (refac, scrap, unscrap, verbump)
+# This script builds and installs all nomion tools (refac, ldiff, scrap, unscrap, verbump)
 # Multiple runs will update to the latest version
 
 set -e  # Exit on any error
@@ -24,7 +24,7 @@ VERBOSE=false
 usage() {
     echo "Usage: $0 [OPTIONS]"
     echo ""
-    echo "Install Nomion Tools (refac, scrap, unscrap, verbump)"
+    echo "Install Nomion Tools (refac, ldiff, scrap, unscrap, verbump)"
     echo ""
     echo "OPTIONS:"
     echo "  -d, --dir DIR        Installation directory (default: $DEFAULT_INSTALL_DIR)"
@@ -138,12 +138,17 @@ check_install_directory() {
 # Get current installed versions
 get_installed_versions() {
     REFAC_VERSION=""
+    LDIFF_VERSION=""
     SCRAP_VERSION=""
     UNSCRAP_VERSION=""
     VERBUMP_VERSION=""
     
     if command -v refac &> /dev/null; then
         REFAC_VERSION=$(refac --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "unknown")
+    fi
+    
+    if command -v ldiff &> /dev/null; then
+        LDIFF_VERSION=$(ldiff --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "unknown")
     fi
     
     if command -v scrap &> /dev/null; then
@@ -175,12 +180,13 @@ check_installation_needed() {
     if [ "$FORCE_INSTALL" = true ]; then
         log "Force installation requested"
         needs_install=true
-    elif [ -z "$REFAC_VERSION" ] || [ -z "$SCRAP_VERSION" ] || [ -z "$UNSCRAP_VERSION" ] || [ -z "$VERBUMP_VERSION" ]; then
+    elif [ -z "$REFAC_VERSION" ] || [ -z "$LDIFF_VERSION" ] || [ -z "$SCRAP_VERSION" ] || [ -z "$UNSCRAP_VERSION" ] || [ -z "$VERBUMP_VERSION" ]; then
         log "Some tools are not installed"
         needs_install=true
-    elif [ "$REFAC_VERSION" != "$PROJECT_VERSION" ] || [ "$SCRAP_VERSION" != "$PROJECT_VERSION" ] || [ "$UNSCRAP_VERSION" != "$PROJECT_VERSION" ] || [ "$VERBUMP_VERSION" != "$PROJECT_VERSION" ]; then
+    elif [ "$REFAC_VERSION" != "$PROJECT_VERSION" ] || [ "$LDIFF_VERSION" != "$PROJECT_VERSION" ] || [ "$SCRAP_VERSION" != "$PROJECT_VERSION" ] || [ "$UNSCRAP_VERSION" != "$PROJECT_VERSION" ] || [ "$VERBUMP_VERSION" != "$PROJECT_VERSION" ]; then
         log "Installed versions differ from project version"
         log "  refac: $REFAC_VERSION -> $PROJECT_VERSION"
+        log "  ldiff: $LDIFF_VERSION -> $PROJECT_VERSION"
         log "  scrap: $SCRAP_VERSION -> $PROJECT_VERSION"
         log "  unscrap: $UNSCRAP_VERSION -> $PROJECT_VERSION"
         log "  verbump: $VERBUMP_VERSION -> $PROJECT_VERSION"
@@ -204,7 +210,7 @@ build_project() {
     fi
     
     # Verify all binaries were built
-    local binaries=("refac" "scrap" "unscrap" "verbump")
+    local binaries=("refac" "ldiff" "scrap" "unscrap" "verbump")
     for binary in "${binaries[@]}"; do
         if [ ! -f "target/release/$binary" ]; then
             error "Failed to build $binary"
@@ -219,7 +225,7 @@ build_project() {
 install_binaries() {
     log "Installing binaries to $INSTALL_DIR"
     
-    local binaries=("refac" "scrap" "unscrap" "verbump")
+    local binaries=("refac" "ldiff" "scrap" "unscrap" "verbump")
     for binary in "${binaries[@]}"; do
         verbose_log "Installing $binary..."
         cp "target/release/$binary" "$INSTALL_DIR/"
@@ -233,7 +239,7 @@ install_binaries() {
 verify_installation() {
     log "Verifying installation..."
     
-    local binaries=("refac" "scrap" "unscrap" "verbump")
+    local binaries=("refac" "ldiff" "scrap" "unscrap" "verbump")
     local all_good=true
     
     for binary in "${binaries[@]}"; do
@@ -284,13 +290,14 @@ main() {
         
         echo ""
         success "🎉 Nomion Tools installation completed!"
-        success "Tools installed: refac, scrap, unscrap, verbump"
+        success "Tools installed: refac, ldiff, scrap, unscrap, verbump"
         success "Version: $PROJECT_VERSION"
         success "Location: $INSTALL_DIR"
         
         echo ""
         log "Quick start:"
         log "  refac . \"oldname\" \"newname\" --dry-run  # Preview string replacement"
+        log "  cat /var/log/system.log | ldiff            # Analyze log patterns"
         log "  scrap temp_file.txt                        # Move file to .scrap folder"
         log "  scrap                                       # List .scrap contents"
         log "  unscrap                                     # Restore last scrapped item"
@@ -299,6 +306,7 @@ main() {
         echo ""
         log "For more information:"
         log "  refac --help"
+        log "  ldiff --help"
         log "  scrap --help"
         log "  unscrap --help"
         log "  verbump --help"

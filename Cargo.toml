@@ -14,6 +14,10 @@ path = "src/bin/unscrap.rs"
 name = "verbump"
 path = "src/bin/verbump.rs"
 
+[[bin]]
+name = "ldiff"
+path = "src/bin/ldiff.rs"
+
 [dependencies]
 anyhow = "1.0"
 atty = "0.2"
@@ -58,7 +62,7 @@ license = "MIT"
 name = "nomion"
 readme = "README.md"
 repository = "https://github.com/jowharshamshiri/nomion"
-version = "0.32.19663"
+version = "0.33.19669"
 
 [profile.dev]
 debug = true

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Nomion Tools Uninstallation Script
-# This script removes all nomion tools (refac, scrap, unscrap, verbump)
+# This script removes all nomion tools (refac, ldiff, scrap, unscrap, verbump)
 
 set -e  # Exit on any error
 
@@ -23,7 +23,7 @@ VERBOSE=false
 usage() {
     echo "Usage: $0 [OPTIONS]"
     echo ""
-    echo "Uninstall Nomion Tools (refac, scrap, unscrap, verbump)"
+    echo "Uninstall Nomion Tools (refac, ldiff, scrap, unscrap, verbump)"
     echo ""
     echo "OPTIONS:"
     echo "  -d, --dir DIR        Installation directory to remove from (default: $DEFAULT_INSTALL_DIR)"
@@ -89,7 +89,7 @@ verbose_log() {
 
 # Find installed binaries
 find_installed_binaries() {
-    local binaries=("refac" "scrap" "unscrap" "verbump")
+    local binaries=("refac" "ldiff" "scrap" "unscrap" "verbump")
     local found_binaries=()
     
     for binary in "${binaries[@]}"; do
@@ -112,7 +112,7 @@ find_installed_binaries() {
 
 # Get versions of installed tools
 get_installed_info() {
-    local binaries=("refac" "scrap" "unscrap" "verbump")
+    local binaries=("refac" "ldiff" "scrap" "unscrap" "verbump")
     
     for binary in "${binaries[@]}"; do
         local binary_path="$INSTALL_DIR/$binary"

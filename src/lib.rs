@@ -1,6 +1,7 @@
 pub mod refac;
 pub mod scrap;
 pub mod verbump;
+pub mod ldiff;
 
 use anyhow::{Context, Result};
 use std::path::Path;
