@@ -1,100 +1,302 @@
 # Nomion
 
-A tool suite for file operations, line analysis, version management, and development workflow automation. The suite includes:
+A tool suite for developers and system administrators for file operations, line analysis, version management, and development workflow automation.
 
-- **refac**: Recursive string replacement in file/folder names and contents
-- **ldiff**: Line difference visualizer for pattern recognition in logs and command output
-- **scrap**: Local trash can using a `.scrap` folder for files you want to delete
-- **unscrap**: Restore files from `.scrap` folder to their original locations
-- **verbump**: Automated version management for projects
+## Tools Overview
 
-These tools are designed for safety, reliability, and performance, making them suitable for mission-critical operations.
+| Tool | Purpose | Primary Use Cases |
+|------|---------|-------------------|
+| **refac** | Code refactoring and string replacement | API migrations, bulk renames, content updates |
+| **ldiff** | Log pattern analysis and visualization | Debug analysis, pattern recognition, monitoring |
+| **scrap** | Safe file disposal with metadata | Experimental code cleanup, temporary file management |
+| **unscrap** | File restoration and recovery | Accident recovery, experiment rollback |
+| **verbump** | Version management | Release automation, version consistency |
 
-## Features
+Built for safety, reliability, and performance with extensive testing (231 tests across 8 test suites).
 
-### Core Functionality
+## Testing & Quality Assurance
 
-- **Recursive processing**: Traverses directory trees with configurable depth limits
-- **Dual operation modes**: Replaces strings in both file/directory names and file contents
-- **Case-sensitive matching**: Ensures precise control over replacements
-- **Cross-platform compatibility**: Works on Windows, macOS, and Linux
+### Test Suite
+- 231 tests across all tools and scenarios
+- 8 test files covering different aspects:
+  - `integration_tests.rs` - End-to-end tool integration (15 tests)
+  - `refac_concurrency_tests.rs` - Multi-threading safety (9 tests)
+  - `refac_edge_cases_tests.rs` - Complex scenarios (14 tests)
+  - `refac_empty_directory_tests.rs` - Directory handling edge cases (8 tests)
+  - `refac_encoding_tests.rs` - UTF-8 and encoding safety (7 tests)
+  - `scrap_advanced_integration_tests.rs` - Scrap workflows (21 tests)
+  - `scrap_integration_tests.rs` - Core scrap functionality (18 tests)
+  - `verbump_integration_tests.rs` - Version management (25 tests)
 
-### Safety Features
+### Quality Standards
+- Zero compilation warnings across platforms
+- Memory safety through Rust's ownership model
+- Performance testing with large file sets
+- Pre-operation validation to prevent mid-execution failures
+- Proper operation ordering to prevent race conditions
+- UTF-8 and encoding issue detection
 
-- **Collision detection**: Prevents overwriting existing files/directories
-- **Dry-run mode**: Preview changes before applying them
-- **Binary file detection**: Automatically skips binary files for content replacement
-- **Backup support**: Optional file backups before modification
-- **Confirmation prompts**: Interactive confirmation unless forced
+### Edge Case Coverage
+- Concurrency: High-thread scenarios, parallel processing
+- Encoding: UTF-8, invalid encodings, BOM handling, mixed encodings
+- File System: Deep nesting, long filenames, special characters
+- Permissions: Read-only files, permission changes, restricted directories
+- Edge Cases: Empty directories, symlinks, hidden files, binary detection
 
-### Performance Features
+## Core Features
 
-- **Parallel processing**: Multi-threaded content replacement for large datasets
-- **Streaming file processing**: Handles large files efficiently
-- **Progress tracking**: Visual progress bars with detailed information
-- **Smart filtering**: Include/exclude patterns with glob and regex support
+### Refac - Code Refactoring
 
-### Options
+**String Replacement Engine**
+- Language-aware processing for code structure
+- Multi-mode operations: names-only, content-only, files-only, dirs-only
+- Collision detection to prevent overwrites and conflicts
+- Binary file protection with automatic detection
+- Pattern filtering with glob and regex support
+- Parallel processing for large codebases
 
-- **Multiple operation modes**: Files-only, directories-only, names-only, content-only
-- **Output formats**: Human-readable, JSON, and plain text
-- **Verbose logging**: Detailed operation information
-- **Symlink handling**: Configurable symlink following
-- **Hidden file support**: Process hidden files and directories
+**Safety & Validation**
+- Pre-validation tests all operations before execution
+- Dry-run mode to preview changes
+- Optional file backups before modifications
+- Atomic operations prevent partial failures
+- Cross-platform support for Windows, macOS, and Linux
+
+### Ldiff - Log Analysis
+
+**Pattern Recognition Engine**
+- Real-time analysis: Process streaming logs with `tail -f` compatibility
+- ANSI color preservation: Maintains terminal formatting and colors
+- Customizable visualization: User-defined substitute characters
+- Performance optimized for large log files
+
+**Use Cases**
+- System monitoring: Track patterns in system logs and metrics
+- Debug analysis: Identify recurring patterns in application logs
+- Security monitoring: Detect suspicious patterns in auth logs
+- Development: Analyze test output and build logs for patterns
+
+### Scrap - File Management
+
+**Local Trash System**
+- Metadata tracking: Preserves original locations, timestamps, and context
+- Conflict resolution: Automatic naming to prevent overwrites
+- Search and discovery: Find files by name, content, date, or size
+- Git integration: Automatic `.gitignore` management
+- Archive support: Compress and backup scrap contents
+
+**Operations**
+- Cleanup: Age-based removal with dry-run preview
+- Bulk operations: Move multiple files/directories efficiently
+- Restoration metadata: Original path and context preservation
+- Size management: Track and report storage usage
+
+### Unscrap - File Recovery
+
+**Restoration System**
+- Automatic recovery: Restore files to original locations using metadata
+- Custom destinations: Flexible restoration to alternative paths
+- Conflict handling: Resolution of destination conflicts
+- Undo operations: Quick reversal of recent scrap operations
+
+**Recovery Features**
+- Last-action undo: Reverse the most recent scrap operation
+- Selective restoration: Restore specific files from scrap history
+- Batch recovery: Restore multiple related files simultaneously
+- Path reconstruction: Automatically recreate directory structures
+
+### Verbump - Version Management
+
+**Git-Integrated Versioning**
+- Automatic bumping: Version increments on commits via git hooks
+- Multi-format support: Handles Cargo.toml, package.json, version.txt, and more
+- Semantic versioning: Version increment strategies
+- Project detection: Automatic configuration for different project types
+
+**Version Control**
+- Audit logging: History of version changes
+- Configuration management: Per-project settings
+- Status monitoring: Version and configuration status
+- Integration ready: Designed for CI/CD and release automation
 
 ## Installation
 
-### Easy Installation (Recommended)
-
+### Quick Install
 ```bash
 git clone https://github.com/jowharshamshiri/nomion
 cd nomion
 ./install.sh
 ```
 
-The installation script will:
-
-- Build all tools in release mode
-- Install to `~/.local/bin` by default
-- Check for updates on subsequent runs
-- Create shell integration for enhanced functionality
-
 **Installation Options:**
-
 ```bash
 ./install.sh --help                    # See all options
-./install.sh -d /usr/local/bin         # Install system-wide
+./install.sh -d /usr/local/bin         # System-wide installation
 ./install.sh --force                   # Force reinstall
-./install.sh --verbose                 # Verbose output
+./install.sh --verbose                 # Detailed output
 ```
 
-**Uninstall:**
+### Manual Installation
+```bash
+# Build from source
+cargo build --release
 
+# Install all tools
+cargo install --path .
+
+# Install specific tools
+cargo install --path . --bin refac
+cargo install --path . --bin ldiff
+cargo install --path . --bin scrap
+cargo install --path . --bin unscrap
+cargo install --path . --bin verbump
+```
+
+### Uninstallation
 ```bash
 ./uninstall.sh                         # Remove all tools
 ./uninstall.sh -d /usr/local/bin       # Remove from custom directory
 ```
 
-### Manual Installation
+## Quick Start Examples
 
+### Developer Refactoring Workflow
 ```bash
-# Clone the repository
-git clone https://github.com/jowharshamshiri/nomion
-cd nomion
+# 1. Preview changes safely (recommended first step)
+refac ./src "OldClassName" "NewClassName" --dry-run --verbose
 
-# Build and install all tools
-cargo build --release
-cargo install --path .
+# 2. Apply the refactoring with backups
+refac ./src "OldClassName" "NewClassName" --backup
 
-# Or install specific tools
-cargo install --path . --bin refac
-cargo install --path . --bin scrap
-cargo install --path . --bin unscrap
+# 3. Update configuration files separately
+refac ./config "old.api.url" "new.api.url" --content-only --include "*.toml"
 ```
 
-## Usage
+### Log Analysis & Monitoring
+```bash
+# Real-time log pattern analysis
+tail -f /var/log/system.log | ldiff
 
-### Refac Tool
+# Compare deployment logs
+cat deploy-1.log | ldiff > patterns-1.txt
+cat deploy-2.log | ldiff > patterns-2.txt
+
+# Custom substitute character for different log sources
+journalctl -f | ldiff "■"
+```
+
+### File Management
+```bash
+# Move experimental code to safe storage
+scrap experimental_feature/ temp_logs/ *.bak
+
+# Review what you've stored
+scrap list --sort date
+
+# Find specific files later
+scrap find "*.rs" --content "TODO"
+
+# Restore when needed
+unscrap experimental_feature/
+```
+
+### Version Management
+```bash
+# Set up automatic versioning
+verbump install
+
+# Check version status
+verbump show
+
+# Version automatically updates on commits
+git add . && git commit -m "Add new feature"  # Auto-increments version
+```
+
+## Command Reference
+
+### Refac - String Replacement & Refactoring
+
+**Basic Syntax:**
+```bash
+refac <directory> <old_string> <new_string> [OPTIONS]
+```
+
+**Essential Options:**
+| Option | Description |
+|--------|-------------|
+| `--dry-run` | Preview changes without applying them |
+| `--backup` | Create backup files before modification |
+| `--verbose` | Show detailed operation information |
+| `--include <pattern>` | Include only files matching pattern |
+| `--exclude <pattern>` | Exclude files matching pattern |
+| `--names-only` | Only rename files/directories, skip content |
+| `--content-only` | Only replace content, skip renaming |
+| `--threads <n>` | Number of threads for parallel processing |
+
+### Ldiff - Log Pattern Analysis
+
+**Basic Syntax:**
+```bash
+ldiff [substitute_char]
+```
+
+**Usage Patterns:**
+```bash
+command | ldiff              # Default substitute character
+command | ldiff "*"          # Custom substitute character
+tail -f logfile | ldiff      # Real-time log monitoring
+```
+
+### Scrap - File Management
+
+**Operations:**
+```bash
+scrap [files...]             # Move files to .scrap (default: list contents)
+scrap list [--sort name|date|size]  # List scrap contents
+scrap find <pattern> [--content]    # Search in scrap
+scrap clean [--days N]       # Remove old items
+scrap archive [--output file] [--remove]  # Archive contents
+scrap purge [--force]        # Remove all items
+```
+
+### Unscrap - File Restoration
+
+**Operations:**
+```bash
+unscrap                      # Restore last scrapped item
+unscrap <filename>           # Restore specific file
+unscrap <filename> --to <path>  # Restore to custom location
+unscrap --force              # Overwrite existing files
+```
+
+### Verbump - Version Management
+
+**Operations:**
+```bash
+verbump install [--force]    # Install git hook
+verbump show                 # Display version information
+verbump status               # Check configuration
+verbump update [--patch|--minor|--major]  # Manual version bump
+verbump uninstall            # Remove git hook
+```
+
+## Documentation
+
+**Complete Documentation:** [https://jowharshamshiri.github.io/nomion/](https://jowharshamshiri.github.io/nomion/)
+
+**Quick Links:**
+- [Installation Guide](https://jowharshamshiri.github.io/nomion/installation/) - Setup instructions
+- [Getting Started](https://jowharshamshiri.github.io/nomion/getting-started/) - Tutorial walkthrough  
+- [Usage Guide](https://jowharshamshiri.github.io/nomion/usage/) - Examples
+- [API Reference](https://jowharshamshiri.github.io/nomion/api-reference/) - Command documentation
+- [Examples](https://jowharshamshiri.github.io/nomion/examples/) - Real-world use cases
+
+**Tool-Specific Guides:**
+- [Scrap Guide](https://jowharshamshiri.github.io/nomion/scrap-guide/) - File management
+- [Ldiff Guide](https://jowharshamshiri.github.io/nomion/ldiff-guide/) - Log analysis techniques
+- [Verbump Guide](https://jowharshamshiri.github.io/nomion/verbump-guide/) - Version management setup
+
+## Detailed Usage Examples
 
 ### Basic Syntax
 

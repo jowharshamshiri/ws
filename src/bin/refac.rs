@@ -129,31 +129,6 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_dry_run_flag() -> Result<(), Box<dyn std::error::Error>> {
-        let temp_dir = TempDir::new()?;
-        
-        // Create a test file
-        std::fs::write(temp_dir.path().join("oldname.txt"), "content")?;
-        
-        let mut cmd = Command::cargo_bin("refac")?;
-        cmd.args(&[
-            temp_dir.path().to_str().unwrap(),
-            "oldname",
-            "newname",
-            "--dry-run",
-            "--force"
-        ]);
-        cmd.assert()
-            .success()
-            .stdout(predicate::str::contains("DRY RUN"));
-
-        // File should still exist with original name
-        assert!(temp_dir.path().join("oldname.txt").exists());
-        assert!(!temp_dir.path().join("newname.txt").exists());
-
-        Ok(())
-    }
 
     #[test]
     fn test_json_output() -> Result<(), Box<dyn std::error::Error>> {
@@ -167,7 +142,7 @@ mod tests {
             temp_dir.path().to_str().unwrap(),
             "oldname",
             "newname",
-            "--dry-run",
+            "--assume-yes",
             "--format", "json"
         ]);
         cmd.assert()
@@ -189,8 +164,7 @@ mod tests {
             temp_dir.path().to_str().unwrap(),
             "oldname",
             "newname",
-            "--dry-run",
-            "--force",
+            "--assume-yes",
             "--verbose"
         ]);
         cmd.assert()
@@ -213,8 +187,7 @@ mod tests {
             temp_dir.path().to_str().unwrap(),
             "oldname",
             "newname",
-            "--dry-run",
-            "--force",
+            "--assume-yes",
             "--max-depth", "2"
         ]);
         cmd.assert()

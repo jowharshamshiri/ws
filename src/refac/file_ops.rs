@@ -43,9 +43,16 @@ impl FileOperations {
             return Ok(false);
         }
 
-        // Read the file content
-        let content = fs::read_to_string(file_path)
-            .with_context(|| format!("Failed to read file: {}", file_path.display()))?;
+        // Read the file content - with better error handling for encoding issues
+        let content = match fs::read_to_string(file_path) {
+            Ok(content) => content,
+            Err(e) => {
+                return Err(anyhow::anyhow!(
+                    "Failed to read file as UTF-8 text ({}): {}. This file may have encoding issues or be binary. Use --verbose to see binary detection details.", 
+                    file_path.display(), e
+                ));
+            }
+        };
 
         // Check if the file contains the target string
         if !content.contains(old_string) {

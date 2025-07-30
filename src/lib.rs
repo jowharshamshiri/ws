@@ -49,8 +49,7 @@ pub struct RenameConfig {
     pub root_dir: std::path::PathBuf,
     pub old_string: String,
     pub new_string: String,
-    pub dry_run: bool,
-    pub force: bool,
+    pub assume_yes: bool,
     pub verbose: bool,
     pub follow_symlinks: bool,
     pub backup: bool,
@@ -81,21 +80,16 @@ impl RenameConfig {
             root_dir: root_path,
             old_string,
             new_string,
-            dry_run: false,
-            force: false,
+            assume_yes: false,
             verbose: false,
             follow_symlinks: false,
             backup: false,
         })
     }
     
-    pub fn with_dry_run(mut self, dry_run: bool) -> Self {
-        self.dry_run = dry_run;
-        self
-    }
     
-    pub fn with_force(mut self, force: bool) -> Self {
-        self.force = force;
+    pub fn with_assume_yes(mut self, assume_yes: bool) -> Self {
+        self.assume_yes = assume_yes;
         self
     }
     
@@ -173,8 +167,7 @@ mod tests {
         
         assert_eq!(config.old_string, "old");
         assert_eq!(config.new_string, "new");
-        assert!(!config.dry_run);
-        assert!(!config.force);
+        assert!(!config.assume_yes);
     }
     
     #[test]
@@ -215,7 +208,7 @@ mod tests {
         // Should be a valid version format (x.y.z)
         assert!(version.contains('.'));
         // Should match current version in version.txt
-        assert_eq!(version, "0.28.19341");
+        assert_eq!(version, "0.33.19669");
     }
     
     #[test]

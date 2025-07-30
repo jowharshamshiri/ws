@@ -296,7 +296,7 @@ main() {
         
         echo ""
         log "Quick start:"
-        log "  refac . \"oldname\" \"newname\" --dry-run  # Preview string replacement"
+        log "  refac . \"oldname\" \"newname\" --assume-yes  # Replace strings (auto-confirm)"
         log "  cat /var/log/system.log | ldiff            # Analyze log patterns"
         log "  scrap temp_file.txt                        # Move file to .scrap folder"
         log "  scrap                                       # List .scrap contents"

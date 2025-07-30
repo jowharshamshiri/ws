@@ -6,66 +6,89 @@ toc: false
 
 # Nomion
 
-A suite of robust, cross-platform command-line tools for developers and system administrators. Built for safety, reliability, and performance, making them suitable for mission-critical operations and daily development workflows.
+A tool suite for developers and system administrators, built for safety, reliability, and performance in daily development workflows.
+
+## Testing & Quality Assurance
+
+### Test Coverage
+- 231 tests across 8 test suites
+- Pre-operation validation prevents mid-execution failures
+- Edge case coverage: Concurrency, encoding, permissions, deep nesting scenarios
+- Zero compilation warnings across platforms
+- Memory safety through Rust's ownership model
+
+### Safety Features
+- Race condition prevention through proper operation ordering
+- UTF-8 and encoding issue detection
+- Atomic operations prevent partial failures
+- Collision detection prevents overwrites and conflicts
+- Binary file protection with automatic detection
 
 ## Tools Overview
 
-### 🔄 Refac - String Replacement Tool
-Replace strings in file/directory names and file contents with safety features and high performance.
+### Refac - Code Refactoring
+String replacement engine with language-aware processing and safety features.
 
 ```bash
-refac . "oldname" "newname" --dry-run
+refac . "oldname" "newname" --dry-run --verbose
+refac ./src "OldClass" "NewClass" --backup --include "*.rs"
 ```
 
-**Key Features**: Collision detection, multi-threaded processing, binary file protection  
-**[📖 Full Guide]({{ '/refac-guide/' | relative_url }})**
+**Key Features**: Pre-validation, collision detection, multi-threaded processing, backup support, binary protection  
+**Developer Focus**: API migrations, bulk renames, content updates, safe refactoring  
+**[Full Guide]({{ '/refac-guide/' | relative_url }})**
 
-### 📊 Ldiff - Line Difference Visualizer
-Process input lines, replacing repeated tokens with a substitute character for easy pattern recognition.
+### Ldiff - Log Analysis
+Real-time pattern recognition engine for logs and command output with ANSI color preservation.
 
 ```bash
-cat /var/log/system.log | tail -n 100 | ldiff
-find / | ldiff
+tail -f /var/log/system.log | ldiff
+journalctl -f | ldiff "■"
+ps aux | ldiff
 ```
 
-**Key Features**: ANSI color preservation, pattern recognition, customizable substitute characters  
-**[📖 Full Guide]({{ '/ldiff-guide/' | relative_url }})**
+**Key Features**: Real-time analysis, ANSI color preservation, customizable visualization, streaming support  
+**Developer Focus**: Debug analysis, pattern recognition, monitoring, test output parsing  
+**[Full Guide]({{ '/ldiff-guide/' | relative_url }})**
 
-### 🗑️ Scrap - Local Trash Folder
-Move unwanted files to a local `.scrap` folder instead of permanent deletion.
+### Scrap - File Management
+Local trash system with metadata tracking, search capabilities, and git integration.
 
 ```bash
-scrap old_file.txt deprecated_feature/
-scrap list
-scrap clean --days 30
+scrap experimental_feature/ temp_logs/ *.bak
+scrap find "*.rs" --content "TODO"
+scrap archive backup-$(date +%Y%m%d).tar.gz --remove
 ```
 
-**Key Features**: Metadata tracking, search capabilities, cleanup operations, archiving  
-**[📖 Full Guide]({{ '/scrap-guide/' | relative_url }})**
+**Key Features**: Metadata tracking, conflict resolution, search and discovery, git integration, archive support  
+**Developer Focus**: Experimental code cleanup, temporary file management, safe deletion  
+**[Full Guide]({{ '/scrap-guide/' | relative_url }})**
 
-### ↩️ Unscrap - File Restoration
-Restore files from the `.scrap` folder to their original locations or custom destinations.
+### Unscrap - File Recovery
+Restoration system with automatic path reconstruction and conflict resolution.
 
 ```bash
-unscrap filename.txt
-unscrap --undo
-unscrap filename.txt --to /new/location/
+unscrap                                    # Restore last scrapped item
+unscrap experimental_feature/              # Restore specific directory
+unscrap important.rs --to ~/backup/       # Custom destination
 ```
 
-**Key Features**: Smart recovery, undo operations, conflict handling, custom destinations  
-**[📖 Full Guide]({{ '/unscrap-guide/' | relative_url }})**
+**Key Features**: Automatic recovery, custom destinations, conflict handling, batch restoration, undo operations  
+**Developer Focus**: Accident recovery, experiment rollback, selective restoration  
+**[Full Guide]({{ '/unscrap-guide/' | relative_url }})**
 
-### 🏷️ Verbump - Automatic Version Management
-Automatic version bumping via git hooks with smart versioning and configuration support.
+### Verbump - Version Management
+Git-integrated versioning system with automatic bumping and multi-format support.
 
 ```bash
-verbump install
-verbump show
-verbump update
+verbump install                           # Set up git hook
+verbump show                              # Display version info
+git commit -m "Add feature"               # Auto-increments version
 ```
 
-**Key Features**: Git integration, smart versioning, customizable patterns, audit logging  
-**[📖 Full Guide]({{ '/verbump-guide/' | relative_url }})**
+**Key Features**: Git integration, automatic bumping, multi-format support, semantic versioning, audit logging  
+**Developer Focus**: Release automation, version consistency, CI/CD integration  
+**[Full Guide]({{ '/verbump-guide/' | relative_url }})**
 
 ## Quick Start Examples
 

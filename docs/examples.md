@@ -204,7 +204,7 @@ git checkout main
 git merge feature-auth
 git tag v0.2.0  # New major/minor version
 
-# Future commits will be v0.2.X.Y
+# Subsequent commits will increment patch version
 ```
 
 #### CI/CD Integration

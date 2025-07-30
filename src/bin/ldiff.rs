@@ -248,13 +248,6 @@ mod tests {
             .copied()
             .collect();
         
-        // Filter out Cargo build messages
-        let filtered_lines: Vec<&str> = lines
-            .iter()
-            .filter(|line| !line.contains("Finished") && !line.contains("Running"))
-            .copied()
-            .collect();
-        
         assert!(filtered_lines.len() >= 3);
         assert_eq!(filtered_lines[0], "2023-01-01 10:00:00 INFO Starting application");
         assert_eq!(filtered_lines[1], "░░░░-░░-░░ ░░:░░:01 ░░░░ Loading configuration");

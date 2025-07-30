@@ -18,13 +18,10 @@ pub struct Args {
     #[arg(value_name = "NEW_STRING")]
     pub new_string: String,
 
-    /// Show what would be changed without making changes
-    #[arg(short = 'd', long = "dry-run")]
-    pub dry_run: bool,
 
-    /// Skip confirmation prompt
-    #[arg(short = 'f', long = "force")]
-    pub force: bool,
+    /// Assume "yes" to confirmation prompts (non-interactive mode)
+    #[arg(short = 'y', long = "assume-yes")]
+    pub assume_yes: bool,
 
     /// Show detailed output
     #[arg(short = 'v', long = "verbose")]
@@ -217,8 +214,7 @@ mod tests {
             root_dir: temp_dir.path().to_path_buf(),
             old_string: "old".to_string(),
             new_string: "new".to_string(),
-            dry_run: false,
-            force: false,
+            assume_yes: false,
             verbose: false,
             follow_symlinks: false,
             backup: false,
@@ -270,8 +266,7 @@ mod tests {
             root_dir: temp_dir.path().to_path_buf(),
             old_string: "old".to_string(),
             new_string: "new".to_string(),
-            dry_run: false,
-            force: false,
+            assume_yes: false,
             verbose: false,
             follow_symlinks: false,
             backup: false,
@@ -321,8 +316,7 @@ mod tests {
             root_dir: temp_dir.path().to_path_buf(),
             old_string: "old".to_string(),
             new_string: "new".to_string(),
-            dry_run: false,
-            force: false,
+            assume_yes: false,
             verbose: false,
             follow_symlinks: false,
             backup: false,

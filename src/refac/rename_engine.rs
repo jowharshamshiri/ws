@@ -14,6 +14,45 @@ use super::{
     progress::{ProgressTracker, SimpleOutput},
 };
 
+/// Detailed information about changes to a specific file/directory
+#[derive(Debug, Clone)]
+pub struct FileChangeReport {
+    pub path: PathBuf,
+    pub content_changes: Option<usize>, // Number of content occurrences to replace
+    pub rename_target: Option<PathBuf>,  // New path if being renamed
+    pub item_type: ItemType,
+}
+
+/// Organized summary of all changes, grouped and sorted by location
+#[derive(Debug, Clone)]
+pub struct DetailedChangeReport {
+    pub file_changes: Vec<FileChangeReport>,
+    pub total_stats: RenameStats,
+}
+
+/// Structured validation error with location and context information
+#[derive(Debug, Clone)]
+pub struct ValidationError {
+    pub location: PathBuf,
+    pub error_type: ValidationErrorType,
+    pub message: String,
+    pub suggestion: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub enum ValidationErrorType {
+    FileNotFound,
+    PermissionDenied,
+    EncodingError,
+    NotAFile,
+    NotADirectory,
+    ReadOnlyFile,
+    TargetExists,
+    ParentDirectoryError,
+    ContentNotFound,
+    EmptyDirectoryIssue,
+}
+
 /// Main engine for executing rename operations
 pub struct RenameEngine {
     config: RenameConfig,
@@ -37,8 +76,7 @@ impl RenameEngine {
 
         // Create configuration
         let config = RenameConfig::new(&args.root_dir, args.old_string.clone(), args.new_string.clone())?
-            .with_dry_run(args.dry_run)
-            .with_force(args.force)
+            .with_assume_yes(args.assume_yes)
             .with_verbose(args.verbose)
             .with_follow_symlinks(args.follow_symlinks)
             .with_backup(args.backup);
@@ -84,7 +122,11 @@ impl RenameEngine {
         self.print_info("Phase 2: Checking for naming collisions...")?;
         self.check_collisions(&rename_items)?;
 
-        // Phase 3: Summary and Confirmation
+        // Phase 3: Mandatory Validation (Dry-Run)
+        self.print_info("Phase 3: Validating all operations...")?;
+        self.validate_all_operations(&content_files, &rename_items)?;
+
+        // Phase 4: Summary and Confirmation
         let stats = self.show_summary(&content_files, &rename_items)?;
         if stats.total_changes() == 0 {
             self.print_success("No changes needed.")?;
@@ -96,7 +138,7 @@ impl RenameEngine {
             return Ok(());
         }
 
-        // Phase 4: Execute Changes
+        // Phase 5: Execute Changes
         self.execute_changes(&content_files, &rename_items)?;
 
         // Phase 5: Final Report
@@ -158,13 +200,18 @@ impl RenameEngine {
             }
         }
 
-        // Sort rename items by depth (deepest first for directories)
+        // Sort rename items to prevent race conditions:
+        // 1. Files first (deepest first), then directories (deepest first)
+        // 2. This ensures files are renamed before their containing directories
         rename_items.sort_by(|a, b| {
             match (&a.item_type, &b.item_type) {
+                // Files come before directories to prevent path invalidation
+                (ItemType::File, ItemType::Directory) => std::cmp::Ordering::Less,
+                (ItemType::Directory, ItemType::File) => std::cmp::Ordering::Greater,
+                // Among files: process deepest first (children before parents)
+                (ItemType::File, ItemType::File) => b.depth.cmp(&a.depth),
+                // Among directories: process deepest first (children before parents)
                 (ItemType::Directory, ItemType::Directory) => b.depth.cmp(&a.depth),
-                (ItemType::Directory, ItemType::File) => std::cmp::Ordering::Less,
-                (ItemType::File, ItemType::Directory) => std::cmp::Ordering::Greater,
-                (ItemType::File, ItemType::File) => a.depth.cmp(&b.depth),
             }
         });
 
@@ -383,65 +430,133 @@ impl RenameEngine {
         Ok(())
     }
 
-    /// Show summary of changes and get user confirmation
-    fn show_summary(&self, content_files: &[PathBuf], rename_items: &[RenameItem]) -> Result<RenameStats> {
+    /// Generate detailed report of all changes organized by file/directory
+    fn generate_detailed_report(&self, content_files: &[PathBuf], rename_items: &[RenameItem]) -> Result<DetailedChangeReport> {
+        use std::collections::HashMap;
+        
+        let mut file_changes_map: HashMap<PathBuf, FileChangeReport> = HashMap::new();
         let mut stats = RenameStats::default();
-        stats.files_with_content_changes = content_files.len();
-        stats.files_renamed = rename_items.iter().filter(|item| item.item_type == ItemType::File).count();
-        stats.directories_renamed = rename_items.iter().filter(|item| item.item_type == ItemType::Directory).count();
+        
+        // Process content changes
+        for file_path in content_files {
+            // Count occurrences of old string in this file
+            let content_count = match std::fs::read_to_string(file_path) {
+                Ok(content) => content.matches(&self.config.old_string).count(),
+                Err(_) => 0, // Already validated during validation phase
+            };
+            
+            file_changes_map.insert(file_path.clone(), FileChangeReport {
+                path: file_path.clone(),
+                content_changes: Some(content_count),
+                rename_target: None,
+                item_type: ItemType::File,
+            });
+            stats.files_with_content_changes += 1;
+        }
+        
+        // Process rename operations
+        for item in rename_items {
+            let entry = file_changes_map.entry(item.original_path.clone()).or_insert_with(|| {
+                FileChangeReport {
+                    path: item.original_path.clone(),
+                    content_changes: None,
+                    rename_target: None,
+                    item_type: item.item_type.clone(),
+                }
+            });
+            
+            entry.rename_target = Some(item.new_path.clone());
+            entry.item_type = item.item_type.clone();
+            
+            match item.item_type {
+                ItemType::File => stats.files_renamed += 1,
+                ItemType::Directory => stats.directories_renamed += 1,
+            }
+        }
+        
+        // Convert to sorted vector (by path for consistent ordering)
+        let mut file_changes: Vec<FileChangeReport> = file_changes_map.into_values().collect();
+        file_changes.sort_by(|a, b| a.path.cmp(&b.path));
+        
+        Ok(DetailedChangeReport {
+            file_changes,
+            total_stats: stats,
+        })
+    }
+
+    /// Show detailed summary of changes organized by file/directory
+    fn show_summary(&self, content_files: &[PathBuf], rename_items: &[RenameItem]) -> Result<RenameStats> {
+        let report = self.generate_detailed_report(content_files, rename_items)?;
 
         match self.output_format {
             OutputFormat::Json => {
-                let summary = serde_json::json!({
+                let json_report = serde_json::json!({
                     "summary": {
-                        "content_changes": stats.files_with_content_changes,
-                        "file_renames": stats.files_renamed,
-                        "directory_renames": stats.directories_renamed,
-                        "total_changes": stats.total_changes()
+                        "content_changes": report.total_stats.files_with_content_changes,
+                        "file_renames": report.total_stats.files_renamed,
+                        "directory_renames": report.total_stats.directories_renamed,
+                        "total_changes": report.total_stats.total_changes()
                     },
-                    "dry_run": self.config.dry_run
+                    "file_changes": report.file_changes.iter().map(|fc| {
+                        serde_json::json!({
+                            "path": fc.path,
+                            "content_changes": fc.content_changes,
+                            "rename_target": fc.rename_target,
+                            "item_type": format!("{:?}", fc.item_type)
+                        })
+                    }).collect::<Vec<_>>()
                 });
-                println!("{}", serde_json::to_string_pretty(&summary)?);
+                println!("{}", serde_json::to_string_pretty(&json_report)?);
             }
             OutputFormat::Plain => {
-                println!("Content changes: {}", stats.files_with_content_changes);
-                println!("File renames: {}", stats.files_renamed);
-                println!("Directory renames: {}", stats.directories_renamed);
-                println!("Total changes: {}", stats.total_changes());
+                println!("Content changes: {}", report.total_stats.files_with_content_changes);
+                println!("File renames: {}", report.total_stats.files_renamed);
+                println!("Directory renames: {}", report.total_stats.directories_renamed);
+                println!("Total changes: {}", report.total_stats.total_changes());
             }
             OutputFormat::Human => {
-                self.print_info("=== CHANGE SUMMARY ===")?;
-                self.print_info(&format!("Content modifications: {} file(s)", stats.files_with_content_changes))?;
-                self.print_info(&format!("File renames:         {} file(s)", stats.files_renamed))?;
-                self.print_info(&format!("Directory renames:    {} directory(ies)", stats.directories_renamed))?;
-                self.print_info(&format!("Total changes:        {}", stats.total_changes()))?;
+                self.print_info("=== PLANNED CHANGES ===")?;
+                self.print_info(&format!("Total files/directories affected: {}", report.file_changes.len()))?;
+                self.print_info(&format!("Content modifications: {} file(s)", report.total_stats.files_with_content_changes))?;
+                self.print_info(&format!("File renames:         {} file(s)", report.total_stats.files_renamed))?;
+                self.print_info(&format!("Directory renames:    {} directory(ies)", report.total_stats.directories_renamed))?;
+                self.print_info("")?;
 
-                if self.config.verbose {
-                    if !content_files.is_empty() {
-                        self.print_info("\nFiles with content to modify:")?;
-                        for file in content_files {
-                            self.print_verbose(&format!("  {}", file.display()))?;
+                if !report.file_changes.is_empty() {
+                    self.print_info("=== DETAILED CHANGES BY LOCATION ===")?;
+                    
+                    for change in &report.file_changes {
+                        let relative_path = change.path.strip_prefix(&self.config.root_dir)
+                            .unwrap_or(&change.path);
+                        
+                        self.print_info(&format!("📁 {}", relative_path.display()))?;
+                        
+                        // Show content changes
+                        if let Some(count) = change.content_changes {
+                            self.print_verbose(&format!("   Content: {} occurrence(s) of '{}' → '{}'", 
+                                count, self.config.old_string, self.config.new_string))?;
                         }
-                    }
-
-                    if !rename_items.is_empty() {
-                        self.print_info("\nItems to rename:")?;
-                        for item in rename_items {
-                            self.print_verbose(&format!("  {} → {}", 
-                                item.original_path.display(), 
-                                item.new_path.display()))?;
+                        
+                        // Show rename operation
+                        if let Some(target) = &change.rename_target {
+                            let relative_target = target.strip_prefix(&self.config.root_dir)
+                                .unwrap_or(target);
+                            self.print_verbose(&format!("   Rename:  {} → {}", 
+                                relative_path.display(), relative_target.display()))?;
                         }
+                        
+                        self.print_info("")?; // Empty line for readability
                     }
                 }
             }
         }
 
-        Ok(stats)
+        Ok(report.total_stats)
     }
 
     /// Confirm changes with the user
     fn confirm_changes(&self) -> Result<bool> {
-        if self.config.force || self.config.dry_run {
+        if self.config.assume_yes {
             return Ok(true);
         }
 
@@ -471,11 +586,6 @@ impl RenameEngine {
 
     /// Execute the actual changes
     fn execute_changes(&self, content_files: &[PathBuf], rename_items: &[RenameItem]) -> Result<()> {
-        if self.config.dry_run {
-            self.print_info("DRY RUN MODE: No actual changes will be made.")?;
-            return Ok(());
-        }
-
         // Phase 1: Content replacement
         if !content_files.is_empty() && self.should_process_content() {
             self.execute_content_changes(content_files)?;
@@ -504,8 +614,14 @@ impl RenameEngine {
         let errors_ref = Arc::clone(&errors);
 
         if self.thread_count > 1 {
-            // Parallel processing (without progress updates due to thread safety)
+            // Parallel processing with improved error handling
             content_files.par_iter().for_each(|file_path| {
+                // Validate file still exists before processing
+                if !file_path.exists() {
+                    errors_ref.lock().unwrap().push(format!("File no longer exists: {}", file_path.display()));
+                    return;
+                }
+
                 let result = file_ops_ref.replace_content(
                     file_path,
                     &config_ref.old_string,
@@ -513,15 +629,29 @@ impl RenameEngine {
                 );
 
                 match result {
+                    Ok(modified) => {
+                        if modified && config_ref.verbose {
+                            // Note: Can't use self.print_verbose in parallel context
+                            // Verbose output is handled in sequential mode
+                        }
+                    }
                     Err(e) => {
                         errors_ref.lock().unwrap().push(format!("Failed to modify {}: {}", file_path.display(), e));
                     }
-                    _ => {}
                 }
             });
         } else {
-            // Sequential processing
+            // Sequential processing with enhanced error handling
             for file_path in content_files {
+                // Validate file still exists before processing
+                if !file_path.exists() {
+                    self.print_error(&format!("File no longer exists: {}", file_path.display()))?;
+                    if let Some(progress) = &self.progress {
+                        progress.update_content(&file_path.display().to_string());
+                    }
+                    continue;
+                }
+
                 let result = file_ops_ref.replace_content(
                     file_path,
                     &config_ref.old_string,
@@ -558,7 +688,7 @@ impl RenameEngine {
         Ok(())
     }
 
-    /// Execute rename operations
+    /// Execute rename operations with proper ordering and error handling
     fn execute_renames(&self, rename_items: &[RenameItem]) -> Result<()> {
         self.print_info("Renaming files and directories...")?;
 
@@ -566,6 +696,10 @@ impl RenameEngine {
             progress.init_rename_progress(rename_items.len() as u64);
         }
 
+        let mut errors = Vec::new();
+        let mut successful_renames = Vec::new();
+
+        // Process renames sequentially to maintain ordering (files before directories)
         for item in rename_items {
             // Skip no-op renames
             if item.original_path == item.new_path {
@@ -575,10 +709,33 @@ impl RenameEngine {
                 continue;
             }
 
+            // Validate that source still exists (in case of race conditions, including broken symlinks)
+            let source_exists = item.original_path.exists() || item.original_path.symlink_metadata().is_ok();
+            if !source_exists {
+                errors.push(format!("Source path no longer exists: {}", item.original_path.display()));
+                if let Some(progress) = &self.progress {
+                    progress.update_rename(&item.original_path.display().to_string());
+                }
+                continue;
+            }
+
+            // Ensure target directory exists
+            if let Some(parent) = item.new_path.parent() {
+                if let Err(e) = self.file_ops.create_dir_all(parent) {
+                    errors.push(format!("Failed to create parent directory for {}: {}", 
+                                      item.new_path.display(), e));
+                    if let Some(progress) = &self.progress {
+                        progress.update_rename(&item.original_path.display().to_string());
+                    }
+                    continue;
+                }
+            }
+
             let result = self.file_ops.move_item(&item.original_path, &item.new_path);
 
             match result {
                 Ok(()) => {
+                    successful_renames.push((item.original_path.clone(), item.new_path.clone()));
                     if self.config.verbose {
                         self.print_verbose(&format!("Renamed: {} → {}", 
                             item.original_path.display(), 
@@ -586,10 +743,10 @@ impl RenameEngine {
                     }
                 }
                 Err(e) => {
-                    self.print_error(&format!("Failed to rename {} to {}: {}", 
+                    errors.push(format!("Failed to rename {} to {}: {}", 
                         item.original_path.display(), 
                         item.new_path.display(),
-                        e))?;
+                        e));
                 }
             }
 
@@ -598,8 +755,338 @@ impl RenameEngine {
             }
         }
 
+        // Report errors
+        for error in &errors {
+            self.print_error(error)?;
+        }
+
+        if !errors.is_empty() {
+            self.print_warning(&format!("{} rename operation(s) failed out of {}", 
+                                      errors.len(), rename_items.len()))?;
+        }
+
         if let Some(progress) = &self.progress {
-            progress.finish_rename(&format!("Rename complete ({} items)", rename_items.len()));
+            progress.finish_rename(&format!("Rename complete ({} successful, {} failed)", 
+                                          successful_renames.len(), errors.len()));
+        }
+
+        Ok(())
+    }
+
+    /// Validate all operations before execution (mandatory validation phase)
+    /// This catches all potential issues before making any changes
+    fn validate_all_operations(&self, content_files: &[PathBuf], rename_items: &[RenameItem]) -> Result<()> {
+        let mut validation_errors = Vec::new();
+
+        // Validate content replacement operations
+        for file_path in content_files {
+            self.validate_content_file(file_path, &mut validation_errors);
+        }
+
+        // Validate rename operations
+        for item in rename_items {
+            self.validate_rename_item(item, &mut validation_errors);
+        }
+
+        // Validate that operation will not leave empty directories
+        self.validate_no_empty_directories_remain(rename_items, &mut validation_errors)?;
+
+        // Report all validation errors with enhanced formatting
+        if !validation_errors.is_empty() {
+            self.report_validation_errors(&validation_errors)?;
+            
+            // Create a more descriptive error message that includes error types
+            let error_types: std::collections::HashSet<&str> = validation_errors.iter().map(|e| {
+                match e.error_type {
+                    ValidationErrorType::FileNotFound => "missing files",
+                    ValidationErrorType::PermissionDenied => "permission issues", 
+                    ValidationErrorType::EncodingError => "encoding issues",
+                    ValidationErrorType::ReadOnlyFile => "read-only files",
+                    ValidationErrorType::TargetExists => "target conflicts",
+                    ValidationErrorType::ParentDirectoryError => "directory issues",
+                    ValidationErrorType::ContentNotFound => "content issues",
+                    ValidationErrorType::EmptyDirectoryIssue => "directory structure issues",
+                    _ => "other issues",
+                }
+            }).collect();
+            
+            let error_summary = error_types.into_iter().collect::<Vec<_>>().join(", ");
+            anyhow::bail!("Operation cannot proceed due to {} validation error(s): {}", validation_errors.len(), error_summary);
+        }
+
+        self.print_info("Validation passed: All operations can be performed safely.")?;
+        Ok(())
+    }
+
+    /// Validate a single content file for replacement operations
+    fn validate_content_file(&self, file_path: &PathBuf, validation_errors: &mut Vec<ValidationError>) {
+        let relative_path = file_path.strip_prefix(&self.config.root_dir)
+            .unwrap_or(file_path);
+
+        if !file_path.exists() {
+            validation_errors.push(ValidationError {
+                location: file_path.clone(),
+                error_type: ValidationErrorType::FileNotFound,
+                message: format!("Content file does not exist: {}", relative_path.display()),
+                suggestion: Some("Check if the file was moved or deleted".to_string()),
+            });
+            return;
+        }
+
+        if !file_path.is_file() {
+            validation_errors.push(ValidationError {
+                location: file_path.clone(),
+                error_type: ValidationErrorType::NotAFile,
+                message: format!("Content target is not a file: {}", relative_path.display()),
+                suggestion: Some("Content replacement only works on files, not directories".to_string()),
+            });
+            return;
+        }
+
+        // Check if file is readable and writable
+        if let Err(e) = std::fs::OpenOptions::new().read(true).write(true).open(file_path) {
+            let error_type = if e.kind() == std::io::ErrorKind::PermissionDenied {
+                ValidationErrorType::PermissionDenied
+            } else {
+                ValidationErrorType::PermissionDenied
+            };
+            
+            validation_errors.push(ValidationError {
+                location: file_path.clone(),
+                error_type,
+                message: format!("Cannot access file {}: {}", relative_path.display(), e),
+                suggestion: Some("Check file permissions or if file is locked by another process".to_string()),
+            });
+            return;
+        }
+
+        // Validate that file can be read and contains the target string
+        match std::fs::read_to_string(file_path) {
+            Ok(content) => {
+                if !content.contains(&self.config.old_string) {
+                    validation_errors.push(ValidationError {
+                        location: file_path.clone(),
+                        error_type: ValidationErrorType::ContentNotFound,
+                        message: format!("File {} does not contain target string '{}'", 
+                                       relative_path.display(), self.config.old_string),
+                        suggestion: Some("File may have been modified since discovery phase".to_string()),
+                    });
+                }
+            },
+            Err(e) => {
+                validation_errors.push(ValidationError {
+                    location: file_path.clone(),
+                    error_type: ValidationErrorType::EncodingError,
+                    message: format!("Cannot read file {} as text: {}. This may be due to encoding issues or the file may be binary.", 
+                                   relative_path.display(), e),
+                    suggestion: Some("Use --files-only mode or exclude this file with --exclude patterns".to_string()),
+                });
+            }
+        }
+    }
+
+    /// Validate a single rename operation
+    fn validate_rename_item(&self, item: &RenameItem, validation_errors: &mut Vec<ValidationError>) {
+        let relative_source = item.original_path.strip_prefix(&self.config.root_dir)
+            .unwrap_or(&item.original_path);
+        let relative_target = item.new_path.strip_prefix(&self.config.root_dir)
+            .unwrap_or(&item.new_path);
+
+        // Skip no-op renames
+        if item.original_path == item.new_path {
+            return;
+        }
+
+        // Check source exists (including broken symlinks)
+        let source_exists = item.original_path.exists() || item.original_path.symlink_metadata().is_ok();
+        if !source_exists {
+            validation_errors.push(ValidationError {
+                location: item.original_path.clone(),
+                error_type: ValidationErrorType::FileNotFound,
+                message: format!("Rename source does not exist: {}", relative_source.display()),
+                suggestion: Some("Source may have been moved or deleted since discovery".to_string()),
+            });
+            return;
+        }
+
+        // Check target doesn't already exist (unless it's the same as source)
+        if item.new_path.exists() && item.new_path != item.original_path {
+            validation_errors.push(ValidationError {
+                location: item.new_path.clone(),
+                error_type: ValidationErrorType::TargetExists,
+                message: format!("Rename target already exists: {}", relative_target.display()),
+                suggestion: Some("Target was created since discovery phase, or there's a naming collision".to_string()),
+            });
+            return;
+        }
+
+        // Check parent directory exists or can be created
+        if let Some(parent) = item.new_path.parent() {
+            if !parent.exists() {
+                match std::fs::create_dir_all(parent) {
+                    Ok(_) => {
+                        // Remove the directory we just created for validation
+                        let _ = std::fs::remove_dir_all(parent);
+                    },
+                    Err(e) => {
+                        validation_errors.push(ValidationError {
+                            location: parent.to_path_buf(),
+                            error_type: ValidationErrorType::ParentDirectoryError,
+                            message: format!("Cannot create parent directory for {}: {}", 
+                                           relative_target.display(), e),
+                            suggestion: Some("Check permissions on parent directories".to_string()),
+                        });
+                        return;
+                    }
+                }
+            }
+        }
+
+        // Check permissions on source (use symlink_metadata to handle broken symlinks)
+        match item.original_path.symlink_metadata() {
+            Ok(metadata) => {
+                if metadata.permissions().readonly() {
+                    validation_errors.push(ValidationError {
+                        location: item.original_path.clone(),
+                        error_type: ValidationErrorType::ReadOnlyFile,
+                        message: format!("Source is read-only: {}", relative_source.display()),
+                        suggestion: Some("Change file permissions or exclude read-only files".to_string()),
+                    });
+                }
+            },
+            Err(e) => {
+                validation_errors.push(ValidationError {
+                    location: item.original_path.clone(),
+                    error_type: ValidationErrorType::PermissionDenied,
+                    message: format!("Cannot read metadata for {}: {}", relative_source.display(), e),
+                    suggestion: Some("Check file permissions and access rights".to_string()),
+                });
+            }
+        }
+    }
+
+    /// Report validation errors with enhanced formatting and organization
+    fn report_validation_errors(&self, validation_errors: &[ValidationError]) -> Result<()> {
+        self.print_error("=== VALIDATION FAILED ===")?;
+        self.print_error(&format!("Found {} issue(s) that prevent safe execution:", validation_errors.len()))?;
+        self.print_error("")?;
+
+        // Group errors by type for better organization
+        use std::collections::HashMap;
+        let mut errors_by_type: HashMap<String, Vec<&ValidationError>> = HashMap::new();
+        
+        for error in validation_errors {
+            let type_name = match error.error_type {
+                ValidationErrorType::FileNotFound => "Missing Files/Directories",
+                ValidationErrorType::PermissionDenied => "Permission Issues", 
+                ValidationErrorType::EncodingError => "Encoding/Binary File Issues",
+                ValidationErrorType::NotAFile => "File Type Issues",
+                ValidationErrorType::ReadOnlyFile => "Read-Only Files",
+                ValidationErrorType::TargetExists => "Target Conflicts",
+                ValidationErrorType::ParentDirectoryError => "Directory Creation Issues",
+                ValidationErrorType::ContentNotFound => "Content Issues",
+                ValidationErrorType::EmptyDirectoryIssue => "Directory Structure Issues",
+                _ => "Other Issues",
+            };
+            
+            errors_by_type.entry(type_name.to_string())
+                .or_insert_with(Vec::new)
+                .push(error);
+        }
+
+        // Report errors grouped by type
+        for (error_type, errors) in errors_by_type {
+            self.print_error(&format!("📋 {}: ({} issue(s))", error_type, errors.len()))?;
+            
+            for error in errors {
+                let relative_path = error.location.strip_prefix(&self.config.root_dir)
+                    .unwrap_or(&error.location);
+                
+                self.print_error(&format!("   📍 Location: {}", relative_path.display()))?;
+                self.print_error(&format!("      Problem: {}", error.message))?;
+                
+                if let Some(suggestion) = &error.suggestion {
+                    self.print_error(&format!("      Suggestion: {}", suggestion))?;
+                }
+                self.print_error("")?;
+            }
+        }
+
+        self.print_error("❌ Cannot proceed until these issues are resolved.")?;
+        Ok(())
+    }
+
+    /// Validate that the rename operations will not leave empty directories
+    /// This is a critical test - if it fails, our operation ordering is wrong
+    fn validate_no_empty_directories_remain(&self, rename_items: &[RenameItem], validation_errors: &mut Vec<ValidationError>) -> Result<()> {
+        use std::collections::{HashMap, HashSet};
+
+        // Build a map of all directories and what they contain
+        let mut directory_contents: HashMap<PathBuf, HashSet<PathBuf>> = HashMap::new();
+        
+        // Scan the existing directory structure
+        for entry in walkdir::WalkDir::new(&self.config.root_dir) {
+            let entry = entry?;
+            let path = entry.path();
+            
+            if let Some(parent) = path.parent() {
+                directory_contents.entry(parent.to_path_buf())
+                    .or_insert_with(HashSet::new)
+                    .insert(path.to_path_buf());
+            }
+        }
+
+        // Simulate the rename operations
+        for item in rename_items {
+            if item.original_path == item.new_path {
+                continue; // No-op
+            }
+
+            // Remove from old parent
+            if let Some(old_parent) = item.original_path.parent() {
+                if let Some(contents) = directory_contents.get_mut(old_parent) {
+                    contents.remove(&item.original_path);
+                }
+            }
+
+            // Add to new parent
+            if let Some(new_parent) = item.new_path.parent() {
+                directory_contents.entry(new_parent.to_path_buf())
+                    .or_insert_with(HashSet::new)
+                    .insert(item.new_path.clone());
+            }
+        }
+
+        // Check for directories that would become empty (excluding directories being renamed themselves)
+        let renamed_dirs: HashSet<PathBuf> = rename_items.iter()
+            .filter(|item| item.item_type == crate::ItemType::Directory)
+            .map(|item| item.original_path.clone())
+            .collect();
+
+        for (dir_path, contents) in &directory_contents {
+            // Skip root directory
+            if dir_path == &self.config.root_dir {
+                continue;
+            }
+
+            // Skip directories that are being renamed (they should become empty)
+            if renamed_dirs.contains(dir_path) {
+                continue;
+            }
+
+            // Check if directory would become empty
+            if contents.is_empty() {
+                let relative_path = dir_path.strip_prefix(&self.config.root_dir)
+                    .unwrap_or(dir_path);
+                    
+                validation_errors.push(ValidationError {
+                    location: dir_path.clone(),
+                    error_type: ValidationErrorType::EmptyDirectoryIssue,
+                    message: format!("CRITICAL: Directory would become empty after operation: {}. This indicates incorrect operation ordering.", 
+                                   relative_path.display()),
+                    suggestion: Some("This is a logic error in operation ordering - files should be processed before directories".to_string()),
+                });
+            }
         }
 
         Ok(())
@@ -618,26 +1105,17 @@ impl RenameEngine {
                         "total_changes": stats.total_changes(),
                         "errors": stats.errors.len()
                     },
-                    "dry_run": self.config.dry_run
                 });
                 println!("{}", serde_json::to_string_pretty(&report)?);
             }
             OutputFormat::Plain => {
-                if self.config.dry_run {
-                    println!("Dry run complete. No changes were made.");
-                } else {
-                    println!("Operation completed successfully.");
-                }
+                println!("Operation completed successfully.");
                 println!("Total changes: {}", stats.total_changes());
             }
             OutputFormat::Human => {
                 self.print_success("=== OPERATION COMPLETE ===")?;
-                if self.config.dry_run {
-                    self.print_info("Dry run complete. No changes were made.")?;
-                } else {
-                    self.print_success("Operation completed successfully!")?;
-                    self.print_info(&format!("Total changes applied: {}", stats.total_changes()))?;
-                }
+                self.print_success("Operation completed successfully!")?;
+                self.print_info(&format!("Total changes applied: {}", stats.total_changes()))?;
 
                 if !stats.errors.is_empty() {
                     self.print_warning(&format!("{} error(s) occurred:", stats.errors.len()))?;
@@ -663,9 +1141,6 @@ impl RenameEngine {
         self.print_info(&format!("New string: '{}'", self.config.new_string))?;
         self.print_info(&format!("Mode: {:?}", self.mode))?;
         
-        if self.config.dry_run {
-            self.print_warning("DRY RUN MODE: No changes will be made")?;
-        }
         
         if self.config.backup {
             self.print_info("Backup mode: Enabled")?;

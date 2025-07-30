@@ -97,8 +97,7 @@ fn test_basic_replacement() -> Result<()> {
         root_dir: temp_dir.path().to_path_buf(),
         old_string: "oldname".to_string(),
         new_string: "newname".to_string(),
-        dry_run: false,
-        force: true,
+        assume_yes: true,
         verbose: false,
         follow_symlinks: false,
         backup: false,
@@ -134,10 +133,10 @@ fn test_basic_replacement() -> Result<()> {
 }
 
 #[test]
-fn test_dry_run_mode() -> Result<()> {
+fn test_mandatory_validation() -> Result<()> {
     let temp_dir = TempDir::new()?;
     
-    // Create test structure
+    // Create test structure that will validate and execute successfully
     File::create(temp_dir.path().join("oldname_file.txt"))?
         .write_all(b"oldname content")?;
     fs::create_dir(temp_dir.path().join("oldname_dir"))?;
@@ -146,8 +145,7 @@ fn test_dry_run_mode() -> Result<()> {
         root_dir: temp_dir.path().to_path_buf(),
         old_string: "oldname".to_string(),
         new_string: "newname".to_string(),
-        dry_run: true,
-        force: true,
+        assume_yes: true,
         verbose: false,
         follow_symlinks: false,
         backup: false,
@@ -165,18 +163,19 @@ fn test_dry_run_mode() -> Result<()> {
         use_regex: false,
     };
 
-    // Run dry run
+    // Run operation (validation is now mandatory and automatic)
     run_refac(args)?;
 
-    // Verify nothing changed
-    assert!(temp_dir.path().join("oldname_file.txt").exists());
-    assert!(temp_dir.path().join("oldname_dir").exists());
-    assert!(!temp_dir.path().join("newname_file.txt").exists());
-    assert!(!temp_dir.path().join("newname_dir").exists());
+    // Verify changes were actually made (validation passed, so execution happened)
+    assert!(!temp_dir.path().join("oldname_file.txt").exists());
+    assert!(!temp_dir.path().join("oldname_dir").exists());
+    assert!(temp_dir.path().join("newname_file.txt").exists());
+    assert!(temp_dir.path().join("newname_dir").exists());
 
-    // Check content unchanged
-    let content = fs::read_to_string(temp_dir.path().join("oldname_file.txt"))?;
-    assert!(content.contains("oldname"));
+    // Check content was changed
+    let content = fs::read_to_string(temp_dir.path().join("newname_file.txt"))?;
+    assert!(content.contains("newname"));
+    assert!(!content.contains("oldname"));
 
     Ok(())
 }
@@ -194,8 +193,7 @@ fn test_case_sensitivity() -> Result<()> {
         root_dir: temp_dir.path().to_path_buf(),
         old_string: "OldName".to_string(),
         new_string: "NewName".to_string(),
-        dry_run: false,
-        force: true,
+        assume_yes: true,
         verbose: false,
         follow_symlinks: false,
         backup: false,
@@ -239,8 +237,7 @@ fn test_complex_nested_structure() -> Result<()> {
         root_dir: temp_dir.path().to_path_buf(),
         old_string: "oldname".to_string(),
         new_string: "newname".to_string(),
-        dry_run: false,
-        force: true,
+        assume_yes: true,
         verbose: false,
         follow_symlinks: false,
         backup: false,
@@ -290,8 +287,7 @@ fn test_files_only_mode() -> Result<()> {
         root_dir: temp_dir.path().to_path_buf(),
         old_string: "oldname".to_string(),
         new_string: "newname".to_string(),
-        dry_run: false,
-        force: true,
+        assume_yes: true,
         verbose: false,
         follow_symlinks: false,
         backup: false,
@@ -332,8 +328,7 @@ fn test_dirs_only_mode() -> Result<()> {
         root_dir: temp_dir.path().to_path_buf(),
         old_string: "oldname".to_string(),
         new_string: "newname".to_string(),
-        dry_run: false,
-        force: true,
+        assume_yes: true,
         verbose: false,
         follow_symlinks: false,
         backup: false,
@@ -377,8 +372,7 @@ fn test_names_only_mode() -> Result<()> {
         root_dir: temp_dir.path().to_path_buf(),
         old_string: "oldname".to_string(),
         new_string: "newname".to_string(),
-        dry_run: false,
-        force: true,
+        assume_yes: true,
         verbose: false,
         follow_symlinks: false,
         backup: false,
@@ -420,8 +414,7 @@ fn test_content_only_mode() -> Result<()> {
         root_dir: temp_dir.path().to_path_buf(),
         old_string: "oldname".to_string(),
         new_string: "newname".to_string(),
-        dry_run: false,
-        force: true,
+        assume_yes: true,
         verbose: false,
         follow_symlinks: false,
         backup: false,
@@ -468,8 +461,7 @@ fn test_binary_file_handling() -> Result<()> {
         root_dir: temp_dir.path().to_path_buf(),
         old_string: "oldname".to_string(),
         new_string: "newname".to_string(),
-        dry_run: false,
-        force: true,
+        assume_yes: true,
         verbose: false,
         follow_symlinks: false,
         backup: false,
@@ -522,8 +514,7 @@ fn test_max_depth() -> Result<()> {
         root_dir: temp_dir.path().to_path_buf(),
         old_string: "oldname".to_string(),
         new_string: "newname".to_string(),
-        dry_run: false,
-        force: true,
+        assume_yes: true,
         verbose: false,
         follow_symlinks: false,
         backup: false,
@@ -564,8 +555,7 @@ fn test_backup_functionality() -> Result<()> {
         root_dir: temp_dir.path().to_path_buf(),
         old_string: "oldname".to_string(),
         new_string: "newname".to_string(),
-        dry_run: false,
-        force: true,
+        assume_yes: true,
         verbose: false,
         follow_symlinks: false,
         backup: true,
@@ -630,8 +620,7 @@ fn test_multiple_occurrences() -> Result<()> {
         root_dir: temp_dir.path().to_path_buf(),
         old_string: "oldname".to_string(),
         new_string: "newname".to_string(),
-        dry_run: false,
-        force: true,
+        assume_yes: true,
         verbose: false,
         follow_symlinks: false,
         backup: false,
@@ -674,8 +663,7 @@ fn test_hidden_files() -> Result<()> {
         root_dir: temp_dir.path().to_path_buf(),
         old_string: "oldname".to_string(),
         new_string: "newname".to_string(),
-        dry_run: false,
-        force: true,
+        assume_yes: true,
         verbose: false,
         follow_symlinks: false,
         backup: false,
@@ -719,8 +707,7 @@ fn test_exclude_patterns() -> Result<()> {
         root_dir: temp_dir.path().to_path_buf(),
         old_string: "oldname".to_string(),
         new_string: "newname".to_string(),
-        dry_run: false,
-        force: true,
+        assume_yes: true,
         verbose: false,
         follow_symlinks: false,
         backup: false,
@@ -761,8 +748,7 @@ fn test_parallel_processing() -> Result<()> {
         root_dir: temp_dir.path().to_path_buf(),
         old_string: "oldname".to_string(),
         new_string: "newname".to_string(),
-        dry_run: false,
-        force: true,
+        assume_yes: true,
         verbose: false,
         follow_symlinks: false,
         backup: false,
