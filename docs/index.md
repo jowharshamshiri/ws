@@ -18,8 +18,8 @@ A tool suite for developers and system administrators that provides file operati
 Recursive string replacement with automatic encoding detection and safety features.
 
 ```bash
-# Preview changes before applying
-refac ./src "OldClassName" "NewClassName" --dry-run --verbose
+# Refac always previews changes and asks for confirmation
+refac ./src "OldClassName" "NewClassName" --verbose
 
 # Refactor with backups and specific file types
 refac ./src "OldApi" "NewApi" --backup --include "*.rs" --include "*.toml"
@@ -198,8 +198,8 @@ refac --help
 
 ### Development Refactoring Workflow
 ```bash
-# 1. Safe preview of changes
-refac ./src "OldApi" "NewApi" --dry-run --verbose
+# 1. Review changes (refac shows changes before applying)
+refac ./src "OldApi" "NewApi" --verbose
 
 # 2. Apply refactoring with backups
 refac ./src "OldApi" "NewApi" --backup

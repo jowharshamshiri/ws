@@ -89,7 +89,7 @@ scrap clean --days 7          # Remove items older than 1 week
 scrap clean --days 1          # Remove items older than 1 day
 
 # Preview what would be removed (dry run)
-scrap clean --days 30 --dry-run
+scrap clean --days 30 --verbose
 
 # Remove ALL items from .scrap folder
 scrap purge
@@ -174,7 +174,7 @@ scrap clean --days 0  # Remove everything
 
 ### Confirmation Prompts
 - **Destructive operations**: `scrap purge` asks for confirmation unless `--force` is used
-- **Preview mode**: `scrap clean --dry-run` shows what would be removed
+- **Preview mode**: `scrap clean --verbose` shows what would be removed
 - **Clear feedback**: Always shows what actions were taken
 
 ### Git Integration

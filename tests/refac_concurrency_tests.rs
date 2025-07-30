@@ -446,11 +446,11 @@ fn test_concurrent_directory_tree_modification() -> Result<()> {
 }
 
 // Helper function to create standardized test arguments
-fn create_test_args(root_dir: &Path, old_string: &str, new_string: &str) -> Args {
+fn create_test_args(root_dir: &Path, pattern: &str, substitute: &str) -> Args {
     Args {
         root_dir: root_dir.to_path_buf(),
-        old_string: old_string.to_string(),
-        new_string: new_string.to_string(),
+        pattern: pattern.to_string(),
+        substitute: substitute.to_string(),
         assume_yes: true,
         verbose: false,
         follow_symlinks: false,

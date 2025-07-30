@@ -58,7 +58,7 @@ st8 [SUBCOMMAND] [OPTIONS]
 
 | Option | Short | Description | Default |
 |--------|-------|-------------|---------|
-| `--dry-run` | `-d` | Show what would be changed without making changes | `false` |
+| `--assume-yes` | `-y` | Skip confirmation prompts (non-interactive mode) | `false` |
 | `--force` | `-f` | Skip confirmation prompt | `false` |
 | `--verbose` | `-v` | Show detailed output | `false` |
 | `--help` | `-h` | Show help information | |
@@ -282,8 +282,8 @@ refac . "old" "new" --format plain
 # Simple replacement
 refac . "oldname" "newname"
 
-# Preview changes
-refac . "oldname" "newname" --dry-run
+# Refac always shows changes before applying
+refac . "oldname" "newname"
 
 # Force without confirmation
 refac . "oldname" "newname" --force
@@ -338,7 +338,7 @@ refac . "old_\\w+" "new_name" --regex
 refac . "oldname" "newname" --backup
 
 # Verbose output for debugging
-refac . "oldname" "newname" --dry-run --verbose
+refac . "oldname" "newname" --verbose
 ```
 
 ### Output Formats
@@ -394,7 +394,7 @@ refac . "oldname" "newname" --progress never
 Use verbose mode to see detailed operation information:
 
 ```bash
-refac . "oldname" "newname" --dry-run --verbose
+refac . "oldname" "newname" --verbose
 ```
 
 This will show:
@@ -427,7 +427,7 @@ scrap list [--sort name|date|size]
 | Subcommand | Description | Options |
 |------------|-------------|---------|
 | `list` | List .scrap contents | `--sort name\|date\|size` |
-| `clean` | Remove old items | `--days N`, `--dry-run` |
+| `clean` | Remove old items | `--days N` |
 | `purge` | Remove all items | `--force` |
 | `find` | Search for patterns | `--content` |
 | `archive` | Create archive | `--output FILE`, `--remove` |
@@ -493,7 +493,7 @@ st8 [SUBCOMMAND] [OPTIONS]
 | `install` | Install git pre-commit hook | `--force` |
 | `uninstall` | Remove git hook | |
 | `show` | Display version information | |
-| `update` | Manually update version | `--force` |
+| `update` | Manually update version | `--no-git`, `--git-add` |
 | `status` | Show configuration status | |
 
 ### Configuration

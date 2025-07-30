@@ -25,8 +25,8 @@ refac <directory> <old_string> <new_string> [OPTIONS]
 
 ### First Steps
 ```bash
-# Preview changes first
-refac ./src "OldClassName" "NewClassName" --dry-run --verbose
+# Refac always previews changes and asks for confirmation
+refac ./src "OldClassName" "NewClassName" --verbose
 
 # Apply with backup for safety
 refac ./src "OldClassName" "NewClassName" --backup
@@ -58,21 +58,21 @@ INFO: Phase 3: Validating all operations...
 INFO: Validation passed: All operations can be performed safely.
 ```
 
-### 🔍 Comprehensive Dry-Run Mode
-Preview all changes with detailed impact analysis:
+### 🔍 Built-in Change Preview
+Refac always shows changes before applying them and asks for confirmation:
 
 ```bash
-# Basic dry-run
-refac . "oldname" "newname" --dry-run
+# Basic operation (shows preview automatically)
+refac . "oldname" "newname"
 
-# Verbose dry-run with detailed information
-refac . "oldname" "newname" --dry-run --verbose
+# Verbose output with detailed information
+refac . "oldname" "newname" --verbose
 
-# JSON output for scripting
-refac . "oldname" "newname" --dry-run --format json
+# JSON output for scripting (still shows preview)
+refac . "oldname" "newname" --format json
 ```
 
-**Dry-Run Output Example**:
+**Preview Output Example**:
 ```
 === CHANGE SUMMARY ===
 Content modifications: 15 file(s)
@@ -229,8 +229,8 @@ refac . "old/path" "new/path"   # Unix-like
 Migrate from old API to new API across entire codebase:
 
 ```bash
-# 1. Preview the migration
-refac ./src "old_api::Client" "new_api::Client" --dry-run --verbose
+# 1. Review the migration (refac shows changes before applying)
+refac ./src "old_api::Client" "new_api::Client" --verbose
 
 # 2. Update import statements
 refac ./src "use old_api" "use new_api" --content-only --include "*.rs"
@@ -359,7 +359,7 @@ refac . "oldname" "newname" --format json
     }
   ],
   "result": "success",
-  "dry_run": false,
+  "interactive": false,
   "execution_time_ms": 1234
 }
 ```
@@ -383,8 +383,7 @@ Total changes: 26
 ### Essential Options
 | Option | Short | Description |
 |--------|-------|-------------|
-| `--dry-run` | `-d` | Preview changes without applying them |
-| `--force` | `-f` | Skip confirmation prompt |
+| `--assume-yes` | `-y` | Skip confirmation prompts (non-interactive mode) |
 | `--verbose` | `-v` | Show detailed output |
 | `--backup` | `-b` | Create backup files before modification |
 
@@ -419,7 +418,7 @@ Total changes: 26
 ## Best Practices
 
 ### 🛡️ Safety First
-1. **Always Use Dry-Run**: Preview changes before applying
+1. **Review Changes Carefully**: Refac shows all changes before applying them
 2. **Use Backups**: Enable `--backup` for important files
 3. **Test on Copies**: Work on a copy of important directories
 4. **Version Control**: Ensure files are committed before major refactoring
@@ -435,7 +434,7 @@ Total changes: 26
 1. **Be Specific**: Use precise patterns to avoid unintended matches
 2. **Case Sensitivity**: Be aware of case-sensitive matching behavior
 3. **Escape Special Characters**: Quote strings with special characters
-4. **Test Patterns**: Use dry-run to verify pattern matching behavior
+4. **Test Patterns**: Use verbose mode to verify pattern matching behavior
 
 ### 📋 Workflow Integration
 1. **CI/CD Integration**: Use JSON output for automated workflows
@@ -459,7 +458,7 @@ sudo refac . "oldname" "newname"  # Use carefully
 **"No changes found" when changes expected**
 ```bash
 # Use verbose mode to see what's being processed
-refac . "oldname" "newname" --dry-run --verbose
+refac . "oldname" "newname" --verbose
 
 # Check case sensitivity
 refac . "OldName" "NewName"  # vs "oldname" "newname"
@@ -470,8 +469,8 @@ refac . "oldname" "newname" --include "*.txt" --verbose
 
 **"Naming collision detected"**
 ```bash
-# Review the collision report in dry-run mode
-refac . "oldname" "newname" --dry-run
+# Review the collision report (shown automatically)
+refac . "oldname" "newname" --verbose
 
 # Resolve conflicts manually before proceeding
 mv conflicting_file.txt conflicting_file_backup.txt
@@ -489,11 +488,11 @@ refac . "oldname" "newname" --verbose --content-only
 For detailed debugging information:
 
 ```bash
-# Maximum verbosity with dry-run
-refac . "oldname" "newname" --dry-run --verbose --progress always
+# Maximum verbosity (shows preview automatically)
+refac . "oldname" "newname" --verbose --progress always
 
 # Check specific file processing
-refac specific_file.txt "oldname" "newname" --dry-run --verbose
+refac specific_file.txt "oldname" "newname" --verbose
 ```
 
 ## Integration Examples
@@ -505,7 +504,7 @@ git checkout -b refactor-api-names
 git add .
 git commit -m "Checkpoint before refactoring"
 
-refac ./src "old_api" "new_api" --dry-run --verbose
+refac ./src "old_api" "new_api" --verbose
 refac ./src "old_api" "new_api" --backup
 
 git add .
@@ -528,8 +527,8 @@ refac . "old_target_name" "new_target_name" \
 # Automated refactoring script
 set -e
 
-# Validate refactoring first
-if refac ./src "$OLD_NAME" "$NEW_NAME" --dry-run --format json > refac_plan.json; then
+# Validate refactoring first (using assume-yes for non-interactive)
+if refac ./src "$OLD_NAME" "$NEW_NAME" --assume-yes --format json > refac_plan.json; then
     echo "Refactoring plan validated"
     
     # Apply changes

@@ -76,7 +76,7 @@ impl RenameEngine {
         args.validate().map_err(|e| anyhow::anyhow!(e))?;
 
         // Create configuration
-        let config = RenameConfig::new(&args.root_dir, args.old_string.clone(), args.new_string.clone())?
+        let config = RenameConfig::new(&args.root_dir, args.pattern.clone(), args.substitute.clone())?
             .with_assume_yes(args.assume_yes)
             .with_verbose(args.verbose)
             .with_follow_symlinks(args.follow_symlinks)
@@ -334,9 +334,9 @@ impl RenameEngine {
         let search_string = if self.ignore_case {
             // For case-insensitive search, we'd need to read the file content
             // This is simplified - a full implementation would use regex
-            &self.config.old_string.to_lowercase()
+            &self.config.pattern.to_lowercase()
         } else {
-            &self.config.old_string
+            &self.config.pattern
         };
 
         self.file_ops.file_contains_string(path, search_string)
@@ -349,9 +349,9 @@ impl RenameEngine {
             .ok_or_else(|| anyhow::anyhow!("Invalid file name: {}", path.display()))?;
 
         let contains_pattern = if self.ignore_case {
-            file_name.to_lowercase().contains(&self.config.old_string.to_lowercase())
+            file_name.to_lowercase().contains(&self.config.pattern.to_lowercase())
         } else {
-            file_name.contains(&self.config.old_string)
+            file_name.contains(&self.config.pattern)
         };
 
 
@@ -376,11 +376,11 @@ impl RenameEngine {
         let new_name = if self.ignore_case {
             // Case-insensitive replacement
             file_name.to_lowercase().replace(
-                &self.config.old_string.to_lowercase(),
-                &self.config.new_string
+                &self.config.pattern.to_lowercase(),
+                &self.config.substitute
             )
         } else {
-            utils::replace_all(file_name, &self.config.old_string, &self.config.new_string)
+            utils::replace_all(file_name, &self.config.pattern, &self.config.substitute)
         };
 
         let new_path = path.with_file_name(new_name);
@@ -449,7 +449,7 @@ impl RenameEngine {
         for file_path in content_files {
             // Count occurrences of old string in this file
             let content_count = match std::fs::read_to_string(file_path) {
-                Ok(content) => content.matches(&self.config.old_string).count(),
+                Ok(content) => content.matches(&self.config.pattern).count(),
                 Err(_) => 0, // Already validated during validation phase
             };
             
@@ -542,7 +542,7 @@ impl RenameEngine {
                         // Show content changes
                         if let Some(count) = change.content_changes {
                             self.print_verbose(&format!("   Content: {} occurrence(s) of '{}' → '{}'", 
-                                count, self.config.old_string, self.config.new_string))?;
+                                count, self.config.pattern, self.config.substitute))?;
                         }
                         
                         // Show rename operation
@@ -632,8 +632,8 @@ impl RenameEngine {
 
                 let result = file_ops_ref.replace_content(
                     file_path,
-                    &config_ref.old_string,
-                    &config_ref.new_string,
+                    &config_ref.pattern,
+                    &config_ref.substitute,
                 );
 
                 match result {
@@ -662,8 +662,8 @@ impl RenameEngine {
 
                 let result = file_ops_ref.replace_content(
                     file_path,
-                    &config_ref.old_string,
-                    &config_ref.new_string,
+                    &config_ref.pattern,
+                    &config_ref.substitute,
                 );
 
                 match result {
@@ -893,14 +893,14 @@ impl RenameEngine {
         }
 
         // Validate that file can be read and contains the target string using encoding-aware methods
-        match self.file_ops.file_contains_string(file_path, &self.config.old_string) {
+        match self.file_ops.file_contains_string(file_path, &self.config.pattern) {
             Ok(contains_string) => {
                 if !contains_string {
                     validation_errors.push(ValidationError {
                         location: file_path.clone(),
                         error_type: ValidationErrorType::ContentNotFound,
                         message: format!("File {} does not contain target string '{}'", 
-                                       relative_path.display(), self.config.old_string),
+                                       relative_path.display(), self.config.pattern),
                         suggestion: Some("File may have been modified since discovery phase".to_string()),
                     });
                 }
@@ -1169,8 +1169,8 @@ impl RenameEngine {
 
         self.print_success("=== NOMION REFAC TOOL ===")?;
         self.print_info(&format!("Root directory: {}", self.config.root_dir.display()))?;
-        self.print_info(&format!("Old string: '{}'", self.config.old_string))?;
-        self.print_info(&format!("New string: '{}'", self.config.new_string))?;
+        self.print_info(&format!("Pattern: '{}'", self.config.pattern))?;
+        self.print_info(&format!("Substitute: '{}'", self.config.substitute))?;
         self.print_info(&format!("Mode: {:?}", self.mode))?;
         
         

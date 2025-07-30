@@ -53,7 +53,7 @@ st8 --version      # Should show: st8 0.34.20950
 
 # Test basic functionality
 echo "hello world" | ldiff               # Test pattern recognition
-refac . "test" "test" --dry-run          # Test string replacement preview
+refac . "test" "test" --verbose          # Test string replacement preview
 st8 status                               # Test version management status
 ```
 
@@ -285,7 +285,7 @@ cargo test --release
 
 ```bash
 # Comprehensive functionality check
-refac . "test" "test" --dry-run --verbose     # Test refac with dry-run
+refac . "test" "test" --verbose     # Test refac (shows preview automatically)
 echo -e "line1\nline2\nline1" | ldiff        # Test ldiff pattern recognition
 scrap list                                    # Test scrap (should show empty or existing)
 st8 status                                    # Test st8 outside git repo

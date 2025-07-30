@@ -411,7 +411,7 @@ fn test_template_integration_with_update() {
     // Update version (which should render templates automatically)
     Command::cargo_bin("st8")
         .unwrap()
-        .args(["update", "--force"])
+        .args(["update", "--no-git"])
         .current_dir(temp_dir.path())
         .assert()
         .success()

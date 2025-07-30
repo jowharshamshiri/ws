@@ -48,8 +48,8 @@ pub enum ItemType {
 #[derive(Debug, Clone)]
 pub struct RenameConfig {
     pub root_dir: std::path::PathBuf,
-    pub old_string: String,
-    pub new_string: String,
+    pub pattern: String,
+    pub substitute: String,
     pub assume_yes: bool,
     pub verbose: bool,
     pub follow_symlinks: bool,
@@ -59,28 +59,25 @@ pub struct RenameConfig {
 impl RenameConfig {
     pub fn new<P: AsRef<Path>>(
         root_dir: P,
-        old_string: String,
-        new_string: String,
+        pattern: String,
+        substitute: String,
     ) -> Result<Self> {
         let root_path = root_dir.as_ref().canonicalize()
             .with_context(|| format!("Failed to resolve root directory: {}", root_dir.as_ref().display()))?;
         
-        if old_string.is_empty() {
-            anyhow::bail!("Old string cannot be empty");
+        if pattern.is_empty() {
+            anyhow::bail!("Pattern cannot be empty");
         }
         
-        if new_string.is_empty() {
-            anyhow::bail!("New string cannot be empty");
+        if substitute.is_empty() {
+            anyhow::bail!("Substitute cannot be empty");
         }
         
-        if new_string.contains('/') || new_string.contains('\\') {
-            anyhow::bail!("New string cannot contain path separators");
-        }
         
         Ok(Self {
             root_dir: root_path,
-            old_string,
-            new_string,
+            pattern,
+            substitute,
             assume_yes: false,
             verbose: false,
             follow_symlinks: false,
@@ -166,8 +163,8 @@ mod tests {
             "new".to_string(),
         ).unwrap();
         
-        assert_eq!(config.old_string, "old");
-        assert_eq!(config.new_string, "new");
+        assert_eq!(config.pattern, "old");
+        assert_eq!(config.substitute, "new");
         assert!(!config.assume_yes);
     }
     
@@ -181,9 +178,9 @@ mod tests {
         // Empty new string should fail
         assert!(RenameConfig::new(temp_dir.path(), "old".to_string(), "".to_string()).is_err());
         
-        // Path separator in new string should fail
-        assert!(RenameConfig::new(temp_dir.path(), "old".to_string(), "new/path".to_string()).is_err());
-        assert!(RenameConfig::new(temp_dir.path(), "old".to_string(), "new\\path".to_string()).is_err());
+        // Path separator in new string should be allowed at this level (CLI validation handles this)
+        assert!(RenameConfig::new(temp_dir.path(), "old".to_string(), "new/path".to_string()).is_ok());
+        assert!(RenameConfig::new(temp_dir.path(), "old".to_string(), "new\\path".to_string()).is_ok());
     }
     
     #[test]

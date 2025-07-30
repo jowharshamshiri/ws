@@ -95,8 +95,8 @@ fn test_basic_replacement() -> Result<()> {
     // Create args for renaming
     let args = Args {
         root_dir: temp_dir.path().to_path_buf(),
-        old_string: "oldname".to_string(),
-        new_string: "newname".to_string(),
+        pattern: "oldname".to_string(),
+        substitute: "newname".to_string(),
         assume_yes: true,
         verbose: false,
         follow_symlinks: false,
@@ -144,8 +144,8 @@ fn test_mandatory_validation() -> Result<()> {
 
     let args = Args {
         root_dir: temp_dir.path().to_path_buf(),
-        old_string: "oldname".to_string(),
-        new_string: "newname".to_string(),
+        pattern: "oldname".to_string(),
+        substitute: "newname".to_string(),
         assume_yes: true,
         verbose: false,
         follow_symlinks: false,
@@ -193,8 +193,8 @@ fn test_case_sensitivity() -> Result<()> {
 
     let args = Args {
         root_dir: temp_dir.path().to_path_buf(),
-        old_string: "OldName".to_string(),
-        new_string: "NewName".to_string(),
+        pattern: "OldName".to_string(),
+        substitute: "NewName".to_string(),
         assume_yes: true,
         verbose: false,
         follow_symlinks: false,
@@ -238,8 +238,8 @@ fn test_complex_nested_structure() -> Result<()> {
 
     let args = Args {
         root_dir: temp_dir.path().to_path_buf(),
-        old_string: "oldname".to_string(),
-        new_string: "newname".to_string(),
+        pattern: "oldname".to_string(),
+        substitute: "newname".to_string(),
         assume_yes: true,
         verbose: false,
         follow_symlinks: false,
@@ -289,8 +289,8 @@ fn test_files_only_mode() -> Result<()> {
 
     let args = Args {
         root_dir: temp_dir.path().to_path_buf(),
-        old_string: "oldname".to_string(),
-        new_string: "newname".to_string(),
+        pattern: "oldname".to_string(),
+        substitute: "newname".to_string(),
         assume_yes: true,
         verbose: false,
         follow_symlinks: false,
@@ -331,8 +331,8 @@ fn test_dirs_only_mode() -> Result<()> {
 
     let args = Args {
         root_dir: temp_dir.path().to_path_buf(),
-        old_string: "oldname".to_string(),
-        new_string: "newname".to_string(),
+        pattern: "oldname".to_string(),
+        substitute: "newname".to_string(),
         assume_yes: true,
         verbose: false,
         follow_symlinks: false,
@@ -376,8 +376,8 @@ fn test_names_only_mode() -> Result<()> {
 
     let args = Args {
         root_dir: temp_dir.path().to_path_buf(),
-        old_string: "oldname".to_string(),
-        new_string: "newname".to_string(),
+        pattern: "oldname".to_string(),
+        substitute: "newname".to_string(),
         assume_yes: true,
         verbose: false,
         follow_symlinks: false,
@@ -419,8 +419,8 @@ fn test_content_only_mode() -> Result<()> {
 
     let args = Args {
         root_dir: temp_dir.path().to_path_buf(),
-        old_string: "oldname".to_string(),
-        new_string: "newname".to_string(),
+        pattern: "oldname".to_string(),
+        substitute: "newname".to_string(),
         assume_yes: true,
         verbose: false,
         follow_symlinks: false,
@@ -467,8 +467,8 @@ fn test_binary_file_handling() -> Result<()> {
 
     let args = Args {
         root_dir: temp_dir.path().to_path_buf(),
-        old_string: "oldname".to_string(),
-        new_string: "newname".to_string(),
+        pattern: "oldname".to_string(),
+        substitute: "newname".to_string(),
         assume_yes: true,
         verbose: false,
         follow_symlinks: false,
@@ -521,8 +521,8 @@ fn test_max_depth() -> Result<()> {
 
     let args = Args {
         root_dir: temp_dir.path().to_path_buf(),
-        old_string: "oldname".to_string(),
-        new_string: "newname".to_string(),
+        pattern: "oldname".to_string(),
+        substitute: "newname".to_string(),
         assume_yes: true,
         verbose: false,
         follow_symlinks: false,
@@ -563,8 +563,8 @@ fn test_backup_functionality() -> Result<()> {
 
     let args = Args {
         root_dir: temp_dir.path().to_path_buf(),
-        old_string: "oldname".to_string(),
-        new_string: "newname".to_string(),
+        pattern: "oldname".to_string(),
+        substitute: "newname".to_string(),
         assume_yes: true,
         verbose: false,
         follow_symlinks: false,
@@ -629,8 +629,8 @@ fn test_multiple_occurrences() -> Result<()> {
 
     let args = Args {
         root_dir: temp_dir.path().to_path_buf(),
-        old_string: "oldname".to_string(),
-        new_string: "newname".to_string(),
+        pattern: "oldname".to_string(),
+        substitute: "newname".to_string(),
         assume_yes: true,
         verbose: false,
         follow_symlinks: false,
@@ -673,8 +673,8 @@ fn test_hidden_files() -> Result<()> {
 
     let args = Args {
         root_dir: temp_dir.path().to_path_buf(),
-        old_string: "oldname".to_string(),
-        new_string: "newname".to_string(),
+        pattern: "oldname".to_string(),
+        substitute: "newname".to_string(),
         assume_yes: true,
         verbose: false,
         follow_symlinks: false,
@@ -718,8 +718,8 @@ fn test_exclude_patterns() -> Result<()> {
 
     let args = Args {
         root_dir: temp_dir.path().to_path_buf(),
-        old_string: "oldname".to_string(),
-        new_string: "newname".to_string(),
+        pattern: "oldname".to_string(),
+        substitute: "newname".to_string(),
         assume_yes: true,
         verbose: false,
         follow_symlinks: false,
@@ -760,8 +760,8 @@ fn test_parallel_processing() -> Result<()> {
 
     let args = Args {
         root_dir: temp_dir.path().to_path_buf(),
-        old_string: "oldname".to_string(),
-        new_string: "newname".to_string(),
+        pattern: "oldname".to_string(),
+        substitute: "newname".to_string(),
         assume_yes: true,
         verbose: false,
         follow_symlinks: false,
@@ -813,8 +813,8 @@ fn test_include_hidden_flag() -> Result<()> {
 
     let args = Args {
         root_dir: temp_dir.path().to_path_buf(),
-        old_string: "oldname".to_string(),
-        new_string: "newname".to_string(),
+        pattern: "oldname".to_string(),
+        substitute: "newname".to_string(),
         assume_yes: true,
         verbose: false,
         follow_symlinks: false,
@@ -871,8 +871,8 @@ fn test_include_hidden_flag_disabled() -> Result<()> {
 
     let args = Args {
         root_dir: temp_dir.path().to_path_buf(),
-        old_string: "oldname".to_string(),
-        new_string: "newname".to_string(),
+        pattern: "oldname".to_string(),
+        substitute: "newname".to_string(),
         assume_yes: true,
         verbose: false,
         follow_symlinks: false,
@@ -919,8 +919,8 @@ fn test_include_hidden_with_patterns() -> Result<()> {
 
     let args = Args {
         root_dir: temp_dir.path().to_path_buf(),
-        old_string: "oldname".to_string(),
-        new_string: "newname".to_string(),
+        pattern: "oldname".to_string(),
+        substitute: "newname".to_string(),
         assume_yes: true,
         verbose: false,
         follow_symlinks: false,
@@ -950,5 +950,92 @@ fn test_include_hidden_with_patterns() -> Result<()> {
     assert!(temp_dir.path().join(".other_oldname.log").exists());
     assert!(!temp_dir.path().join(".other_newname.log").exists());
 
+    Ok(())
+}
+
+#[test]
+fn test_content_only_allows_path_separators() -> Result<()> {
+    let temp_dir = TempDir::new()?;
+    
+    // Create test file with content
+    let test_file = temp_dir.path().join("test.txt");
+    File::create(&test_file)?
+        .write_all(b"old content here\nmore old content")?;
+    
+    // Test that forward slash is allowed in content-only mode
+    let args = Args {
+        root_dir: temp_dir.path().to_path_buf(),
+        pattern: "old".to_string(),
+        substitute: "new/path".to_string(),
+        assume_yes: true,
+        verbose: false,
+        follow_symlinks: false,
+        backup: false,
+        files_only: false,
+        dirs_only: false,
+        names_only: false,
+        content_only: true,
+        max_depth: 0,
+        exclude_patterns: vec![],
+        include_patterns: vec![],
+        format: nomion::cli::OutputFormat::Plain,
+        threads: 1,
+        progress: nomion::cli::ProgressMode::Never,
+        ignore_case: false,
+        use_regex: false,
+        include_hidden: false,
+    };
+    
+    run_refac(args)?;
+    
+    // Check that content was replaced correctly
+    let content = fs::read_to_string(&test_file)?;
+    assert!(content.contains("new/path content here"));
+    assert!(content.contains("more new/path content"));
+    assert!(!content.contains("old content"));
+    
+    // Verify file name wasn't changed
+    assert!(test_file.exists());
+    
+    Ok(())
+}
+
+#[test]
+fn test_mutual_exclusion_validation() -> Result<()> {
+    let temp_dir = TempDir::new()?;
+    
+    // Create test file 
+    let test_file = temp_dir.path().join("test.txt");
+    File::create(&test_file)?
+        .write_all(b"content")?;
+    
+    // Test that content-only and names-only are mutually exclusive
+    let args = Args {
+        root_dir: temp_dir.path().to_path_buf(),
+        pattern: "test".to_string(),
+        substitute: "new".to_string(),
+        assume_yes: true,
+        verbose: false,
+        follow_symlinks: false,
+        backup: false,
+        files_only: false,
+        dirs_only: false,
+        names_only: true,    // Both flags set
+        content_only: true,  // Both flags set
+        max_depth: 0,
+        exclude_patterns: vec![],
+        include_patterns: vec![],
+        format: nomion::cli::OutputFormat::Plain,
+        threads: 1,
+        progress: nomion::cli::ProgressMode::Never,
+        ignore_case: false,
+        use_regex: false,
+        include_hidden: false,
+    };
+    
+    // Should fail during validation
+    let result = run_refac(args);
+    assert!(result.is_err());
+    
     Ok(())
 }

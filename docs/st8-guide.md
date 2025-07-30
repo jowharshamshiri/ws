@@ -102,8 +102,11 @@ Current Version Information:
 # Update version file manually
 st8 update
 
-# Force update (even outside git repo)
-st8 update --force
+# Update even outside git repo
+st8 update --no-git
+
+# Update and automatically stage changed files
+st8 update --git-add
 ```
 
 ### Check Status
@@ -150,7 +153,8 @@ If you prefer manual control:
 
 1. Configure: Set `"enabled": false` in `.st8.json`
 2. Update manually: Run `st8 update` when needed
-3. Commit the version file changes manually
+3. Optionally use `st8 update --git-add` to automatically stage updated files
+4. Commit the version file changes manually
 
 ### CI/CD Integration
 
@@ -301,18 +305,24 @@ rm version.txt
 
 ## Logging
 
-St8 logs all actions to `.st8.log` in your repository root:
+St8 logs all actions to `.nomion/st8/logs/st8.log` in your repository:
 
 ```bash
 # View recent actions
-tail -f .st8.log
+tail -f .nomion/st8/logs/st8.log
+
+# Monitor in real-time
+tail -f .nomion/st8/logs/st8.log
 ```
 
 Log format:
 ```
 [2024-07-19 14:30:15] Created new pre-commit hook: /path/to/repo/.git/hooks/pre-commit
 [2024-07-19 14:30:45] Updated version to: 1.2.3.156 (file: version.txt)
+[2024-07-19 14:31:02] Rendered template: src/version.h
 ```
+
+The log file is automatically created when st8 performs operations and is stored in the centralized `.nomion` state directory along with templates and other tool configurations.
 
 ## Best Practices
 

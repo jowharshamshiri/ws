@@ -42,8 +42,8 @@ impl FileOperations {
     pub fn replace_content<P: AsRef<Path>>(
         &self,
         file_path: P,
-        old_string: &str,
-        new_string: &str,
+        pattern: &str,
+        substitute: &str,
     ) -> Result<bool> {
         let file_path = file_path.as_ref();
         
@@ -64,7 +64,7 @@ impl FileOperations {
             .with_context(|| format!("Failed to decode file with detected encoding: {}", file_path.display()))?;
 
         // Check if the file contains the target string
-        if !content.contains(old_string) {
+        if !content.contains(pattern) {
             return Ok(false);
         }
 
@@ -74,7 +74,7 @@ impl FileOperations {
         }
 
         // Replace content
-        let new_content = content.replace(old_string, new_string);
+        let new_content = content.replace(pattern, substitute);
 
         // Encode back to the original encoding and write
         let encoded_bytes = self.encode_with_encoding(&new_content, &file_encoding)
@@ -90,8 +90,8 @@ impl FileOperations {
     pub fn replace_content_streaming<P: AsRef<Path>>(
         &self,
         file_path: P,
-        old_string: &str,
-        new_string: &str,
+        pattern: &str,
+        substitute: &str,
     ) -> Result<bool> {
         let file_path = file_path.as_ref();
         
@@ -122,9 +122,9 @@ impl FileOperations {
                     format!("Failed to read line from file: {}", file_path.display())
                 })?;
                 
-                let new_line = if line.contains(old_string) {
+                let new_line = if line.contains(pattern) {
                     modified = true;
-                    line.replace(old_string, new_string)
+                    line.replace(pattern, substitute)
                 } else {
                     line
                 };

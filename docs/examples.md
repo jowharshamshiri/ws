@@ -22,7 +22,7 @@ git tag v1.0  # Mark current state
 scrap temp_files/ debug_logs/ old_tests/
 
 # 3. Preview and apply refactoring
-refac ./src "UserManager" "AccountManager" --dry-run
+refac ./src "UserManager" "AccountManager" --verbose
 refac ./src "UserManager" "AccountManager" --include "*.rs" --include "*.toml"
 
 # 4. Commit changes (auto-bumps version)
@@ -105,7 +105,7 @@ scrap find "*.log"
 scrap find "test" --content  # Search in file contents
 
 # Clean up old items (older than 7 days) permanently
-scrap clean --days 7 --dry-run
+scrap clean --days 7 --verbose
 scrap clean --days 7
 ```
 
@@ -233,7 +233,7 @@ cp target/release/myapp "releases/myapp-$VERSION"
 
 ```bash
 # Preview the changes first
-refac ./src "oldVariableName" "newVariableName" --dry-run
+refac ./src "oldVariableName" "newVariableName" --verbose
 
 # Apply the changes
 refac ./src "oldVariableName" "newVariableName"
@@ -263,7 +263,7 @@ refac . "api.old-service.com" "api.new-service.com" \
 
 ```bash
 # Rename both files and their contents
-refac . "MyApp" "AwesomeApp" --dry-run
+refac . "MyApp" "AwesomeApp" --verbose
 
 # Exclude certain directories
 refac . "MyApp" "AwesomeApp" \
@@ -404,7 +404,7 @@ refac ./src "old_table" "new_table" \
 ```bash
 # Preview changes across multiple file types
 refac ./project "old_column_name" "new_column_name" \
-  --dry-run \
+  --verbose \
   --include "*.sql" \
   --include "*.py" \
   --include "*.js"
@@ -525,7 +525,7 @@ cp -r "$PROJECT_DIR" "${PROJECT_DIR}.backup"
 
 # Step 2: Dry run
 echo "Previewing changes..."
-refac "$PROJECT_DIR" "$OLD_NAME" "$NEW_NAME" --dry-run --verbose
+refac "$PROJECT_DIR" "$OLD_NAME" "$NEW_NAME" --verbose --verbose
 
 read -p "Continue with these changes? (y/N): " confirm
 if [ "$confirm" != "y" ]; then
@@ -649,7 +649,7 @@ jobs:
       - name: Check for deprecated patterns
         run: |
           # Check for deprecated function names
-          if refac . "deprecated_function" "new_function" --dry-run --format json | jq -e '.summary.total_changes > 0'; then
+          if refac . "deprecated_function" "new_function" --verbose --format json | jq -e '.summary.total_changes > 0'; then
             echo "Found deprecated patterns!"
             exit 1
           fi
@@ -664,17 +664,17 @@ jobs:
 # .git/hooks/pre-commit
 
 # Check for debug statements
-if refac . "console.log" "" --dry-run --format json | jq -e '.summary.total_changes > 0' >/dev/null; then
+if refac . "console.log" "" --verbose --format json | jq -e '.summary.total_changes > 0' >/dev/null; then
   echo "Error: Found console.log statements in code"
-  refac . "console.log" "" --dry-run --include "*.js" --include "*.ts"
+  refac . "console.log" "" --verbose --include "*.js" --include "*.ts"
   echo "Please remove debug statements before committing"
   exit 1
 fi
 
 # Check for TODO comments (warning only)
-if refac . "TODO" "" --dry-run --format json | jq -e '.summary.total_changes > 0' >/dev/null; then
+if refac . "TODO" "" --verbose --format json | jq -e '.summary.total_changes > 0' >/dev/null; then
   echo "Warning: Found TODO comments in code"
-  refac . "TODO" "" --dry-run --include "*.rs" --include "*.js" --include "*.py"
+  refac . "TODO" "" --verbose --include "*.rs" --include "*.js" --include "*.py"
 fi
 
 exit 0
@@ -688,21 +688,21 @@ exit 0
 
 ```bash
 # Use verbose mode to see what's happening
-refac . "search_term" "replacement" --dry-run --verbose
+refac . "search_term" "replacement" --verbose --verbose
 
 # Check if the term exists
 grep -r "search_term" . --include="*.rs"
 
 # Verify include/exclude patterns
 refac . "search_term" "replacement" \
-  --dry-run \
+  --verbose \
   --verbose \
   --include "*" \
   --exclude "target/*"
 
 # Test with broader patterns
 refac . "search_term" "replacement" \
-  --dry-run \
+  --verbose \
   --ignore-case \
   --include "*.rs"
 ```
@@ -766,7 +766,7 @@ echo "Workspace cleaned and archived"
 
 # 3. Preview changes
 echo "Previewing changes..."
-refac . "$OLD_NAME" "$NEW_NAME" --dry-run --verbose
+refac . "$OLD_NAME" "$NEW_NAME" --verbose --verbose
 
 # 4. Confirm with user
 read -p "Apply these changes? (y/N) " -n 1 -r
@@ -860,7 +860,7 @@ scrap archive "backup-$(date +%s).tar.gz"
 
 # Preview changes
 echo "Previewing changes..."
-refac . "$OLD" "$NEW" --dry-run
+refac . "$OLD" "$NEW" --verbose
 
 # Apply with confirmation
 read -p "Apply changes? (y/N) " -n 1 -r

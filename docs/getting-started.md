@@ -56,7 +56,7 @@ Performs recursive string replacement in file names and contents:
 refac <DIRECTORY> <OLD_STRING> <NEW_STRING> [OPTIONS]
 
 # Always preview first
-refac . "oldFunction" "newFunction" --dry-run
+refac . "oldFunction" "newFunction" --verbose
 ```
 
 ### 🗑️ Scrap - Local Trash
@@ -135,7 +135,7 @@ git commit -m "Initial commit"
 
 ```bash
 # Preview changes
-refac . "oldFunction" "newFunction" --dry-run
+refac . "oldFunction" "newFunction" --verbose
 
 # Apply changes
 refac . "oldFunction" "newFunction"
@@ -200,7 +200,7 @@ git checkout -b feature-branch
 scrap temp.txt debug.log old_tests/
 
 # 3. Refactor code as needed
-refac ./src "OldClass" "NewClass" --dry-run
+refac ./src "OldClass" "NewClass" --verbose
 refac ./src "OldClass" "NewClass"
 
 # 4. Set up automatic versioning
@@ -250,7 +250,7 @@ refac . "oldname" "newname" --exclude "target/*" --exclude "*.log"
 
 ```bash
 # Preview refac changes
-refac . "oldname" "newname" --dry-run --verbose
+refac . "oldname" "newname" --verbose --verbose
 
 # Test scrap operations
 scrap --help  # Review options before using
@@ -302,7 +302,7 @@ st8 install
 git tag v1.0  # Mark pre-refactor state
 
 # 3. Rename classes and update imports
-refac ./src "UserController" "AccountController" --dry-run
+refac ./src "UserController" "AccountController" --verbose
 refac ./src "UserController" "AccountController" --include "*.rs"
 
 # 4. Update configuration files  
@@ -395,7 +395,7 @@ echo '{"version_file": "src/version.rs"}' > .st8.json
 ### 1. Tool-Specific Guidelines
 
 **Refac:**
-- Always use `--dry-run` first
+- Always use `--verbose` first
 - Be specific with include/exclude patterns
 - Use version control before major changes
 
@@ -415,7 +415,7 @@ echo '{"version_file": "src/version.rs"}' > .st8.json
 # Safe development cycle
 git checkout -b feature-branch
 scrap temp_files/ debug_logs/         # Clear workspace
-refac ./src "OldAPI" "NewAPI" --dry-run  # Preview changes
+refac ./src "OldAPI" "NewAPI" --verbose  # Preview changes
 refac ./src "OldAPI" "NewAPI"         # Apply changes
 st8 install                       # Track versions
 git add . && git commit -m "Refactor API"  # Auto-version
@@ -440,7 +440,7 @@ unscrap --help
 st8 --help
 
 # Verbose output for debugging
-refac . "old" "new" --dry-run --verbose
+refac . "old" "new" --verbose --verbose
 scrap find "pattern" --verbose
 st8 status
 ```
@@ -480,7 +480,7 @@ st8 status
 
 ```bash
 # === REFAC - String Replacement ===
-refac . "old" "new" --dry-run        # Preview changes
+refac . "old" "new" --verbose        # Preview changes
 refac . "old" "new" --include "*.rs" # Specific files
 refac . "old" "new" --names-only     # Rename only
 

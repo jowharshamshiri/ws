@@ -34,11 +34,14 @@ enum Commands {
     /// Show current version information without updating
     Show,
     
-    /// Update version manually (normally done automatically via git hook)
+    /// Update project state (version, templates) manually (normally done automatically via git hook)
     Update {
-        /// Force update even if not in a git repository
-        #[arg(short, long)]
-        force: bool,
+        /// Run update even when not in a git repository
+        #[arg(long)]
+        no_git: bool,
+        /// Add updated files to git staging area after state update
+        #[arg(long)]
+        git_add: bool,
     },
     
     /// Show st8 status and configuration
@@ -110,13 +113,13 @@ fn run() -> Result<()> {
         Some(Commands::Install { force }) => install_hook(force)?,
         Some(Commands::Uninstall) => uninstall_hook()?,
         Some(Commands::Show) => show_version()?,
-        Some(Commands::Update { force }) => update_version(force)?,
+        Some(Commands::Update { no_git, git_add }) => update_state(no_git, git_add)?,
         Some(Commands::Status) => show_status()?,
         Some(Commands::Template { action }) => handle_template_command(action)?,
         None => {
-            // Default behavior: install hook if not installed, otherwise update version
+            // Default behavior: install hook if not installed, otherwise update state
             if is_hook_installed()? {
-                update_version(false)?;
+                update_state(false, false)?;
             } else {
                 install_hook(false)?;
             }
@@ -154,7 +157,7 @@ fn install_hook(force: bool) -> Result<()> {
         .context("Failed to get current executable path")?;
     
     let st8_block = format!(
-        "#!/bin/bash\n# === ST8 BLOCK START ===\n# DO NOT EDIT THIS BLOCK MANUALLY\n# Use 'st8 uninstall' to remove this hook\n{} update --force\n# === ST8 BLOCK END ===\n",
+        "#!/bin/bash\n# === ST8 BLOCK START ===\n# DO NOT EDIT THIS BLOCK MANUALLY\n# Use 'st8 uninstall' to remove this hook\n{} update --git-add\n# === ST8 BLOCK END ===\n",
         current_exe.display()
     );
     
@@ -256,9 +259,9 @@ fn show_version() -> Result<()> {
     Ok(())
 }
 
-fn update_version(force: bool) -> Result<()> {
-    if !force && !is_git_repository() {
-        anyhow::bail!("Not in a git repository. Use --force to update anyway.");
+fn update_state(no_git: bool, git_add: bool) -> Result<()> {
+    if !no_git && !is_git_repository() {
+        anyhow::bail!("Not in a git repository. Use --no-git to update anyway.");
     }
     
     let git_root = if is_git_repository() {
@@ -281,6 +284,8 @@ fn update_version(force: bool) -> Result<()> {
         println!("{} Updated version to: {}", "Success".green(), version_info.full_version);
         log_action(&format!("Updated version to: {} (file: {})", version_info.full_version, config.version_file));
         
+        let mut files_to_add = vec![config.version_file.clone()];
+        
         // Render templates after version update
         if let Ok(project_root) = get_project_root() {
             if let Ok(state) = NomionState::load(&project_root) {
@@ -292,6 +297,7 @@ fn update_version(force: bool) -> Result<()> {
                                 for file in &rendered_files {
                                     println!("  • {}", file);
                                     log_action(&format!("Rendered template: {}", file));
+                                    files_to_add.push(file.clone());
                                 }
                             }
                         }
@@ -299,6 +305,25 @@ fn update_version(force: bool) -> Result<()> {
                             eprintln!("{} Failed to render templates: {}", "Warning".yellow(), e);
                         }
                     }
+                }
+            }
+        }
+        
+        // Add files to git if requested and in git repository
+        if git_add && is_git_repository() {
+            let git_add_result = add_files_to_git(&files_to_add);
+            match git_add_result {
+                Ok(added_files) => {
+                    if !added_files.is_empty() {
+                        println!("{} Added {} file(s) to git:", "Info".blue(), added_files.len());
+                        for file in &added_files {
+                            println!("  • {}", file);
+                            log_action(&format!("Added to git: {}", file));
+                        }
+                    }
+                }
+                Err(e) => {
+                    eprintln!("{} Failed to add files to git: {}", "Warning".yellow(), e);
                 }
             }
         }
@@ -578,14 +603,21 @@ fn log_action(message: &str) {
     let timestamp = chrono::Local::now().format("%Y-%m-%d %H:%M:%S");
     let log_entry = format!("[{}] {}\n", timestamp, message);
     
-    // Try to append to log file, but don't fail if we can't
+    // Try to append to log file in .nomion/st8/logs/, but don't fail if we can't
     if let Ok(git_root) = get_git_root() {
-        let log_file = git_root.join(".st8.log");
-        let _ = OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(&log_file)
-            .and_then(|mut file| file.write_all(log_entry.as_bytes()));
+        if let Ok(state) = NomionState::load(&git_root) {
+            let logs_dir = state.tool_dir("st8").join("logs");
+            let log_file = logs_dir.join("st8.log");
+            
+            // Ensure logs directory exists
+            let _ = std::fs::create_dir_all(&logs_dir);
+            
+            let _ = OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(&log_file)
+                .and_then(|mut file| file.write_all(log_entry.as_bytes()));
+        }
     }
 }
 
@@ -615,6 +647,31 @@ fn get_git_root() -> Result<PathBuf> {
     Ok(PathBuf::from(root))
 }
 
+fn add_files_to_git(files: &[String]) -> Result<Vec<String>> {
+    let mut added_files = Vec::new();
+    
+    for file in files {
+        // Check if file exists before trying to add it
+        if std::path::Path::new(file).exists() {
+            let output = Command::new("git")
+                .args(["add", file])
+                .output()
+                .with_context(|| format!("Failed to run git add for file: {}", file))?;
+
+            if output.status.success() {
+                added_files.push(file.clone());
+            } else {
+                let stderr = String::from_utf8_lossy(&output.stderr);
+                eprintln!("{} Failed to add file '{}' to git: {}", "Warning".yellow(), file, stderr.trim());
+            }
+        } else {
+            eprintln!("{} File '{}' does not exist, skipping git add", "Warning".yellow(), file);
+        }
+    }
+    
+    Ok(added_files)
+}
+
 
 #[cfg(test)]
 mod tests {
@@ -628,7 +685,7 @@ echo "Before st8"
 
 # === ST8 BLOCK START ===
 # DO NOT EDIT THIS BLOCK MANUALLY
-/path/to/st8 update --force
+/path/to/st8 update --git-add
 # === ST8 BLOCK END ===
 
 echo "After st8"
@@ -644,7 +701,7 @@ echo "After st8"
     fn test_remove_st8_block_only() {
         let content = r#"#!/bin/bash
 # === ST8 BLOCK START ===
-/path/to/st8 update --force
+/path/to/st8 update --git-add
 # === ST8 BLOCK END ===
 "#;
         

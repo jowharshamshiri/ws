@@ -56,7 +56,7 @@ refac . "oldname" "newname"
 refac ./src "OldClass" "NewClass"
 
 # Preview changes first (recommended)
-refac . "oldname" "newname" --dry-run
+refac . "oldname" "newname" --verbose
 ```
 
 ## Operation Modes
@@ -92,10 +92,10 @@ Always preview changes before applying them:
 
 ```bash
 # See what would be changed
-refac . "oldname" "newname" --dry-run
+refac . "oldname" "newname" --verbose
 
 # Dry run with verbose output
-refac . "oldname" "newname" --dry-run --verbose
+refac . "oldname" "newname" --verbose --verbose
 ```
 
 ### Backup Files
@@ -248,7 +248,7 @@ Simple text output without colors or special formatting.
 
 ```bash
 # Rename a class throughout a project
-refac ./src "UserManager" "AccountManager" --dry-run
+refac ./src "UserManager" "AccountManager" --verbose
 
 # Update variable names in specific files
 refac ./src "oldVar" "newVar" --include "*.js" --include "*.ts"
@@ -285,8 +285,8 @@ refac ./src "old_column" "new_column" --include "*.py" --include "*.sql"
 ### 1. Always Test First
 
 ```bash
-# Preview changes with dry-run
-refac . "oldname" "newname" --dry-run --verbose
+# Review changes carefully (refac shows preview automatically)
+refac . "oldname" "newname" --verbose --verbose
 
 # Check the output carefully before proceeding
 refac . "oldname" "newname"
@@ -345,13 +345,13 @@ refac . "oldname" "newname" --include "src/**" --exclude "tests/**"
 
 ```bash
 # Use verbose mode to see what's being processed
-refac . "oldname" "newname" --dry-run --verbose
+refac . "oldname" "newname" --verbose --verbose
 
 # Check if the string exists
 grep -r "oldname" . --include="*.rs"
 
 # Verify include/exclude patterns
-refac . "oldname" "newname" --include "*" --dry-run
+refac . "oldname" "newname" --include "*" --verbose
 ```
 
 ### Permission Errors
@@ -391,7 +391,7 @@ Create a pre-commit hook to validate changes:
 ```bash
 #!/bin/bash
 # .git/hooks/pre-commit
-refac . "debug_print" "logger.debug" --dry-run --format json | \
+refac . "debug_print" "logger.debug" --verbose --format json | \
   jq '.summary.total_changes > 0' && \
   echo "Warning: debug prints found"
 ```
@@ -400,7 +400,7 @@ refac . "debug_print" "logger.debug" --dry-run --format json | \
 
 ```bash
 # Check for outdated patterns
-refac . "old_api_url" "new_api_url" --dry-run --format json | \
+refac . "old_api_url" "new_api_url" --verbose --format json | \
   jq '.summary.total_changes > 0' && exit 1
 ```
 
@@ -617,7 +617,7 @@ st8 show
 st8 update
 
 # Force update (outside git repo)
-st8 update --force
+st8 update --no-git
 
 # Check configuration and status
 st8 status
@@ -670,7 +670,7 @@ st8 show
 cat version.txt
 
 # Manual version check
-st8 update --force
+st8 update --no-git
 ```
 
 For detailed information, see the [St8 Tool Guide]({{ '/st8-guide/' | relative_url }}).
@@ -683,14 +683,14 @@ For detailed information, see the [St8 Tool Guide]({{ '/st8-guide/' | relative_u
 # development workflow
 st8 install                               # Set up versioning
 scrap temp_* *.log build/                    # Clear workspace
-refac . "OldClass" "NewClass" --dry-run      # Preview changes
+refac . "OldClass" "NewClass" --verbose      # Preview changes
 refac . "OldClass" "NewClass"                # Apply changes
 git add . && git commit -m "Refactor class" # Auto-version bump
 
 # Safe refactoring with backup
 scrap old_implementation.rs                  # Backup current code
 st8 show                                 # Note current version
-refac . "OldClass" "NewClass" --dry-run      # Preview changes
+refac . "OldClass" "NewClass" --verbose      # Preview changes
 refac . "OldClass" "NewClass"                # Apply changes
 # If issues arise: unscrap old_implementation.rs
 
@@ -725,7 +725,7 @@ scrap archive --output "backup-$(date +%s).tar.gz"
 
 # Preview changes
 echo "Previewing changes..."
-refac . "$OLD" "$NEW" --dry-run
+refac . "$OLD" "$NEW" --verbose
 
 # Ask for confirmation
 read -p "Apply changes? (y/N) " -n 1 -r

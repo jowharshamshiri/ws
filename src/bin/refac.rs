@@ -98,7 +98,7 @@ mod tests {
     }
 
     #[test]
-    fn test_path_separator_in_new_string() -> Result<(), Box<dyn std::error::Error>> {
+    fn test_path_separator_in_substitute() -> Result<(), Box<dyn std::error::Error>> {
         let temp_dir = TempDir::new()?;
         
         let mut cmd = Command::cargo_bin("refac")?;

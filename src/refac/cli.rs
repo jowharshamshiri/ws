@@ -10,13 +10,13 @@ pub struct Args {
     #[arg(value_name = "ROOT_DIR")]
     pub root_dir: PathBuf,
 
-    /// String to replace
-    #[arg(value_name = "OLD_STRING")]
-    pub old_string: String,
+    /// Pattern to find and replace
+    #[arg(value_name = "PATTERN")]
+    pub pattern: String,
 
-    /// Replacement string
-    #[arg(value_name = "NEW_STRING")]
-    pub new_string: String,
+    /// Replacement text
+    #[arg(value_name = "SUBSTITUTE")]
+    pub substitute: String,
 
 
     /// Assume "yes" to confirmation prompts (non-interactive mode)
@@ -152,17 +152,17 @@ impl Args {
         }
 
         // Validate strings
-        if self.old_string.is_empty() {
-            return Err("Old string cannot be empty".to_string());
+        if self.pattern.is_empty() {
+            return Err("Pattern cannot be empty".to_string());
         }
 
-        if self.new_string.is_empty() {
-            return Err("New string cannot be empty".to_string());
+        if self.substitute.is_empty() {
+            return Err("Substitute cannot be empty".to_string());
         }
 
-        // Check for path separators in new string
-        if self.new_string.contains('/') || self.new_string.contains('\\') {
-            return Err("New string cannot contain path separators (/ or \\)".to_string());
+        // Check for path separators in substitute (only when processing names)
+        if self.should_process_names() && (self.substitute.contains('/') || self.substitute.contains('\\')) {
+            return Err("Substitute cannot contain path separators (/ or \\) when processing names".to_string());
         }
 
         // Validate thread count
@@ -216,8 +216,8 @@ mod tests {
         
         let mut args = Args {
             root_dir: temp_dir.path().to_path_buf(),
-            old_string: "old".to_string(),
-            new_string: "new".to_string(),
+            pattern: "old".to_string(),
+            substitute: "new".to_string(),
             assume_yes: false,
             verbose: false,
             follow_symlinks: false,
@@ -240,22 +240,31 @@ mod tests {
         // Valid args should pass
         assert!(args.validate().is_ok());
 
-        // Empty old string should fail
-        args.old_string = "".to_string();
+        // Empty pattern should fail
+        args.pattern = "".to_string();
         assert!(args.validate().is_err());
-        args.old_string = "old".to_string();
+        args.pattern = "old".to_string();
 
-        // Empty new string should fail
-        args.new_string = "".to_string();
+        // Empty substitute should fail
+        args.substitute = "".to_string();
         assert!(args.validate().is_err());
-        args.new_string = "new".to_string();
+        args.substitute = "new".to_string();
 
-        // Path separator in new string should fail
-        args.new_string = "new/path".to_string();
+        // Path separator in substitute should fail when processing names
+        args.substitute = "new/path".to_string();
         assert!(args.validate().is_err());
-        args.new_string = "new\\path".to_string();
+        args.substitute = "new\\path".to_string();
         assert!(args.validate().is_err());
-        args.new_string = "new".to_string();
+        args.substitute = "new".to_string();
+
+        // Path separator should be allowed with content-only mode
+        args.content_only = true;
+        args.substitute = "new/path".to_string();
+        assert!(args.validate().is_ok());
+        args.substitute = "new\\path".to_string();
+        assert!(args.validate().is_ok());
+        args.substitute = "new".to_string();
+        args.content_only = false;
 
         // Multiple mode flags should fail
         args.files_only = true;
@@ -269,8 +278,8 @@ mod tests {
         
         let base_args = Args {
             root_dir: temp_dir.path().to_path_buf(),
-            old_string: "old".to_string(),
-            new_string: "new".to_string(),
+            pattern: "old".to_string(),
+            substitute: "new".to_string(),
             assume_yes: false,
             verbose: false,
             follow_symlinks: false,
@@ -320,8 +329,8 @@ mod tests {
         
         let mut args = Args {
             root_dir: temp_dir.path().to_path_buf(),
-            old_string: "old".to_string(),
-            new_string: "new".to_string(),
+            pattern: "old".to_string(),
+            substitute: "new".to_string(),
             assume_yes: false,
             verbose: false,
             follow_symlinks: false,

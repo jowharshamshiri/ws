@@ -20,8 +20,8 @@ A tool suite for developers and system administrators that provides file operati
 
 ### Code Refactoring with Refac
 ```bash
-# Preview changes before applying
-refac ./src "OldClassName" "NewClassName" --dry-run --verbose
+# Refac always previews changes and asks for confirmation
+refac ./src "OldClassName" "NewClassName" --verbose
 
 # Apply refactoring with backups
 refac ./src "OldClassName" "NewClassName" --backup
@@ -172,7 +172,7 @@ scrap find "*.log" --days 7                # Find files from last 7 days
 
 # Maintenance operations
 scrap clean                                 # Remove items older than 30 days
-scrap clean --days 7 --dry-run             # Preview cleanup
+scrap clean --days 7                        # Remove items older than 7 days
 scrap archive --output backup-$(date +%Y%m%d).tar.gz
 scrap archive --remove                     # Archive and remove originals
 scrap purge --force                        # Remove all items
@@ -206,6 +206,7 @@ unscrap --list                              # Show restorable items
 - **Template Engine**: Tera template support with variables
 - **Multi-format Support**: Cargo.toml, package.json, version.txt, etc.
 - **State Management**: Centralized configuration in .nomion folder
+- **Activity Logging**: All operations logged to .nomion/st8/logs/st8.log
 
 **Template System Variables:**
 - `{{ project.version }}` - Full version (e.g., "1.2.3")
@@ -451,8 +452,7 @@ cargo test --release
 ### Refac Options
 | Option | Short | Description |
 |--------|-------|-------------|
-| `--dry-run` | `-d` | Preview changes without applying |
-| `--force` | `-f` | Skip confirmation prompts |
+| `--assume-yes` | `-y` | Skip confirmation prompts (non-interactive mode) |
 | `--verbose` | `-v` | Show detailed output |
 | `--backup` | `-b` | Create backup files |
 | `--files-only` | | Process files only |
@@ -485,7 +485,7 @@ cargo test --release
 - **Race Condition Prevention**: Proper operation ordering
 
 ### Best Practices
-1. **Use dry-run first**: `--dry-run` to preview changes
+1. **Review changes carefully**: Refac shows all changes before applying them
 2. **Use backups for important files**: `--backup` option
 3. **Test on copies**: Work on backups of important directories
 4. **Use version control**: Commit files before running operations
@@ -495,8 +495,8 @@ cargo test --release
 
 ### API Migration Workflow
 ```bash
-# 1. Preview the migration
-refac ./src "oldapi.v1" "newapi.v2" --dry-run --verbose
+# 1. Review the migration (refac shows changes before applying)
+refac ./src "oldapi.v1" "newapi.v2" --verbose
 
 # 2. Update source code
 refac ./src "oldapi.v1" "newapi.v2" --backup --include "*.rs"

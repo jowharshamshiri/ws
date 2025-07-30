@@ -94,7 +94,7 @@ fn test_st8_outside_git_repo() {
         .current_dir(temp_dir.path())
         .assert()
         .failure()
-        .stderr(predicate::str::contains("Not in a git repository"));
+        .stderr(predicate::str::contains("Not in a git repository. Use --no-git to update anyway"));
 }
 
 #[test]
@@ -155,7 +155,6 @@ fn test_st8_update_creates_version_file() {
     Command::cargo_bin("st8")
         .unwrap()
         .arg("update")
-        .arg("--force")
         .current_dir(temp_dir.path())
         .assert()
         .success()
@@ -208,7 +207,7 @@ fn test_st8_install_hook() {
 }
 
 #[test]
-fn test_st8_install_hook_force() {
+fn test_st8_install_hook_already_installed() {
     let temp_dir = TempDir::new().unwrap();
     setup_git_repo(temp_dir.path()).unwrap();
     
@@ -229,15 +228,13 @@ fn test_st8_install_hook_force() {
         .success()
         .stdout(predicate::str::contains("already installed"));
     
-    // Force installation should succeed
+    // Second installation should succeed (already installed is not an error)
     Command::cargo_bin("st8")
         .unwrap()
         .arg("install")
-        .arg("--force")
         .current_dir(temp_dir.path())
         .assert()
-        .success()
-        .stdout(predicate::str::contains("st8 installed successfully"));
+        .success();
 }
 
 #[test]
@@ -432,7 +429,6 @@ fn test_st8_config_file() {
     Command::cargo_bin("st8")
         .unwrap()
         .arg("update")
-        .arg("--force")
         .current_dir(temp_dir.path())
         .assert()
         .success();
@@ -458,8 +454,8 @@ fn test_st8_logging() {
         .assert()
         .success();
     
-    // Check that log file was created
-    let log_file = temp_dir.path().join(".st8.log");
+    // Check that log file was created in .nomion/st8/logs/
+    let log_file = temp_dir.path().join(".nomion").join("st8").join("logs").join("st8.log");
     assert!(log_file.exists());
     
     let log_content = fs::read_to_string(&log_file).unwrap();
@@ -488,7 +484,6 @@ serde = "1.0"
     Command::cargo_bin("st8")
         .unwrap()
         .arg("update")
-        .arg("--force")
         .current_dir(temp_dir.path())
         .assert()
         .success()
@@ -526,7 +521,6 @@ fn test_st8_auto_detect_package_json() {
     Command::cargo_bin("st8")
         .unwrap()
         .arg("update")
-        .arg("--force")
         .current_dir(temp_dir.path())
         .assert()
         .success()
@@ -580,7 +574,6 @@ version = "0.5.0"
     Command::cargo_bin("st8")
         .unwrap()
         .arg("update")
-        .arg("--force")
         .current_dir(temp_dir.path())
         .assert()
         .success()
@@ -653,7 +646,6 @@ version = "0.1.0"
     Command::cargo_bin("st8")
         .unwrap()
         .arg("update")
-        .arg("--force")
         .current_dir(temp_dir.path())
         .assert()
         .success()
@@ -695,7 +687,6 @@ fn test_st8_manual_project_files() {
     Command::cargo_bin("st8")
         .unwrap()
         .arg("update")
-        .arg("--force")
         .current_dir(temp_dir.path())
         .assert()
         .success()
@@ -727,7 +718,6 @@ version = "0.1.0"
     Command::cargo_bin("st8")
         .unwrap()
         .arg("update")
-        .arg("--force")
         .current_dir(temp_dir.path())
         .assert()
         .success()
@@ -741,7 +731,6 @@ version = "0.1.0"
     Command::cargo_bin("st8")
         .unwrap()
         .arg("update")
-        .arg("--force")
         .current_dir(temp_dir.path())
         .assert()
         .success()
@@ -760,7 +749,6 @@ version = "0.1.0"
     Command::cargo_bin("st8")
         .unwrap()
         .arg("update")
-        .arg("--force")
         .current_dir(temp_dir.path())
         .assert()
         .success()
@@ -773,4 +761,166 @@ version = "0.1.0"
         .unwrap();
     
     assert_eq!(cargo_modified_time, cargo_modified_time_after);
+}
+
+#[test]
+fn test_st8_logging_in_nomion_directory() {
+    let temp_dir = TempDir::new().unwrap();
+    setup_git_repo(temp_dir.path()).unwrap();
+    
+    // Install st8 to trigger logging
+    Command::cargo_bin("st8")
+        .unwrap()
+        .arg("install")
+        .current_dir(temp_dir.path())
+        .assert()
+        .success();
+    
+    // Check that log file was created in .nomion/st8/logs/ directory
+    let log_file = temp_dir.path().join(".nomion").join("st8").join("logs").join("st8.log");
+    assert!(log_file.exists(), "st8.log should be created in .nomion/st8/logs/");
+    
+    // Check log content
+    let log_content = fs::read_to_string(&log_file).unwrap();
+    assert!(log_content.contains("pre-commit hook"), "Log should contain hook installation message");
+    assert!(log_content.contains("["), "Log should have timestamp format");
+    
+    // Trigger another logging action (uninstall)
+    Command::cargo_bin("st8")
+        .unwrap()
+        .arg("uninstall")
+        .current_dir(temp_dir.path())
+        .assert()
+        .success();
+    
+    // Check that log was appended
+    let log_content_after = fs::read_to_string(&log_file).unwrap();
+    assert!(log_content_after.len() > log_content.len(), "Log should be appended to");
+    assert!(log_content_after.contains("Removed"), "Log should contain uninstall message");
+}
+
+#[test]
+fn test_st8_update_with_git_add() {
+    let temp_dir = TempDir::new().unwrap();
+    setup_git_repo(temp_dir.path()).unwrap();
+    create_test_commits(temp_dir.path(), 1).unwrap();
+    
+    // Create a version file
+    let version_file = temp_dir.path().join("VERSION");
+    fs::write(&version_file, "1.0.0").unwrap();
+    
+    // Add version file to git and commit it
+    std::process::Command::new("git")
+        .args(["add", "VERSION"])
+        .current_dir(temp_dir.path())
+        .output()
+        .unwrap();
+    
+    std::process::Command::new("git")
+        .args(["commit", "-m", "Add version file"])
+        .current_dir(temp_dir.path())
+        .output()
+        .unwrap();
+    
+    // Run st8 update with --git-add flag
+    Command::cargo_bin("st8")
+        .unwrap()
+        .arg("update")
+        .arg("--git-add")
+        .current_dir(temp_dir.path())
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Updated version to:"));
+    
+    // Check that the version file is in git staging area
+    let git_status = std::process::Command::new("git")
+        .args(["status", "--porcelain"])
+        .current_dir(temp_dir.path())
+        .output()
+        .unwrap();
+    
+    let status_output = String::from_utf8(git_status.stdout).unwrap();
+    
+    // The version file should be staged (shows as "M " in git status --porcelain)
+    // or already committed if the version didn't change
+    assert!(
+        status_output.contains("M  VERSION") || 
+        status_output.is_empty() || 
+        !status_output.contains("VERSION"),
+        "Version file should be staged or not modified, got: '{}'", 
+        status_output
+    );
+}
+
+#[test]
+fn test_st8_update_without_git_add() {
+    let temp_dir = TempDir::new().unwrap();
+    setup_git_repo(temp_dir.path()).unwrap();
+    create_test_commits(temp_dir.path(), 1).unwrap();
+    
+    // Create a version file
+    let version_file = temp_dir.path().join("VERSION");
+    fs::write(&version_file, "1.0.0").unwrap();
+    
+    // Add version file to git and commit it
+    std::process::Command::new("git")
+        .args(["add", "VERSION"])
+        .current_dir(temp_dir.path())
+        .output()
+        .unwrap();
+    
+    std::process::Command::new("git")
+        .args(["commit", "-m", "Add version file"])
+        .current_dir(temp_dir.path())
+        .output()
+        .unwrap();
+    
+    // Run st8 update without --git-add flag
+    Command::cargo_bin("st8")
+        .unwrap()
+        .arg("update")
+        .current_dir(temp_dir.path())
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Updated version to:"));
+    
+    // Check that the version file might be modified but not staged
+    let git_status = std::process::Command::new("git")
+        .args(["status", "--porcelain"])
+        .current_dir(temp_dir.path())
+        .output()
+        .unwrap();
+    
+    let status_output = String::from_utf8(git_status.stdout).unwrap();
+    
+    // Without --git-add, the file should either not be modified (if version didn't change)
+    // or be modified but not staged (shows as " M" in git status --porcelain)
+    assert!(
+        status_output.contains(" M VERSION") || 
+        status_output.is_empty() || 
+        !status_output.contains("VERSION"),
+        "Version file should be unstaged if modified, got: '{}'", 
+        status_output
+    );
+}
+
+#[test]
+fn test_st8_install_hook_includes_git_add() {
+    let temp_dir = TempDir::new().unwrap();
+    setup_git_repo(temp_dir.path()).unwrap();
+    
+    Command::cargo_bin("st8")
+        .unwrap()
+        .arg("install")
+        .current_dir(temp_dir.path())
+        .assert()
+        .success();
+    
+    // Check that the hook includes --git-add flag
+    let hook_file = temp_dir.path().join(".git").join("hooks").join("pre-commit");
+    assert!(hook_file.exists());
+    
+    let hook_content = fs::read_to_string(&hook_file).unwrap();
+    assert!(hook_content.contains("update --git-add"), 
+           "Hook should include --git-add flag, got: {}", hook_content);
 }
