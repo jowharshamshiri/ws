@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Nomion Tools Installation Script
-# This script builds and installs all nomion tools (refac, ldiff, scrap, unscrap, verbump)
+# This script builds and installs all nomion tools (refac, ldiff, scrap, unscrap, st8)
 # Multiple runs will update to the latest version
 
 set -e  # Exit on any error
@@ -24,7 +24,7 @@ VERBOSE=false
 usage() {
     echo "Usage: $0 [OPTIONS]"
     echo ""
-    echo "Install Nomion Tools (refac, ldiff, scrap, unscrap, verbump)"
+    echo "Install Nomion Tools (refac, ldiff, scrap, unscrap, st8)"
     echo ""
     echo "OPTIONS:"
     echo "  -d, --dir DIR        Installation directory (default: $DEFAULT_INSTALL_DIR)"
@@ -141,7 +141,7 @@ get_installed_versions() {
     LDIFF_VERSION=""
     SCRAP_VERSION=""
     UNSCRAP_VERSION=""
-    VERBUMP_VERSION=""
+    ST8_VERSION=""
     
     if command -v refac &> /dev/null; then
         REFAC_VERSION=$(refac --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "unknown")
@@ -159,8 +159,8 @@ get_installed_versions() {
         UNSCRAP_VERSION=$(unscrap --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "unknown")
     fi
     
-    if command -v verbump &> /dev/null; then
-        VERBUMP_VERSION=$(verbump --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "unknown")
+    if command -v st8 &> /dev/null; then
+        ST8_VERSION=$(st8 --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "unknown")
     fi
 }
 
@@ -180,16 +180,16 @@ check_installation_needed() {
     if [ "$FORCE_INSTALL" = true ]; then
         log "Force installation requested"
         needs_install=true
-    elif [ -z "$REFAC_VERSION" ] || [ -z "$LDIFF_VERSION" ] || [ -z "$SCRAP_VERSION" ] || [ -z "$UNSCRAP_VERSION" ] || [ -z "$VERBUMP_VERSION" ]; then
+    elif [ -z "$REFAC_VERSION" ] || [ -z "$LDIFF_VERSION" ] || [ -z "$SCRAP_VERSION" ] || [ -z "$UNSCRAP_VERSION" ] || [ -z "$ST8_VERSION" ]; then
         log "Some tools are not installed"
         needs_install=true
-    elif [ "$REFAC_VERSION" != "$PROJECT_VERSION" ] || [ "$LDIFF_VERSION" != "$PROJECT_VERSION" ] || [ "$SCRAP_VERSION" != "$PROJECT_VERSION" ] || [ "$UNSCRAP_VERSION" != "$PROJECT_VERSION" ] || [ "$VERBUMP_VERSION" != "$PROJECT_VERSION" ]; then
+    elif [ "$REFAC_VERSION" != "$PROJECT_VERSION" ] || [ "$LDIFF_VERSION" != "$PROJECT_VERSION" ] || [ "$SCRAP_VERSION" != "$PROJECT_VERSION" ] || [ "$UNSCRAP_VERSION" != "$PROJECT_VERSION" ] || [ "$ST8_VERSION" != "$PROJECT_VERSION" ]; then
         log "Installed versions differ from project version"
         log "  refac: $REFAC_VERSION -> $PROJECT_VERSION"
         log "  ldiff: $LDIFF_VERSION -> $PROJECT_VERSION"
         log "  scrap: $SCRAP_VERSION -> $PROJECT_VERSION"
         log "  unscrap: $UNSCRAP_VERSION -> $PROJECT_VERSION"
-        log "  verbump: $VERBUMP_VERSION -> $PROJECT_VERSION"
+        log "  st8: $ST8_VERSION -> $PROJECT_VERSION"
         needs_install=true
     else
         success "All tools are already up to date (version $PROJECT_VERSION)"
@@ -210,7 +210,7 @@ build_project() {
     fi
     
     # Verify all binaries were built
-    local binaries=("refac" "ldiff" "scrap" "unscrap" "verbump")
+    local binaries=("refac" "ldiff" "scrap" "unscrap" "st8")
     for binary in "${binaries[@]}"; do
         if [ ! -f "target/release/$binary" ]; then
             error "Failed to build $binary"
@@ -225,7 +225,7 @@ build_project() {
 install_binaries() {
     log "Installing binaries to $INSTALL_DIR"
     
-    local binaries=("refac" "ldiff" "scrap" "unscrap" "verbump")
+    local binaries=("refac" "ldiff" "scrap" "unscrap" "st8")
     for binary in "${binaries[@]}"; do
         verbose_log "Installing $binary..."
         cp "target/release/$binary" "$INSTALL_DIR/"
@@ -239,7 +239,7 @@ install_binaries() {
 verify_installation() {
     log "Verifying installation..."
     
-    local binaries=("refac" "ldiff" "scrap" "unscrap" "verbump")
+    local binaries=("refac" "ldiff" "scrap" "unscrap" "st8")
     local all_good=true
     
     for binary in "${binaries[@]}"; do
@@ -290,7 +290,7 @@ main() {
         
         echo ""
         success "🎉 Nomion Tools installation completed!"
-        success "Tools installed: refac, ldiff, scrap, unscrap, verbump"
+        success "Tools installed: refac, ldiff, scrap, unscrap, st8"
         success "Version: $PROJECT_VERSION"
         success "Location: $INSTALL_DIR"
         
@@ -301,7 +301,7 @@ main() {
         log "  scrap temp_file.txt                        # Move file to .scrap folder"
         log "  scrap                                       # List .scrap contents"
         log "  unscrap                                     # Restore last scrapped item"
-        log "  verbump install                             # Install git hook for version bumping"
+        log "  st8 install                             # Install git hook for version bumping"
         
         echo ""
         log "For more information:"
@@ -309,7 +309,7 @@ main() {
         log "  ldiff --help"
         log "  scrap --help"
         log "  unscrap --help"
-        log "  verbump --help"
+        log "  st8 --help"
     fi
 }
 

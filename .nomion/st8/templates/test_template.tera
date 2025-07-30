@@ -1,0 +1,1 @@
+# {{ project.name | default(value='Project') }} v{{ project.version }}

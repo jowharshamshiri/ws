@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct VerbumpConfig {
+pub struct St8Config {
     pub version: u32,
     pub enabled: bool,
     pub version_file: String,
@@ -20,7 +20,7 @@ fn default_auto_detect() -> bool {
     true
 }
 
-impl Default for VerbumpConfig {
+impl Default for St8Config {
     fn default() -> Self {
         Self {
             version: 1,
@@ -32,27 +32,27 @@ impl Default for VerbumpConfig {
     }
 }
 
-impl VerbumpConfig {
+impl St8Config {
     pub fn load(repo_root: &Path) -> Result<Self> {
-        let config_path = repo_root.join(".verbump.json");
+        let config_path = repo_root.join(".st8.json");
         if !config_path.exists() {
             return Ok(Self::default());
         }
 
         let content = fs::read_to_string(&config_path)
-            .context("Failed to read verbump config file")?;
+            .context("Failed to read st8 config file")?;
         
         serde_json::from_str(&content)
-            .context("Failed to parse verbump config file")
+            .context("Failed to parse st8 config file")
     }
 
     pub fn save(&self, repo_root: &Path) -> Result<()> {
-        let config_path = repo_root.join(".verbump.json");
+        let config_path = repo_root.join(".st8.json");
         let content = serde_json::to_string_pretty(self)
-            .context("Failed to serialize verbump config")?;
+            .context("Failed to serialize st8 config")?;
         
         fs::write(&config_path, content)
-            .context("Failed to write verbump config file")?;
+            .context("Failed to write st8 config file")?;
         
         Ok(())
     }
@@ -157,7 +157,7 @@ fn get_total_changes() -> Result<u32> {
     Ok(total)
 }
 
-pub fn update_version_file(version_info: &VersionInfo, config: &VerbumpConfig) -> Result<bool> {
+pub fn update_version_file(version_info: &VersionInfo, config: &St8Config) -> Result<bool> {
     // Check if version has actually changed
     let version_file_path = PathBuf::from(&config.version_file);
     let current_version_content = if version_file_path.exists() {
@@ -515,20 +515,20 @@ mod tests {
     use tempfile::TempDir;
 
     #[test]
-    fn test_verbump_config_default() {
-        let config = VerbumpConfig::default();
+    fn test_st8_config_default() {
+        let config = St8Config::default();
         assert_eq!(config.version, 1);
         assert!(config.enabled);
         assert_eq!(config.version_file, "version.txt");
     }
 
     #[test]
-    fn test_verbump_config_save_load() {
+    fn test_st8_config_save_load() {
         let temp_dir = TempDir::new().unwrap();
-        let config = VerbumpConfig::default();
+        let config = St8Config::default();
         
         config.save(temp_dir.path()).unwrap();
-        let loaded_config = VerbumpConfig::load(temp_dir.path()).unwrap();
+        let loaded_config = St8Config::load(temp_dir.path()).unwrap();
         
         assert_eq!(config.version, loaded_config.version);
         assert_eq!(config.enabled, loaded_config.enabled);
@@ -758,10 +758,10 @@ set(CMAKE_CXX_STANDARD 17)
     }
 
     #[test]
-    fn test_verbump_config_with_auto_detect() {
+    fn test_st8_config_with_auto_detect() {
         let temp_dir = TempDir::new().unwrap();
         
-        let config = VerbumpConfig {
+        let config = St8Config {
             version: 1,
             enabled: true,
             version_file: "version.txt".to_string(),
@@ -770,14 +770,14 @@ set(CMAKE_CXX_STANDARD 17)
         };
         
         config.save(temp_dir.path()).unwrap();
-        let loaded_config = VerbumpConfig::load(temp_dir.path()).unwrap();
+        let loaded_config = St8Config::load(temp_dir.path()).unwrap();
         
         assert_eq!(loaded_config.auto_detect_project_files, true);
         assert_eq!(loaded_config.project_files, vec!["custom.toml"]);
     }
 
     #[test]
-    fn test_verbump_config_default_auto_detect() {
+    fn test_st8_config_default_auto_detect() {
         let temp_dir = TempDir::new().unwrap();
         
         // Test that auto_detect defaults to true when not specified
@@ -786,9 +786,9 @@ set(CMAKE_CXX_STANDARD 17)
   "enabled": true,
   "version_file": "version.txt"
 }"#;
-        fs::write(temp_dir.path().join(".verbump.json"), config_content).unwrap();
+        fs::write(temp_dir.path().join(".st8.json"), config_content).unwrap();
         
-        let loaded_config = VerbumpConfig::load(temp_dir.path()).unwrap();
+        let loaded_config = St8Config::load(temp_dir.path()).unwrap();
         assert_eq!(loaded_config.auto_detect_project_files, true);
         assert!(loaded_config.project_files.is_empty());
     }
@@ -796,7 +796,7 @@ set(CMAKE_CXX_STANDARD 17)
     #[test]
     fn test_update_version_file_no_change() {
         let temp_dir = TempDir::new().unwrap();
-        let config = VerbumpConfig::default();
+        let config = St8Config::default();
         
         let version_info = VersionInfo {
             major_version: "v1.0".to_string(),

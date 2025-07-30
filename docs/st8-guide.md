@@ -1,15 +1,15 @@
 ---
 layout: default
-title: Verbump Guide - Automatic Version Management
+title: St8 Guide - Automatic Version Management
 ---
 
-# Verbump Guide
+# St8 Guide
 
-Verbump is an automatic version management tool that integrates with Git to provide semantic versioning based on your repository's commit history. It calculates version numbers using git tags, commit counts, and change statistics, making it perfect for continuous integration workflows.
+St8 is an automatic version management tool that integrates with Git to provide semantic versioning based on your repository's commit history. It calculates version numbers using git tags, commit counts, and change statistics, making it perfect for continuous integration workflows.
 
 ## How It Works
 
-Verbump uses a three-part versioning scheme based on your Git repository:
+St8 uses a three-part versioning scheme based on your Git repository:
 
 - **Major Version**: Extracted from the most recent Git tag (e.g., `v1.0` → `1.0`)
 - **Minor Version**: Number of commits since the last tag
@@ -30,16 +30,16 @@ Verbump uses a three-part versioning scheme based on your Git repository:
 
 ## Installation and Setup
 
-### 1. Install Verbump
+### 1. Install St8
 
-First, ensure verbump is installed as part of the Nomion tool suite:
+First, ensure st8 is installed as part of the Nomion tool suite:
 
 ```bash
-# Install all tools including verbump
+# Install all tools including st8
 ./install.sh
 
-# Or install just verbump
-cargo install --path . --bin verbump
+# Or install just st8
+cargo install --path . --bin st8
 ```
 
 ### 2. Install Git Hook
@@ -48,14 +48,14 @@ Navigate to your Git repository and install the pre-commit hook:
 
 ```bash
 cd your-git-repo
-verbump install
+st8 install
 ```
 
 This creates a pre-commit hook that automatically updates your version file before each commit.
 
 ### 3. Configure (Optional)
 
-Create a `.verbump.json` configuration file in your repository root:
+Create a `.st8.json` configuration file in your repository root:
 
 ```json
 {
@@ -76,16 +76,16 @@ Create a `.verbump.json` configuration file in your repository root:
 ### Install Hook
 ```bash
 # Install pre-commit hook
-verbump install
+st8 install
 
 # Force reinstall (if already installed)
-verbump install --force
+st8 install --force
 ```
 
 ### Show Version Information
 ```bash
 # Display current version breakdown
-verbump show
+st8 show
 ```
 
 Output example:
@@ -100,21 +100,21 @@ Current Version Information:
 ### Manual Version Update
 ```bash
 # Update version file manually
-verbump update
+st8 update
 
 # Force update (even outside git repo)
-verbump update --force
+st8 update --force
 ```
 
 ### Check Status
 ```bash
-# Show verbump status and configuration
-verbump status
+# Show st8 status and configuration
+st8 status
 ```
 
 Output example:
 ```
-Verbump Status:
+St8 Status:
   Git Repository: ✓
   Hook Installed: ✓
   Enabled: ✓
@@ -129,15 +129,15 @@ Verbump Status:
 
 ### Uninstall Hook
 ```bash
-# Remove verbump from pre-commit hooks
-verbump uninstall
+# Remove st8 from pre-commit hooks
+st8 uninstall
 ```
 
 ## Workflow Integration
 
 ### Automatic Mode (Recommended)
 
-1. Install the git hook once: `verbump install`
+1. Install the git hook once: `st8 install`
 2. Work normally - commit as usual
 3. Version files are automatically updated before each commit:
    - `version.txt` (or custom version file)
@@ -148,8 +148,8 @@ verbump uninstall
 
 If you prefer manual control:
 
-1. Configure: Set `"enabled": false` in `.verbump.json`
-2. Update manually: Run `verbump update` when needed
+1. Configure: Set `"enabled": false` in `.st8.json`
+2. Update manually: Run `st8 update` when needed
 3. Commit the version file changes manually
 
 ### CI/CD Integration
@@ -170,7 +170,7 @@ docker build -t myapp:$VERSION .
 
 ### Project File Auto-Detection
 
-Verbump automatically detects and updates version fields in common project configuration files:
+St8 automatically detects and updates version fields in common project configuration files:
 
 **Supported File Types:**
 - **Cargo.toml** (Rust): `version = "x.y.z"` in `[package]` section
@@ -195,9 +195,9 @@ Verbump automatically detects and updates version fields in common project confi
 ```
 
 **How It Works:**
-1. When `auto_detect_project_files` is `true` (default), verbump scans the repository root for supported project files
+1. When `auto_detect_project_files` is `true` (default), st8 scans the repository root for supported project files
 2. Each detected file is automatically updated with the new version
-3. Files specified in `project_files` are also updated (if they exist and verbump can detect their type)
+3. Files specified in `project_files` are also updated (if they exist and st8 can detect their type)
 4. All updated files are automatically staged in git
 
 **Disable Auto-Detection:**
@@ -219,7 +219,7 @@ Configure different version file paths:
 
 ### Version File Formats
 
-Verbump writes just the version number to the file:
+St8 writes just the version number to the file:
 
 ```
 1.2.3.156
@@ -242,18 +242,18 @@ mv package.json.tmp package.json
 
 ### Multiple Repositories
 
-Each repository can have its own verbump configuration:
+Each repository can have its own st8 configuration:
 
 ```bash
 # Project A
 cd project-a
-verbump install
-echo '{"version_file": "VERSION"}' > .verbump.json
+st8 install
+echo '{"version_file": "VERSION"}' > .st8.json
 
 # Project B  
 cd project-b
-verbump install
-echo '{"version_file": "src/version.txt"}' > .verbump.json
+st8 install
+echo '{"version_file": "src/version.txt"}' > .st8.json
 ```
 
 ## Troubleshooting
@@ -262,10 +262,10 @@ echo '{"version_file": "src/version.txt"}' > .verbump.json
 
 If the version isn't updating automatically:
 
-1. Check if hook is installed: `verbump status`
+1. Check if hook is installed: `st8 status`
 2. Verify hook file exists: `ls -la .git/hooks/pre-commit`
 3. Ensure hook is executable: `chmod +x .git/hooks/pre-commit`
-4. Check if verbump is in PATH: `which verbump`
+4. Check if st8 is in PATH: `which st8`
 
 ### Version Not Updating
 
@@ -274,26 +274,26 @@ If version calculations seem wrong:
 1. Check git repository status: `git status`
 2. Verify tags exist: `git tag -l`
 3. Check commit history: `git log --oneline`
-4. Test manually: `verbump show`
+4. Test manually: `st8 show`
 
 ### Configuration Issues
 
 If configuration isn't working:
 
-1. Validate JSON syntax: `cat .verbump.json | jq .`
-2. Check file permissions: `ls -la .verbump.json`
+1. Validate JSON syntax: `cat .st8.json | jq .`
+2. Check file permissions: `ls -la .st8.json`
 3. Verify configuration is in repository root
 
-### Removing Verbump
+### Removing St8
 
-To completely remove verbump from a repository:
+To completely remove st8 from a repository:
 
 ```bash
 # Remove git hook
-verbump uninstall
+st8 uninstall
 
 # Remove configuration (optional)
-rm .verbump.json
+rm .st8.json
 
 # Remove version file (optional)
 rm version.txt
@@ -301,11 +301,11 @@ rm version.txt
 
 ## Logging
 
-Verbump logs all actions to `.verbump.log` in your repository root:
+St8 logs all actions to `.st8.log` in your repository root:
 
 ```bash
 # View recent actions
-tail -f .verbump.log
+tail -f .st8.log
 ```
 
 Log format:
@@ -316,11 +316,11 @@ Log format:
 
 ## Best Practices
 
-1. **Install Early**: Set up verbump when creating a new repository
+1. **Install Early**: Set up st8 when creating a new repository
 2. **Tag Releases**: Create git tags for major releases (`git tag v1.0`)
 3. **Consistent Workflow**: Let the hook handle versioning automatically
 4. **CI Integration**: Use version.txt in your build and deployment scripts
-5. **Backup Hooks**: Document verbump usage for team members
+5. **Backup Hooks**: Document st8 usage for team members
 
 ## Integration Examples
 
@@ -333,9 +333,9 @@ For projects using multiple technologies:
 # ├── Cargo.toml          (Rust backend)
 # ├── package.json        (Node.js frontend)
 # ├── pyproject.toml      (Python scripts)
-# └── .verbump.json
+# └── .st8.json
 
-# Verbump automatically updates all three files:
+# St8 automatically updates all three files:
 git commit -m "Add new feature"
 # → Cargo.toml version updated to 1.2.5.234
 # → package.json version updated to 1.2.5.234  

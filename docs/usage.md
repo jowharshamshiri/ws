@@ -29,9 +29,9 @@ scrap [FILE/DIR] [SUBCOMMAND] [OPTIONS]
 unscrap [FILE/DIR] [OPTIONS]
 ```
 
-### Verbump - Version Management Tool
+### St8 - Version Management Tool
 ```bash
-verbump [SUBCOMMAND] [OPTIONS]
+st8 [SUBCOMMAND] [OPTIONS]
 ```
 
 ## Refac - String Replacement
@@ -592,7 +592,7 @@ unscrap old_config.json --to ./backup/
 
 For detailed information, see the [Unscrap Tool Guide]({{ '/unscrap-guide/' | relative_url }}).
 
-## Verbump - Version Management
+## St8 - Version Management
 
 ### Installation and Setup
 
@@ -601,34 +601,34 @@ For detailed information, see the [Unscrap Tool Guide]({{ '/unscrap-guide/' | re
 cd your-project/
 
 # Install git hook
-verbump install
+st8 install
 
 # Check status
-verbump status
+st8 status
 ```
 
 ### Basic Operations
 
 ```bash
 # Show current version information
-verbump show
+st8 show
 
 # Manual version update
-verbump update
+st8 update
 
 # Force update (outside git repo)
-verbump update --force
+st8 update --force
 
 # Check configuration and status
-verbump status
+st8 status
 
 # Uninstall hook
-verbump uninstall
+st8 uninstall
 ```
 
 ### Configuration
 
-Create `.verbump.json` in your repository root:
+Create `.st8.json` in your repository root:
 
 ```json
 {
@@ -640,7 +640,7 @@ Create `.verbump.json` in your repository root:
 
 ### Version Calculation
 
-Verbump calculates versions using:
+St8 calculates versions using:
 - **Major**: Latest git tag (e.g., `v1.2` → `1.2`)
 - **Minor**: Commits since tag
 - **Patch**: Total line changes
@@ -658,7 +658,7 @@ git init
 git add .
 git commit -m "Initial commit"
 git tag v1.0
-verbump install
+st8 install
 
 # Normal development (automatic)
 echo "new feature" >> main.rs
@@ -666,14 +666,14 @@ git add .
 git commit -m "Add feature"  # Version auto-updated
 
 # Check current version
-verbump show
+st8 show
 cat version.txt
 
 # Manual version check
-verbump update --force
+st8 update --force
 ```
 
-For detailed information, see the [Verbump Tool Guide]({{ '/verbump-guide/' | relative_url }}).
+For detailed information, see the [St8 Tool Guide]({{ '/st8-guide/' | relative_url }}).
 
 ## Tool Integration
 
@@ -681,7 +681,7 @@ For detailed information, see the [Verbump Tool Guide]({{ '/verbump-guide/' | re
 
 ```bash
 # development workflow
-verbump install                               # Set up versioning
+st8 install                               # Set up versioning
 scrap temp_* *.log build/                    # Clear workspace
 refac . "OldClass" "NewClass" --dry-run      # Preview changes
 refac . "OldClass" "NewClass"                # Apply changes
@@ -689,7 +689,7 @@ git add . && git commit -m "Refactor class" # Auto-version bump
 
 # Safe refactoring with backup
 scrap old_implementation.rs                  # Backup current code
-verbump show                                 # Note current version
+st8 show                                 # Note current version
 refac . "OldClass" "NewClass" --dry-run      # Preview changes
 refac . "OldClass" "NewClass"                # Apply changes
 # If issues arise: unscrap old_implementation.rs
@@ -698,7 +698,7 @@ refac . "OldClass" "NewClass"                # Apply changes
 scrap temp_* debug_* old_*/                  # Move temporary files
 refac . "old_project_name" "new_project_name" # Rename project
 scrap clean --days 14                       # Clean old scrapped files
-verbump status                               # Check version tracking
+st8 status                               # Check version tracking
 ```
 
 ### Automation Scripts
@@ -709,14 +709,14 @@ verbump status                               # Check version tracking
 OLD="$1"
 NEW="$2"
 
-# Check verbump is set up
-if ! verbump status >/dev/null 2>&1; then
+# Check st8 is set up
+if ! st8 status >/dev/null 2>&1; then
     echo "Setting up version tracking..."
-    verbump install
+    st8 install
 fi
 
 # Record current version
-CURRENT_VERSION=$(verbump show 2>/dev/null | grep "Full Version" | cut -d: -f2 | xargs)
+CURRENT_VERSION=$(st8 show 2>/dev/null | grep "Full Version" | cut -d: -f2 | xargs)
 echo "Current version: $CURRENT_VERSION"
 
 # Backup current state
@@ -751,6 +751,6 @@ fi
 - Check the [Command Reference]({{ '/api-reference/' | relative_url }}) for option details
 - See [Scrap Tool Guide]({{ '/scrap-guide/' | relative_url }}) for file management
 - See [Unscrap Tool Guide]({{ '/unscrap-guide/' | relative_url }}) for restoration workflows
-- See [Verbump Tool Guide]({{ '/verbump-guide/' | relative_url }}) for version management setup
+- See [St8 Tool Guide]({{ '/st8-guide/' | relative_url }}) for version management setup
 - See [Examples]({{ '/examples/' | relative_url }}) for more real-world scenarios
 - Report issues at [GitHub Issues](https://github.com/jowharshamshiri/nomion/issues)

@@ -15,7 +15,7 @@ Learn how to use the Nomion tool suite through practical examples for common dev
 
 ```bash
 # 1. Set up version tracking
-verbump install
+st8 install
 git tag v1.0  # Mark current state
 
 # 2. Move unwanted files to local trash can
@@ -30,7 +30,7 @@ git add .
 git commit -m "Refactor: UserManager -> AccountManager"
 
 # 5. Check new version
-verbump show
+st8 show
 cat version.txt  # Shows new version: v1.0.1.X
 ```
 
@@ -43,7 +43,7 @@ cat version.txt  # Shows new version: v1.0.1.X
 scrap src/experimental.rs src/core.rs
 
 # 2. Note current version
-CURRENT_VERSION=$(verbump show | grep "Full Version" | cut -d: -f2 | xargs)
+CURRENT_VERSION=$(st8 show | grep "Full Version" | cut -d: -f2 | xargs)
 echo "Starting experiment from version: $CURRENT_VERSION"
 
 # 3. Make experimental changes
@@ -71,7 +71,7 @@ refac ./config "dev.api.com" "prod.api.com" --content-only
 refac ./config "debug=true" "debug=false" --content-only
 
 # 3. Ensure version tracking is set up
-verbump status || verbump install
+st8 status || st8 install
 
 # 4. Create release commit
 git add .
@@ -159,7 +159,7 @@ unscrap server.log
 unscrap config.json --to ./backup/ --force
 ```
 
-### Verbump - Version Management
+### St8 - Version Management
 
 #### Project Setup and Release Management
 
@@ -174,7 +174,7 @@ git commit -m "Initial commit"
 
 # Set base version and install hook
 git tag v0.1.0
-verbump install
+st8 install
 
 # Normal development with automatic versioning
 echo "new feature" >> main.rs
@@ -182,7 +182,7 @@ git add .
 git commit -m "Add feature"  # Version auto-incremented
 
 # Check version progression
-verbump show
+st8 show
 cat version.txt  # 0.1.1.X (1 commit since tag, X changes)
 ```
 
@@ -193,7 +193,7 @@ cat version.txt  # 0.1.1.X (1 commit since tag, X changes)
 ```bash
 # Create feature branch with versioning
 git checkout -b feature-auth
-verbump install --force  # Ensure hook is active
+st8 install --force  # Ensure hook is active
 
 # Development commits auto-increment version
 git commit -m "Add auth module"     # v0.1.2.Y
@@ -749,13 +749,13 @@ echo "Refactor: $OLD_NAME -> $NEW_NAME"
 
 # 1. Setup versioning if not already configured
 echo "Setting up version tracking..."
-if ! verbump status >/dev/null 2>&1; then
-    verbump install
-    echo "Verbump installed"
+if ! st8 status >/dev/null 2>&1; then
+    st8 install
+    echo "St8 installed"
 fi
 
 # Record starting version
-START_VERSION=$(verbump show 2>/dev/null | grep "Full Version" | cut -d: -f2 | xargs)
+START_VERSION=$(st8 show 2>/dev/null | grep "Full Version" | cut -d: -f2 | xargs)
 echo "Starting version: $START_VERSION"
 
 # 2. Clean workspace
@@ -824,7 +824,7 @@ echo "Refactoring workflow complete!"
 ./install.sh
 
 # 2. Setup project-wide versioning
-verbump install
+st8 install
 
 # 3. Create team workspace management script
 cat > team-cleanup.sh << 'EOF'
@@ -899,7 +899,7 @@ refac ./config "debug=true" "debug=false" --content-only
 refac ./config "localhost" "$PROD_HOST" --content-only
 
 # 3. Update version and create release
-if verbump status; then
+if st8 status; then
     # Version automatically updated on commit
     git add .
     git commit -m "Prepare production release"
@@ -910,7 +910,7 @@ if verbump status; then
     
     echo "Release v$RELEASE_VERSION prepared"
 else
-    echo "Warning: Verbump not configured"
+    echo "Warning: St8 not configured"
 fi
 
 # 4. Generate release artifacts

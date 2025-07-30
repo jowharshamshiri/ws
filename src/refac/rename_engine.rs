@@ -67,6 +67,7 @@ pub struct RenameEngine {
     exclude_patterns: Vec<String>,
     ignore_case: bool,
     use_regex: bool,
+    include_hidden: bool,
 }
 
 impl RenameEngine {
@@ -107,6 +108,7 @@ impl RenameEngine {
             exclude_patterns: args.exclude_patterns,
             ignore_case: args.ignore_case,
             use_regex: args.use_regex,
+            include_hidden: args.include_hidden,
         })
     }
 
@@ -235,9 +237,15 @@ impl RenameEngine {
         if let Some(name) = path.file_name() {
             if let Some(name_str) = name.to_str() {
                 if name_str.starts_with('.') {
-                    let should_include = self.include_patterns.iter().any(|p| p == ".*" || p.contains("*"));
-                    if !should_include {
-                        return false;
+                    // Check if include_hidden flag is set
+                    if self.include_hidden {
+                        // Include hidden files when flag is set
+                    } else {
+                        // Original logic: check include patterns
+                        let should_include = self.include_patterns.iter().any(|p| p == ".*" || p.contains("*"));
+                        if !should_include {
+                            return false;
+                        }
                     }
                 }
             }
@@ -860,10 +868,34 @@ impl RenameEngine {
             return;
         }
 
-        // Validate that file can be read and contains the target string
-        match std::fs::read_to_string(file_path) {
-            Ok(content) => {
-                if !content.contains(&self.config.old_string) {
+        // Check if file is binary before attempting to read as text
+        match self.file_ops.is_text_file(file_path) {
+            Ok(false) => {
+                // Binary file - skip validation (should not have been included in content_files)
+                if self.config.verbose {
+                    eprintln!("WARNING: Binary file {} was included in content validation - this may indicate a discovery phase issue", relative_path.display());
+                }
+                return; // Binary files are skipped during content processing
+            }
+            Err(e) => {
+                validation_errors.push(ValidationError {
+                    location: file_path.clone(),
+                    error_type: ValidationErrorType::EncodingError,
+                    message: format!("Cannot determine if file {} is binary or text: {}", 
+                                   relative_path.display(), e),
+                    suggestion: Some("Use --exclude patterns to exclude problematic files".to_string()),
+                });
+                return;
+            }
+            Ok(true) => {
+                // File is text, continue with validation
+            }
+        }
+
+        // Validate that file can be read and contains the target string using encoding-aware methods
+        match self.file_ops.file_contains_string(file_path, &self.config.old_string) {
+            Ok(contains_string) => {
+                if !contains_string {
                     validation_errors.push(ValidationError {
                         location: file_path.clone(),
                         error_type: ValidationErrorType::ContentNotFound,
@@ -877,9 +909,9 @@ impl RenameEngine {
                 validation_errors.push(ValidationError {
                     location: file_path.clone(),
                     error_type: ValidationErrorType::EncodingError,
-                    message: format!("Cannot read file {} as text: {}. This may be due to encoding issues or the file may be binary.", 
+                    message: format!("Cannot read file {} with detected encoding: {}", 
                                    relative_path.display(), e),
-                    suggestion: Some("Use --files-only mode or exclude this file with --exclude patterns".to_string()),
+                    suggestion: Some("Use --exclude patterns to exclude this file".to_string()),
                 });
             }
         }

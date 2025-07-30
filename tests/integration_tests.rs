@@ -113,6 +113,7 @@ fn test_basic_replacement() -> Result<()> {
         progress: nomion::cli::ProgressMode::Never,
         ignore_case: false,
         use_regex: false,
+        include_hidden: false,
     };
 
     // Run refac
@@ -161,6 +162,7 @@ fn test_mandatory_validation() -> Result<()> {
         progress: nomion::cli::ProgressMode::Never,
         ignore_case: false,
         use_regex: false,
+        include_hidden: false,
     };
 
     // Run operation (validation is now mandatory and automatic)
@@ -209,6 +211,7 @@ fn test_case_sensitivity() -> Result<()> {
         progress: nomion::cli::ProgressMode::Never,
         ignore_case: false,
         use_regex: false,
+        include_hidden: false,
     };
 
     run_refac(args)?;
@@ -253,6 +256,7 @@ fn test_complex_nested_structure() -> Result<()> {
         progress: nomion::cli::ProgressMode::Never,
         ignore_case: false,
         use_regex: false,
+        include_hidden: false,
     };
 
     run_refac(args)?;
@@ -303,6 +307,7 @@ fn test_files_only_mode() -> Result<()> {
         progress: nomion::cli::ProgressMode::Never,
         ignore_case: false,
         use_regex: false,
+        include_hidden: false,
     };
 
     run_refac(args)?;
@@ -344,6 +349,7 @@ fn test_dirs_only_mode() -> Result<()> {
         progress: nomion::cli::ProgressMode::Never,
         ignore_case: false,
         use_regex: false,
+        include_hidden: false,
     };
 
     run_refac(args)?;
@@ -388,6 +394,7 @@ fn test_names_only_mode() -> Result<()> {
         progress: nomion::cli::ProgressMode::Never,
         ignore_case: false,
         use_regex: false,
+        include_hidden: false,
     };
 
     run_refac(args)?;
@@ -430,6 +437,7 @@ fn test_content_only_mode() -> Result<()> {
         progress: nomion::cli::ProgressMode::Never,
         ignore_case: false,
         use_regex: false,
+        include_hidden: false,
     };
 
     run_refac(args)?;
@@ -477,6 +485,7 @@ fn test_binary_file_handling() -> Result<()> {
         progress: nomion::cli::ProgressMode::Never,
         ignore_case: false,
         use_regex: false,
+        include_hidden: false,
     };
 
     run_refac(args)?;
@@ -530,6 +539,7 @@ fn test_max_depth() -> Result<()> {
         progress: nomion::cli::ProgressMode::Never,
         ignore_case: false,
         use_regex: false,
+        include_hidden: false,
     };
 
     run_refac(args)?;
@@ -571,6 +581,7 @@ fn test_backup_functionality() -> Result<()> {
         progress: nomion::cli::ProgressMode::Never,
         ignore_case: false,
         use_regex: false,
+        include_hidden: false,
     };
 
     run_refac(args)?;
@@ -636,6 +647,7 @@ fn test_multiple_occurrences() -> Result<()> {
         progress: nomion::cli::ProgressMode::Never,
         ignore_case: false,
         use_regex: false,
+        include_hidden: false,
     };
 
     run_refac(args)?;
@@ -679,6 +691,7 @@ fn test_hidden_files() -> Result<()> {
         progress: nomion::cli::ProgressMode::Never,
         ignore_case: false,
         use_regex: false,
+        include_hidden: false,
     };
 
     run_refac(args)?;
@@ -723,6 +736,7 @@ fn test_exclude_patterns() -> Result<()> {
         progress: nomion::cli::ProgressMode::Never,
         ignore_case: false,
         use_regex: false,
+        include_hidden: false,
     };
 
     run_refac(args)?;
@@ -764,6 +778,7 @@ fn test_parallel_processing() -> Result<()> {
         progress: nomion::cli::ProgressMode::Never,
         ignore_case: false,
         use_regex: false,
+        include_hidden: false,
     };
 
     run_refac(args)?;
@@ -777,6 +792,163 @@ fn test_parallel_processing() -> Result<()> {
         assert!(content.contains("newname"), "Content in file {} was not updated", i);
         assert!(!content.contains("oldname"), "Old content still exists in file {}", i);
     }
+
+    Ok(())
+}
+
+#[test]
+fn test_include_hidden_flag() -> Result<()> {
+    let temp_dir = TempDir::new()?;
+    
+    // Create hidden files and directories
+    File::create(temp_dir.path().join(".hidden_oldname.txt"))?
+        .write_all(b"oldname content")?;
+    fs::create_dir(temp_dir.path().join(".hidden_oldname_dir"))?;
+    File::create(temp_dir.path().join(".hidden_oldname_dir/file.txt"))?
+        .write_all(b"oldname content")?;
+    
+    // Create regular files for comparison
+    File::create(temp_dir.path().join("regular_oldname.txt"))?
+        .write_all(b"oldname content")?;
+
+    let args = Args {
+        root_dir: temp_dir.path().to_path_buf(),
+        old_string: "oldname".to_string(),
+        new_string: "newname".to_string(),
+        assume_yes: true,
+        verbose: false,
+        follow_symlinks: false,
+        backup: false,
+        files_only: false,
+        dirs_only: false,
+        names_only: false,
+        content_only: false,
+        max_depth: 0,
+        exclude_patterns: vec![],
+        include_patterns: vec![],
+        format: nomion::cli::OutputFormat::Plain,
+        threads: 1,
+        progress: nomion::cli::ProgressMode::Never,
+        ignore_case: false,
+        use_regex: false,
+        include_hidden: true, // Enable hidden file processing
+    };
+
+    run_refac(args)?;
+
+    // Hidden files should be renamed
+    assert!(temp_dir.path().join(".hidden_newname.txt").exists());
+    assert!(temp_dir.path().join(".hidden_newname_dir").exists());
+    assert!(temp_dir.path().join(".hidden_newname_dir/file.txt").exists());
+    
+    // Regular files should also be renamed
+    assert!(temp_dir.path().join("regular_newname.txt").exists());
+    
+    // Check content was updated in hidden files
+    let hidden_content = fs::read_to_string(temp_dir.path().join(".hidden_newname.txt"))?;
+    assert!(hidden_content.contains("newname"));
+    assert!(!hidden_content.contains("oldname"));
+    
+    let nested_content = fs::read_to_string(temp_dir.path().join(".hidden_newname_dir/file.txt"))?;
+    assert!(nested_content.contains("newname"));
+    assert!(!nested_content.contains("oldname"));
+
+    Ok(())
+}
+
+#[test]
+fn test_include_hidden_flag_disabled() -> Result<()> {
+    let temp_dir = TempDir::new()?;
+    
+    // Create hidden files and directories
+    File::create(temp_dir.path().join(".hidden_oldname.txt"))?
+        .write_all(b"oldname content")?;
+    fs::create_dir(temp_dir.path().join(".hidden_oldname_dir"))?;
+    
+    // Create regular files for comparison
+    File::create(temp_dir.path().join("regular_oldname.txt"))?
+        .write_all(b"oldname content")?;
+
+    let args = Args {
+        root_dir: temp_dir.path().to_path_buf(),
+        old_string: "oldname".to_string(),
+        new_string: "newname".to_string(),
+        assume_yes: true,
+        verbose: false,
+        follow_symlinks: false,
+        backup: false,
+        files_only: false,
+        dirs_only: false,
+        names_only: false,
+        content_only: false,
+        max_depth: 0,
+        exclude_patterns: vec![],
+        include_patterns: vec![],
+        format: nomion::cli::OutputFormat::Plain,
+        threads: 1,
+        progress: nomion::cli::ProgressMode::Never,
+        ignore_case: false,
+        use_regex: false,
+        include_hidden: false, // Disable hidden file processing
+    };
+
+    run_refac(args)?;
+
+    // Hidden files should NOT be renamed
+    assert!(temp_dir.path().join(".hidden_oldname.txt").exists());
+    assert!(temp_dir.path().join(".hidden_oldname_dir").exists());
+    assert!(!temp_dir.path().join(".hidden_newname.txt").exists());
+    assert!(!temp_dir.path().join(".hidden_newname_dir").exists());
+    
+    // Regular files should be renamed
+    assert!(temp_dir.path().join("regular_newname.txt").exists());
+    assert!(!temp_dir.path().join("regular_oldname.txt").exists());
+
+    Ok(())
+}
+
+#[test]
+fn test_include_hidden_with_patterns() -> Result<()> {
+    let temp_dir = TempDir::new()?;
+    
+    // Create hidden files with different patterns
+    File::create(temp_dir.path().join(".hidden_oldname.txt"))?
+        .write_all(b"oldname content")?;
+    File::create(temp_dir.path().join(".other_oldname.log"))?
+        .write_all(b"oldname content")?;
+
+    let args = Args {
+        root_dir: temp_dir.path().to_path_buf(),
+        old_string: "oldname".to_string(),
+        new_string: "newname".to_string(),
+        assume_yes: true,
+        verbose: false,
+        follow_symlinks: false,
+        backup: false,
+        files_only: false,
+        dirs_only: false,
+        names_only: false,
+        content_only: false,
+        max_depth: 0,
+        exclude_patterns: vec!["*.log".to_string()], // Exclude .log files
+        include_patterns: vec![],
+        format: nomion::cli::OutputFormat::Plain,
+        threads: 1,
+        progress: nomion::cli::ProgressMode::Never,
+        ignore_case: false,
+        use_regex: false,
+        include_hidden: true, // Enable hidden file processing
+    };
+
+    run_refac(args)?;
+
+    // Hidden .txt file should be renamed
+    assert!(temp_dir.path().join(".hidden_newname.txt").exists());
+    assert!(!temp_dir.path().join(".hidden_oldname.txt").exists());
+    
+    // Hidden .log file should NOT be renamed due to exclude pattern
+    assert!(temp_dir.path().join(".other_oldname.log").exists());
+    assert!(!temp_dir.path().join(".other_newname.log").exists());
 
     Ok(())
 }

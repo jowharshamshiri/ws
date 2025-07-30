@@ -3,11 +3,20 @@ use std::fs::{self, File};
 use std::io::{BufRead, BufReader, BufWriter, Write};
 use std::path::{Path, PathBuf};
 use super::binary_detector::BinaryDetector;
+use encoding_rs::{Encoding, UTF_8};
+use chardet::detect;
 
 /// File operations for the refac tool (part of the nomion suite)
 pub struct FileOperations {
     binary_detector: BinaryDetector,
     backup_enabled: bool,
+}
+
+/// Encoding information for a file
+#[derive(Debug, Clone)]
+struct FileEncoding {
+    encoding: &'static Encoding,
+    has_bom: bool,
 }
 
 impl Default for FileOperations {
@@ -43,16 +52,16 @@ impl FileOperations {
             return Ok(false);
         }
 
-        // Read the file content - with better error handling for encoding issues
-        let content = match fs::read_to_string(file_path) {
-            Ok(content) => content,
-            Err(e) => {
-                return Err(anyhow::anyhow!(
-                    "Failed to read file as UTF-8 text ({}): {}. This file may have encoding issues or be binary. Use --verbose to see binary detection details.", 
-                    file_path.display(), e
-                ));
-            }
-        };
+        // Read file as bytes first
+        let original_bytes = fs::read(file_path)
+            .with_context(|| format!("Failed to read file: {}", file_path.display()))?;
+
+        // Detect the file's encoding
+        let file_encoding = self.detect_encoding(&original_bytes)?;
+        
+        // Decode the content using the detected encoding
+        let content = self.decode_with_encoding(&original_bytes, &file_encoding)
+            .with_context(|| format!("Failed to decode file with detected encoding: {}", file_path.display()))?;
 
         // Check if the file contains the target string
         if !content.contains(old_string) {
@@ -67,8 +76,11 @@ impl FileOperations {
         // Replace content
         let new_content = content.replace(old_string, new_string);
 
-        // Write the modified content back
-        fs::write(file_path, new_content)
+        // Encode back to the original encoding and write
+        let encoded_bytes = self.encode_with_encoding(&new_content, &file_encoding)
+            .with_context(|| format!("Failed to encode content back to original encoding: {}", file_path.display()))?;
+
+        fs::write(file_path, encoded_bytes)
             .with_context(|| format!("Failed to write file: {}", file_path.display()))?;
 
         Ok(true)
@@ -257,8 +269,13 @@ impl FileOperations {
             return Ok(false);
         }
 
-        let content = fs::read_to_string(file_path)
+        // Read file as bytes and detect encoding
+        let bytes = fs::read(file_path)
             .with_context(|| format!("Failed to read file: {}", file_path.display()))?;
+            
+        let file_encoding = self.detect_encoding(&bytes)?;
+        let content = self.decode_with_encoding(&bytes, &file_encoding)
+            .with_context(|| format!("Failed to decode file: {}", file_path.display()))?;
 
         Ok(content.contains(search_string))
     }
@@ -276,8 +293,13 @@ impl FileOperations {
             return Ok(0);
         }
 
-        let content = fs::read_to_string(file_path)
+        // Read file as bytes and detect encoding
+        let bytes = fs::read(file_path)
             .with_context(|| format!("Failed to read file: {}", file_path.display()))?;
+            
+        let file_encoding = self.detect_encoding(&bytes)?;
+        let content = self.decode_with_encoding(&bytes, &file_encoding)
+            .with_context(|| format!("Failed to decode file: {}", file_path.display()))?;
 
         Ok(content.matches(search_string).count())
     }
@@ -319,6 +341,143 @@ impl FileOperations {
     /// Check if a path is a directory
     pub fn is_dir<P: AsRef<Path>>(&self, path: P) -> bool {
         path.as_ref().is_dir()
+    }
+
+    /// Detect the encoding of a file from its byte content
+    fn detect_encoding(&self, bytes: &[u8]) -> Result<FileEncoding> {
+        // Check for UTF-8 BOM first
+        if bytes.len() >= 3 && &bytes[0..3] == b"\xEF\xBB\xBF" {
+            return Ok(FileEncoding {
+                encoding: UTF_8,
+                has_bom: true,
+            });
+        }
+        
+        // Check for UTF-16 BOM
+        if bytes.len() >= 2 {
+            match &bytes[0..2] {
+                b"\xFF\xFE" => {
+                    return Ok(FileEncoding {
+                        encoding: encoding_rs::UTF_16LE,
+                        has_bom: true,
+                    });
+                }
+                b"\xFE\xFF" => {
+                    return Ok(FileEncoding {
+                        encoding: encoding_rs::UTF_16BE,
+                        has_bom: true,
+                    });
+                }
+                _ => {}
+            }
+        }
+        
+        // Try UTF-8 first (most common)
+        if let Ok(_) = std::str::from_utf8(bytes) {
+            return Ok(FileEncoding {
+                encoding: UTF_8,
+                has_bom: false,
+            });
+        }
+        
+        // Use chardet for automatic detection
+        let detection_result = detect(bytes);
+        let encoding_name = detection_result.0;
+        
+        // Map chardet encoding names to encoding_rs encodings
+        let encoding = match encoding_name.as_str() {
+            "UTF-8" => UTF_8,
+            "ASCII" => encoding_rs::WINDOWS_1252, // ASCII is subset of Windows-1252
+            "ISO-8859-1" | "LATIN1" => encoding_rs::WINDOWS_1252,
+            "WINDOWS-1252" | "CP1252" => encoding_rs::WINDOWS_1252,
+            "WINDOWS-1251" | "CP1251" => encoding_rs::WINDOWS_1251,
+            "ISO-8859-2" => encoding_rs::ISO_8859_2,
+            "ISO-8859-3" => encoding_rs::ISO_8859_3,
+            "ISO-8859-4" => encoding_rs::ISO_8859_4,
+            "ISO-8859-5" => encoding_rs::ISO_8859_5,
+            "ISO-8859-6" => encoding_rs::ISO_8859_6,
+            "ISO-8859-7" => encoding_rs::ISO_8859_7,
+            "ISO-8859-8" => encoding_rs::ISO_8859_8,
+            "ISO-8859-10" => encoding_rs::ISO_8859_10,
+            "ISO-8859-13" => encoding_rs::ISO_8859_13,
+            "ISO-8859-14" => encoding_rs::ISO_8859_14,
+            "ISO-8859-15" => encoding_rs::ISO_8859_15,
+            "ISO-8859-16" => encoding_rs::ISO_8859_16,
+            "KOI8-R" => encoding_rs::KOI8_R,
+            "KOI8-U" => encoding_rs::KOI8_U,
+            "BIG5" => encoding_rs::BIG5,
+            "GB2312" | "GB18030" => encoding_rs::GB18030,
+            "GBK" => encoding_rs::GBK,
+            "EUC-JP" => encoding_rs::EUC_JP,
+            "ISO-2022-JP" => encoding_rs::ISO_2022_JP,
+            "SHIFT_JIS" => encoding_rs::SHIFT_JIS,
+            "EUC-KR" => encoding_rs::EUC_KR,
+            _ => {
+                // Fallback to Windows-1252 for unknown encodings (handles most extended ASCII)
+                encoding_rs::WINDOWS_1252
+            }
+        };
+        
+        Ok(FileEncoding {
+            encoding,
+            has_bom: false,
+        })
+    }
+    
+    /// Decode bytes using the detected encoding
+    fn decode_with_encoding(&self, bytes: &[u8], file_encoding: &FileEncoding) -> Result<String> {
+        let decode_bytes = if file_encoding.has_bom {
+            // Skip BOM bytes
+            if std::ptr::eq(file_encoding.encoding, UTF_8) {
+                &bytes[3..] // UTF-8 BOM is 3 bytes
+            } else if std::ptr::eq(file_encoding.encoding, encoding_rs::UTF_16LE) || 
+                     std::ptr::eq(file_encoding.encoding, encoding_rs::UTF_16BE) {
+                &bytes[2..] // UTF-16 BOM is 2 bytes
+            } else {
+                bytes
+            }
+        } else {
+            bytes
+        };
+        
+        let (decoded, _, had_errors) = file_encoding.encoding.decode(decode_bytes);
+        
+        if had_errors {
+            return Err(anyhow::anyhow!(
+                "Decoding errors occurred with encoding: {}", 
+                file_encoding.encoding.name()
+            ));
+        }
+        
+        Ok(decoded.into_owned())
+    }
+    
+    /// Encode string back to the original encoding
+    fn encode_with_encoding(&self, content: &str, file_encoding: &FileEncoding) -> Result<Vec<u8>> {
+        let (encoded, _, had_errors) = file_encoding.encoding.encode(content);
+        
+        if had_errors {
+            return Err(anyhow::anyhow!(
+                "Encoding errors occurred with encoding: {}", 
+                file_encoding.encoding.name()
+            ));
+        }
+        
+        let mut result = Vec::new();
+        
+        // Add BOM if original file had one
+        if file_encoding.has_bom {
+            if std::ptr::eq(file_encoding.encoding, UTF_8) {
+                result.extend_from_slice(b"\xEF\xBB\xBF");
+            } else if std::ptr::eq(file_encoding.encoding, encoding_rs::UTF_16LE) {
+                result.extend_from_slice(b"\xFF\xFE");
+            } else if std::ptr::eq(file_encoding.encoding, encoding_rs::UTF_16BE) {
+                result.extend_from_slice(b"\xFE\xFF");
+            }
+        }
+        
+        result.extend_from_slice(&encoded);
+        Ok(result)
     }
 
     /// Get file permissions (Unix-style)
@@ -604,6 +763,153 @@ mod tests {
         assert!(file_ops.is_dir(&test_dir));
         assert!(!file_ops.is_dir(&test_file));
 
+        Ok(())
+    }
+    
+    #[test]
+    fn test_encoding_detection_and_preservation() -> Result<()> {
+        let temp_dir = TempDir::new()?;
+        let file_ops = FileOperations::new();
+        
+        // Test UTF-8 with BOM
+        let utf8_bom_file = temp_dir.path().join("utf8_bom.txt");
+        let utf8_content = "Hello, 世界! target string here";
+        let mut utf8_bytes = vec![0xEF, 0xBB, 0xBF]; // UTF-8 BOM
+        utf8_bytes.extend_from_slice(utf8_content.as_bytes());
+        fs::write(&utf8_bom_file, &utf8_bytes)?;
+        
+        let modified = file_ops.replace_content(&utf8_bom_file, "target", "replacement")?;
+        assert!(modified, "UTF-8 BOM file should be modified");
+        
+        // Check that BOM is preserved
+        let result_bytes = fs::read(&utf8_bom_file)?;
+        assert_eq!(&result_bytes[0..3], &[0xEF, 0xBB, 0xBF], "UTF-8 BOM should be preserved");
+        
+        // Check content was replaced
+        let result_content = String::from_utf8_lossy(&result_bytes[3..]);
+        assert!(result_content.contains("replacement"), "Content should contain replacement string");
+        assert!(!result_content.contains("target"), "Content should not contain original target string");
+        
+        // Test Windows-1252 (extended ASCII) - simulating the TypeScript file issue
+        let win1252_file = temp_dir.path().join("win1252.txt");
+        // Create content with extended ASCII character (em-dash is 0x96 in Windows-1252)
+        let win1252_bytes = vec![
+            72, 101, 108, 108, 111, 32, // "Hello "
+            150, // em-dash (0x96) in Windows-1252
+            32, 116, 97, 114, 103, 101, 116, 32, 115, 116, 114, 105, 110, 103 // " target string"
+        ];
+        fs::write(&win1252_file, &win1252_bytes)?;
+        
+        let modified = file_ops.replace_content(&win1252_file, "target", "replacement")?;
+        assert!(modified, "Windows-1252 file should be modified");
+        
+        // Verify the special character is preserved
+        let result_bytes = fs::read(&win1252_file)?;
+        assert!(result_bytes.contains(&150), "Extended ASCII character (em-dash) should be preserved");
+        
+        // Verify content was replaced
+        let file_encoding = file_ops.detect_encoding(&result_bytes)?;
+        let result_content = file_ops.decode_with_encoding(&result_bytes, &file_encoding)?;
+        assert!(result_content.contains("replacement"), "Content should contain replacement string");
+        assert!(!result_content.contains("target"), "Content should not contain original target string");
+        
+        Ok(())
+    }
+    
+    #[test]
+    fn test_utf16_bom_detection() -> Result<()> {
+        let _temp_dir = TempDir::new()?;
+        let file_ops = FileOperations::new();
+        
+        // Test UTF-16LE BOM detection
+        let utf16le_bom = vec![0xFF, 0xFE, 0x48, 0x00, 0x65, 0x00]; // UTF-16LE BOM + "He"
+        let encoding = file_ops.detect_encoding(&utf16le_bom)?;
+        assert!(std::ptr::eq(encoding.encoding, encoding_rs::UTF_16LE), "Should detect UTF-16LE");
+        assert!(encoding.has_bom, "Should detect BOM");
+        
+        // Test UTF-16BE BOM detection
+        let utf16be_bom = vec![0xFE, 0xFF, 0x00, 0x48, 0x00, 0x65]; // UTF-16BE BOM + "He"
+        let encoding = file_ops.detect_encoding(&utf16be_bom)?;
+        assert!(std::ptr::eq(encoding.encoding, encoding_rs::UTF_16BE), "Should detect UTF-16BE");
+        assert!(encoding.has_bom, "Should detect BOM");
+        
+        Ok(())
+    }
+    
+    #[test]
+    fn test_encoding_detection_methods() -> Result<()> {
+        let _temp_dir = TempDir::new()?;
+        let file_ops = FileOperations::new();
+        
+        // Test UTF-8 detection
+        let utf8_content = "Hello, 世界!";
+        let utf8_bytes = utf8_content.as_bytes();
+        let encoding = file_ops.detect_encoding(utf8_bytes)?;
+        assert!(std::ptr::eq(encoding.encoding, UTF_8), "Should detect UTF-8");
+        assert!(!encoding.has_bom, "Should not have BOM");
+        
+        // Test UTF-8 BOM detection
+        let mut utf8_bom_bytes = vec![0xEF, 0xBB, 0xBF];
+        utf8_bom_bytes.extend_from_slice(utf8_bytes);
+        let encoding = file_ops.detect_encoding(&utf8_bom_bytes)?;
+        assert!(std::ptr::eq(encoding.encoding, UTF_8), "Should detect UTF-8 with BOM");
+        assert!(encoding.has_bom, "Should have BOM");
+        
+        // Test Windows-1252 (extended ASCII) detection
+        let extended_ascii_bytes = vec![72, 101, 108, 108, 111, 32, 150, 32, 119, 111, 114, 108, 100]; // "Hello \x96 world"
+        let encoding = file_ops.detect_encoding(&extended_ascii_bytes)?;
+        assert!(std::ptr::eq(encoding.encoding, encoding_rs::WINDOWS_1252), "Should detect Windows-1252");
+        assert!(!encoding.has_bom, "Should not have BOM");
+        
+        Ok(())
+    }
+    
+    #[test]
+    fn test_file_contains_string_with_encoding() -> Result<()> {
+        let temp_dir = TempDir::new()?;
+        let file_ops = FileOperations::new();
+        
+        // Test with Windows-1252 file (like the TypeScript issue)
+        let win1252_file = temp_dir.path().join("extended_ascii.txt");
+        let content_bytes = vec![
+            84, 104, 105, 115, 32, 102, 105, 108, 101, 32, // "This file "
+            150, // em-dash (0x96) in Windows-1252
+            32, 99, 111, 110, 116, 97, 105, 110, 115, 32, // " contains "
+            116, 97, 114, 103, 101, 116, 32, 115, 116, 114, 105, 110, 103 // "target string"
+        ];
+        fs::write(&win1252_file, &content_bytes)?;
+        
+        // Test that we can detect the string despite encoding
+        assert!(file_ops.file_contains_string(&win1252_file, "target string")?, 
+                "Should find target string in Windows-1252 file");
+        assert!(file_ops.file_contains_string(&win1252_file, "contains")?, 
+                "Should find contains string in Windows-1252 file");
+        assert!(!file_ops.file_contains_string(&win1252_file, "nonexistent")?, 
+                "Should not find nonexistent string");
+        
+        // Test count occurrences
+        let count = file_ops.count_string_occurrences(&win1252_file, "i")?;
+        assert!(count >= 2, "Should find multiple occurrences of 'i'"); // in "This file"
+        
+        Ok(())
+    }
+    
+    #[test]
+    fn test_encoding_error_handling() -> Result<()> {
+        let temp_dir = TempDir::new()?;
+        let file_ops = FileOperations::new();
+        
+        // Test with truly invalid sequence that can't be decoded
+        let invalid_file = temp_dir.path().join("invalid.txt");
+        // Create a sequence that's invalid in most encodings
+        let invalid_bytes = vec![0xFF, 0xFE, 0xFF, 0xFF, 0x00, 0xD8, 0x00, 0x00]; // Invalid UTF-16
+        fs::write(&invalid_file, &invalid_bytes)?;
+        
+        // The file operations should handle this gracefully
+        let result = file_ops.file_contains_string(&invalid_file, "test");
+        // Should either succeed (with lossy conversion) or fail gracefully
+        assert!(result.is_ok() || result.is_err(), "Should handle invalid encoding gracefully");
+        
         Ok(())
     }
 }

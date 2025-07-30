@@ -1,129 +1,365 @@
 # Nomion
 
-A tool suite for developers and system administrators for file operations, line analysis, version management, and development workflow automation.
+A tool suite for developers and system administrators that provides file operations, line analysis, version management, and development workflow automation.
+
+**Current Version**: 0.34.20950  
+**Build Status**: Clean compilation with zero warnings  
+**Test Status**: 249 tests passing across 8 test suites  
 
 ## Tools Overview
 
 | Tool | Purpose | Primary Use Cases |
 |------|---------|-------------------|
-| **refac** | Code refactoring and string replacement | API migrations, bulk renames, content updates |
-| **ldiff** | Log pattern analysis and visualization | Debug analysis, pattern recognition, monitoring |
-| **scrap** | Safe file disposal with metadata | Experimental code cleanup, temporary file management |
-| **unscrap** | File restoration and recovery | Accident recovery, experiment rollback |
-| **verbump** | Version management | Release automation, version consistency |
+| **refac** | Recursive string replacement with encoding detection | Code refactoring, API migrations, bulk renames |
+| **ldiff** | Line difference visualization for pattern recognition | Log analysis, debug pattern detection, monitoring |
+| **scrap** | Local trash can with metadata tracking | Safe file disposal, experimental cleanup |
+| **unscrap** | File restoration from scrap folder | Accident recovery, experiment rollback |
+| **st8** | Automated version management with templates | Release automation, version consistency, file generation |
 
-Built for safety, reliability, and performance with extensive testing (231 tests across 8 test suites).
+## Quick Start Examples
 
-## Testing & Quality Assurance
+### Code Refactoring with Refac
+```bash
+# Preview changes before applying
+refac ./src "OldClassName" "NewClassName" --dry-run --verbose
 
-### Test Suite
-- 231 tests across all tools and scenarios
-- 8 test files covering different aspects:
-  - `integration_tests.rs` - End-to-end tool integration (15 tests)
-  - `refac_concurrency_tests.rs` - Multi-threading safety (9 tests)
-  - `refac_edge_cases_tests.rs` - Complex scenarios (14 tests)
-  - `refac_empty_directory_tests.rs` - Directory handling edge cases (8 tests)
-  - `refac_encoding_tests.rs` - UTF-8 and encoding safety (7 tests)
-  - `scrap_advanced_integration_tests.rs` - Scrap workflows (21 tests)
-  - `scrap_integration_tests.rs` - Core scrap functionality (18 tests)
-  - `verbump_integration_tests.rs` - Version management (25 tests)
+# Apply refactoring with backups
+refac ./src "OldClassName" "NewClassName" --backup
 
-### Quality Standards
-- Zero compilation warnings across platforms
-- Memory safety through Rust's ownership model
-- Performance testing with large file sets
-- Pre-operation validation to prevent mid-execution failures
-- Proper operation ordering to prevent race conditions
-- UTF-8 and encoding issue detection
+# Process specific file types
+refac ./config "old.api.url" "new.api.url" --content-only --include "*.toml"
 
-### Edge Case Coverage
-- Concurrency: High-thread scenarios, parallel processing
-- Encoding: UTF-8, invalid encodings, BOM handling, mixed encodings
-- File System: Deep nesting, long filenames, special characters
-- Permissions: Read-only files, permission changes, restricted directories
-- Edge Cases: Empty directories, symlinks, hidden files, binary detection
+# Include hidden files
+refac . "st8" "new_st8" --include-hidden
+```
 
-## Core Features
+### Log Pattern Analysis with Ldiff
+```bash
+# Real-time log monitoring
+tail -f /var/log/system.log | ldiff
 
-### Refac - Code Refactoring
+# Compare deployment logs
+cat deploy-v1.log | ldiff > patterns-v1.txt
+cat deploy-v2.log | ldiff > patterns-v2.txt
 
-**String Replacement Engine**
-- Language-aware processing for code structure
-- Multi-mode operations: names-only, content-only, files-only, dirs-only
-- Collision detection to prevent overwrites and conflicts
-- Binary file protection with automatic detection
-- Pattern filtering with glob and regex support
-- Parallel processing for large codebases
+# Custom substitute character
+journalctl -f | ldiff "■"
+```
 
-**Safety & Validation**
-- Pre-validation tests all operations before execution
-- Dry-run mode to preview changes
-- Optional file backups before modifications
-- Atomic operations prevent partial failures
-- Cross-platform support for Windows, macOS, and Linux
+### File Management with Scrap/Unscrap
+```bash
+# Move files to local storage instead of deleting
+scrap experimental_feature/ temp_logs/ *.bak
 
-### Ldiff - Log Analysis
+# Review stored files
+scrap list --sort date
 
-**Pattern Recognition Engine**
-- Real-time analysis: Process streaming logs with `tail -f` compatibility
-- ANSI color preservation: Maintains terminal formatting and colors
-- Customizable visualization: User-defined substitute characters
-- Performance optimized for large log files
+# Find specific files in storage
+scrap find "*.rs" --content "TODO"
 
-**Use Cases**
-- System monitoring: Track patterns in system logs and metrics
-- Debug analysis: Identify recurring patterns in application logs
-- Security monitoring: Detect suspicious patterns in auth logs
-- Development: Analyze test output and build logs for patterns
+# Restore when needed
+unscrap experimental_feature/
+unscrap important.txt --to ~/backup/
+```
 
-### Scrap - File Management
+### Version Management with St8 Templates
+```bash
+# Set up automatic versioning
+st8 install
 
-**Local Trash System**
-- Metadata tracking: Preserves original locations, timestamps, and context
-- Conflict resolution: Automatic naming to prevent overwrites
-- Search and discovery: Find files by name, content, date, or size
-- Git integration: Automatic `.gitignore` management
-- Archive support: Compress and backup scrap contents
+# Add a template for generating version headers
+st8 template add version-header.h --content \
+"#ifndef VERSION_H
+#define VERSION_H
+#define VERSION \"{{ project.version }}\"
+#define VERSION_MAJOR {{ project.major_version }}
+#define VERSION_MINOR {{ project.minor_version }}
+#define VERSION_PATCH {{ project.patch_version }}
+#define BUILD_DATE \"{{ datetime.date }}\"
+#endif"
 
-**Operations**
-- Cleanup: Age-based removal with dry-run preview
-- Bulk operations: Move multiple files/directories efficiently
-- Restoration metadata: Original path and context preservation
-- Size management: Track and report storage usage
+# Add template for deployment config
+st8 template add deploy.yml --file-path ./deploy.template.yml
 
-### Unscrap - File Recovery
+# List templates
+st8 template list
 
-**Restoration System**
-- Automatic recovery: Restore files to original locations using metadata
-- Custom destinations: Flexible restoration to alternative paths
-- Conflict handling: Resolution of destination conflicts
-- Undo operations: Quick reversal of recent scrap operations
+# Templates render automatically when version updates
+git add . && git commit -m "Add new feature"  # Auto-increments version and renders templates
+```
 
-**Recovery Features**
-- Last-action undo: Reverse the most recent scrap operation
-- Selective restoration: Restore specific files from scrap history
-- Batch recovery: Restore multiple related files simultaneously
-- Path reconstruction: Automatically recreate directory structures
+## Tool Documentation
 
-### Verbump - Version Management
+### Refac - String Replacement
 
-**Git-Integrated Versioning**
-- Automatic bumping: Version increments on commits via git hooks
-- Multi-format support: Handles Cargo.toml, package.json, version.txt, and more
-- Semantic versioning: Version increment strategies
-- Project detection: Automatic configuration for different project types
+**Core Features:**
+- **Encoding Detection**: Handles UTF-8, UTF-16, Windows-1252, and other text encodings
+- **Multi-threaded Processing**: Parallel processing for large codebases
+- **Safety Features**: Pre-validation prevents mid-operation failures
+- **Collision Detection**: Prevents naming conflicts and data loss
+- **Binary Protection**: Skips binary files automatically
 
-**Version Control**
-- Audit logging: History of version changes
-- Configuration management: Per-project settings
-- Status monitoring: Version and configuration status
-- Integration ready: Designed for CI/CD and release automation
+**Usage Examples:**
+```bash
+# Multi-mode operations
+refac . "oldname" "newname" --names-only     # Rename files/dirs only
+refac . "oldname" "newname" --content-only   # Replace content only
+refac . "oldname" "newname" --files-only     # Process files only
+refac . "oldname" "newname" --dirs-only      # Process directories only
+
+# Pattern filtering
+refac . "oldname" "newname" \
+  --include "*.rs" --include "*.toml" \
+  --exclude "target/*" --exclude "*.log"
+
+# Performance tuning
+refac ./large-project "old" "new" \
+  --threads 8 \
+  --max-depth 5 \
+  --verbose
+
+# Backup operations
+refac . "oldname" "newname" --force --backup --assume-yes
+```
+
+### Ldiff - Pattern Recognition
+
+**Core Features:**
+- **Real-time Analysis**: Works with streaming input (`tail -f`)
+- **ANSI Preservation**: Maintains terminal colors and formatting
+- **Customizable Visualization**: User-defined substitute characters
+- **Performance**: Handles large log files
+
+**Usage Patterns:**
+```bash
+# System administration
+systemctl status | ldiff
+ps aux | ldiff "*"
+df -h | ldiff "░"
+
+# Development workflows
+npm test | ldiff
+cargo test --verbose | ldiff "█"
+git log --oneline | ldiff
+
+# Security monitoring
+tail -f /var/log/auth.log | ldiff "⚠"
+journalctl -f -u ssh | ldiff "●"
+```
+
+### Scrap - Local Trash System
+
+**Core Features:**
+- **Metadata Tracking**: Preserves original locations and timestamps
+- **Conflict Resolution**: Smart naming prevents overwrites
+- **Git Integration**: Automatic .gitignore management
+- **Search Capabilities**: Find files by name, content, or metadata
+- **Archive Support**: Compress and backup scrap contents
+
+**Operations:**
+```bash
+# Basic operations
+scrap file.txt directory/                    # Move to scrap
+scrap                                       # List contents (default)
+scrap list --sort name                      # Sort by name
+scrap list --sort date                      # Sort by date
+scrap list --sort size                      # Sort by size
+
+# Search operations
+scrap find "test.*"                         # Find by filename pattern
+scrap find "TODO" --content                 # Search file contents
+scrap find "*.log" --days 7                # Find files from last 7 days
+
+# Maintenance operations
+scrap clean                                 # Remove items older than 30 days
+scrap clean --days 7 --dry-run             # Preview cleanup
+scrap archive --output backup-$(date +%Y%m%d).tar.gz
+scrap archive --remove                     # Archive and remove originals
+scrap purge --force                        # Remove all items
+```
+
+### Unscrap - File Recovery System
+
+**Core Features:**
+- **Automatic Recovery**: Restores to original locations using metadata
+- **Custom Destinations**: Flexible restoration paths
+- **Conflict Handling**: Safe resolution of destination conflicts
+- **Batch Operations**: Restore multiple related files
+
+**Recovery Operations:**
+```bash
+# Quick recovery
+unscrap                                     # Restore last scrapped item
+unscrap filename.txt                        # Restore specific file
+unscrap project_backup/                     # Restore directory
+
+# Custom recovery
+unscrap important.txt --to ~/Documents/     # Custom destination
+unscrap config.toml --force                 # Overwrite existing
+unscrap --list                              # Show restorable items
+```
+
+### St8 - Version Management with Templates
+
+**Core Features:**
+- **Git Integration**: Automatic version bumping on commits
+- **Template Engine**: Tera template support with variables
+- **Multi-format Support**: Cargo.toml, package.json, version.txt, etc.
+- **State Management**: Centralized configuration in .nomion folder
+
+**Template System Variables:**
+- `{{ project.version }}` - Full version (e.g., "1.2.3")
+- `{{ project.name }}` - Project name from repository
+- `{{ project.major_version }}`, `{{ project.minor_version }}`, `{{ project.patch_version }}` - Version components
+- `{{ datetime.date }}`, `{{ datetime.time }}`, `{{ datetime.iso }}` - Build timestamps
+
+**Template Examples:**
+
+#### C/C++ Version Header
+```bash
+st8 template add include/version.h --content \
+"#ifndef VERSION_H
+#define VERSION_H
+
+#define PROJECT_NAME \"{{ project.name }}\"
+#define PROJECT_VERSION \"{{ project.version }}\"
+#define VERSION_MAJOR {{ project.major_version }}
+#define VERSION_MINOR {{ project.minor_version }}
+#define VERSION_PATCH {{ project.patch_version }}
+#define BUILD_DATE \"{{ datetime.date }}\"
+#define BUILD_TIME \"{{ datetime.time }}\"
+
+#endif // VERSION_H"
+```
+
+#### JavaScript/Node.js Version Module
+```bash
+st8 template add src/version.js --content \
+"// Auto-generated version file - DO NOT EDIT
+export const VERSION = {
+  full: '{{ project.version }}',
+  major: {{ project.major_version }},
+  minor: {{ project.minor_version }},
+  patch: {{ project.patch_version }},
+  name: '{{ project.name }}',
+  buildDate: '{{ datetime.date }}',
+  buildTime: '{{ datetime.time }}'
+};
+
+export default VERSION;"
+```
+
+#### Docker Compose with Version
+```bash
+st8 template add docker-compose.prod.yml --content \
+"version: '3.8'
+services:
+  app:
+    image: {{ project.name }}:{{ project.version }}
+    environment:
+      - VERSION={{ project.version }}
+      - BUILD_DATE={{ datetime.date }}
+    labels:
+      - \"version={{ project.version }}\"
+      - \"build.date={{ datetime.date }}\"
+      - \"build.time={{ datetime.time }}\""
+```
+
+#### Kubernetes Deployment Manifest
+```bash
+st8 template add k8s/deployment.yml --content \
+"apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ project.name }}
+  labels:
+    app: {{ project.name }}
+    version: \"{{ project.version }}\"
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: {{ project.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ project.name }}
+        version: \"{{ project.version }}\"
+    spec:
+      containers:
+      - name: {{ project.name }}
+        image: {{ project.name }}:{{ project.version }}
+        env:
+        - name: VERSION
+          value: \"{{ project.version }}\"
+        - name: BUILD_DATE
+          value: \"{{ datetime.date }}\""
+```
+
+#### Python Version Module
+```bash
+st8 template add __version__.py --content \
+"\"\"\"
+Auto-generated version information.
+This file is automatically updated by st8 on version changes.
+\"\"\"
+
+__version__ = '{{ project.version }}'
+__project__ = '{{ project.name }}'
+__major__ = {{ project.major_version }}
+__minor__ = {{ project.minor_version }}
+__patch__ = {{ project.patch_version }}
+__build_date__ = '{{ datetime.date }}'
+__build_time__ = '{{ datetime.time }}'
+
+VERSION_INFO = {
+    'version': __version__,
+    'project': __project__,
+    'major': __major__,
+    'minor': __minor__,
+    'patch': __patch__,
+    'build_date': __build_date__,
+    'build_time': __build_time__,
+}"
+```
+
+**Template Management Workflow:**
+```bash
+# Set up st8 in your project
+st8 install
+
+# Add templates for your project
+st8 template add src/version.h --file-path ./templates/version.h.template
+st8 template add package.json --content "{ \"version\": \"{{ project.version }}\" }"
+
+# List templates
+st8 template list
+
+# Show template details
+st8 template show src/version.h
+
+# Test template rendering
+st8 template render
+
+# Enable/disable templates
+st8 template enable src/version.h
+st8 template enable --all
+
+# Version updates render templates automatically
+git add . && git commit -m "New feature"
+# -> Version auto-increments from 1.2.3 to 1.2.4
+# -> Templates re-render with new version
+
+# Manual version update
+st8 update --minor  # 1.2.4 -> 1.3.0
+st8 update --major  # 1.3.0 -> 2.0.0
+```
 
 ## Installation
 
 ### Quick Install
 ```bash
-git clone https://github.com/jowharshamshiri/nomion
+git clone https://github.com/jowharshamshiri/nomion.git
 cd nomion
 ./install.sh
 ```
@@ -138,10 +374,7 @@ cd nomion
 
 ### Manual Installation
 ```bash
-# Build from source
-cargo build --release
-
-# Install all tools
+# Build and install tools
 cargo install --path .
 
 # Install specific tools
@@ -149,652 +382,190 @@ cargo install --path . --bin refac
 cargo install --path . --bin ldiff
 cargo install --path . --bin scrap
 cargo install --path . --bin unscrap
-cargo install --path . --bin verbump
+cargo install --path . --bin st8
 ```
 
-### Uninstallation
+### Verification
 ```bash
-./uninstall.sh                         # Remove all tools
-./uninstall.sh -d /usr/local/bin       # Remove from custom directory
+# Check installation
+refac --version    # Should show: refac 0.34.20950
+ldiff --version    # Should show: ldiff 0.34.20950
+scrap --version    # Should show: scrap 0.34.20950
+unscrap --version  # Should show: unscrap 0.34.20950
+st8 --version      # Should show: st8 0.34.20950
+
+# Test basic functionality
+echo "test" | ldiff
+st8 status
+refac --help
 ```
 
-## Quick Start Examples
+## Quality Assurance & Testing
 
-### Developer Refactoring Workflow
+### Test Suite Coverage
+- **249 Tests** across 8 test suites
+- **Unit Tests**: Core functionality and edge cases (94 tests)
+- **Integration Tests**: End-to-end workflows (155 tests)
+- **Edge Case Coverage**: Concurrency, encoding, permissions, deep nesting
+
+### Test Categories
+| Test Suite | Tests | Focus Area |
+|------------|-------|------------|
+| `integration_tests` | 18 | Cross-tool integration |
+| `refac_concurrency_tests` | 9 | Multi-threading safety |
+| `refac_edge_cases_tests` | 14 | Complex scenarios |
+| `refac_empty_directory_tests` | 8 | Directory handling |
+| `refac_encoding_tests` | 7 | UTF-8/encoding safety |
+| `scrap_advanced_integration_tests` | 21 | Advanced scrap workflows |
+| `scrap_integration_tests` | 18 | Core scrap functionality |
+| `st8_integration_tests` | 25 | Version management |
+| `st8_template_tests` | 15 | Template system |
+
+### Quality Standards
+- Zero compilation warnings across platforms
+- Memory safety through Rust's ownership model
+- Performance testing with large file sets
+- Pre-operation validation prevents mid-execution failures
+- Operation ordering prevents race conditions
+- Encoding detection handles text file encodings
+
+### Running Tests
 ```bash
-# 1. Preview changes safely (recommended first step)
-refac ./src "OldClassName" "NewClassName" --dry-run --verbose
+# Run test suite
+cargo test
 
-# 2. Apply the refactoring with backups
-refac ./src "OldClassName" "NewClassName" --backup
+# Run specific test categories
+cargo test --test integration_tests
+cargo test --test refac_encoding_tests
+cargo test --test st8_template_tests
 
-# 3. Update configuration files separately
-refac ./config "old.api.url" "new.api.url" --content-only --include "*.toml"
-```
+# Test with verbose output
+cargo test -- --nocapture
 
-### Log Analysis & Monitoring
-```bash
-# Real-time log pattern analysis
-tail -f /var/log/system.log | ldiff
-
-# Compare deployment logs
-cat deploy-1.log | ldiff > patterns-1.txt
-cat deploy-2.log | ldiff > patterns-2.txt
-
-# Custom substitute character for different log sources
-journalctl -f | ldiff "■"
-```
-
-### File Management
-```bash
-# Move experimental code to safe storage
-scrap experimental_feature/ temp_logs/ *.bak
-
-# Review what you've stored
-scrap list --sort date
-
-# Find specific files later
-scrap find "*.rs" --content "TODO"
-
-# Restore when needed
-unscrap experimental_feature/
-```
-
-### Version Management
-```bash
-# Set up automatic versioning
-verbump install
-
-# Check version status
-verbump show
-
-# Version automatically updates on commits
-git add . && git commit -m "Add new feature"  # Auto-increments version
+# Performance testing
+cargo test --release
 ```
 
 ## Command Reference
 
-### Refac - String Replacement & Refactoring
+### Refac Options
+| Option | Short | Description |
+|--------|-------|-------------|
+| `--dry-run` | `-d` | Preview changes without applying |
+| `--force` | `-f` | Skip confirmation prompts |
+| `--verbose` | `-v` | Show detailed output |
+| `--backup` | `-b` | Create backup files |
+| `--files-only` | | Process files only |
+| `--dirs-only` | | Process directories only |
+| `--names-only` | | Rename only, skip content |
+| `--content-only` | | Replace content only |
+| `--include-hidden` | | Include hidden files |
+| `--threads <N>` | `-j` | Number of threads |
+| `--include <PATTERN>` | | Include files matching pattern |
+| `--exclude <PATTERN>` | | Exclude files matching pattern |
 
-**Basic Syntax:**
+### St8 Template Commands
+| Command | Description |
+|---------|-------------|
+| `st8 template add <name>` | Add new template |
+| `st8 template list` | List templates |
+| `st8 template show <name>` | Show template details |
+| `st8 template enable <name>` | Enable template |
+| `st8 template remove <name>` | Remove template |
+| `st8 template render` | Render templates |
+
+## Safety Features
+
+### Built-in Protections
+- **Collision Detection**: Prevents overwriting existing files
+- **Pre-validation**: Tests operations before execution
+- **Binary File Protection**: Skips binary files automatically
+- **Atomic Operations**: Prevents partial failures
+- **Encoding Safety**: Handles text encodings without corruption
+- **Race Condition Prevention**: Proper operation ordering
+
+### Best Practices
+1. **Use dry-run first**: `--dry-run` to preview changes
+2. **Use backups for important files**: `--backup` option
+3. **Test on copies**: Work on backups of important directories
+4. **Use version control**: Commit files before running operations
+5. **Be specific with patterns**: Use include/exclude to limit scope
+
+## Usage Examples
+
+### API Migration Workflow
 ```bash
-refac <directory> <old_string> <new_string> [OPTIONS]
+# 1. Preview the migration
+refac ./src "oldapi.v1" "newapi.v2" --dry-run --verbose
+
+# 2. Update source code
+refac ./src "oldapi.v1" "newapi.v2" --backup --include "*.rs"
+
+# 3. Update configuration
+refac ./config "oldapi.v1" "newapi.v2" --content-only --include "*.toml"
+
+# 4. Update documentation
+refac ./docs "oldapi.v1" "newapi.v2" --include "*.md"
+
+# 5. Clean up old files
+scrap old_api_tests/ legacy_configs/
+
+# 6. Update version and generate deployment files
+st8 update --minor
+# Templates render automatically with new version
 ```
 
-**Essential Options:**
-| Option | Description |
-|--------|-------------|
-| `--dry-run` | Preview changes without applying them |
-| `--backup` | Create backup files before modification |
-| `--verbose` | Show detailed operation information |
-| `--include <pattern>` | Include only files matching pattern |
-| `--exclude <pattern>` | Exclude files matching pattern |
-| `--names-only` | Only rename files/directories, skip content |
-| `--content-only` | Only replace content, skip renaming |
-| `--threads <n>` | Number of threads for parallel processing |
-
-### Ldiff - Log Pattern Analysis
-
-**Basic Syntax:**
+### Log Analysis Workflow
 ```bash
-ldiff [substitute_char]
+# Monitor application startup
+tail -f /var/log/myapp.log | ldiff
+
+# Compare two deployment logs
+cat deployment-1.log | ldiff > patterns-1.txt
+cat deployment-2.log | ldiff > patterns-2.txt
+diff patterns-1.txt patterns-2.txt
+
+# Analyze different log sources with distinct markers
+tail -f /var/log/nginx/access.log | ldiff "█" &
+tail -f /var/log/nginx/error.log | ldiff "░" &
 ```
 
-**Usage Patterns:**
+### Development Cleanup Workflow
 ```bash
-command | ldiff              # Default substitute character
-command | ldiff "*"          # Custom substitute character
-tail -f logfile | ldiff      # Real-time log monitoring
-```
+# Move experimental code to storage
+scrap experiment-v1/ temp-tests/ *.backup
 
-### Scrap - File Management
+# Review what was moved
+scrap list --sort date
 
-**Operations:**
-```bash
-scrap [files...]             # Move files to .scrap (default: list contents)
-scrap list [--sort name|date|size]  # List scrap contents
-scrap find <pattern> [--content]    # Search in scrap
-scrap clean [--days N]       # Remove old items
-scrap archive [--output file] [--remove]  # Archive contents
-scrap purge [--force]        # Remove all items
-```
+# Archive old experiments
+scrap archive --output experiments-$(date +%Y%m%d).tar.gz --remove
 
-### Unscrap - File Restoration
+# Clean up old items
+scrap clean --days 30
 
-**Operations:**
-```bash
-unscrap                      # Restore last scrapped item
-unscrap <filename>           # Restore specific file
-unscrap <filename> --to <path>  # Restore to custom location
-unscrap --force              # Overwrite existing files
-```
-
-### Verbump - Version Management
-
-**Operations:**
-```bash
-verbump install [--force]    # Install git hook
-verbump show                 # Display version information
-verbump status               # Check configuration
-verbump update [--patch|--minor|--major]  # Manual version bump
-verbump uninstall            # Remove git hook
+# Restore if needed
+scrap find "experiment" --content "important"
+unscrap experiment-v1/critical_file.rs --to ./src/
 ```
 
 ## Documentation
 
-**Complete Documentation:** [https://jowharshamshiri.github.io/nomion/](https://jowharshamshiri.github.io/nomion/)
+**Documentation Site**: [https://jowharshamshiri.github.io/nomion/](https://jowharshamshiri.github.io/nomion/)
 
-**Quick Links:**
+**Links:**
 - [Installation Guide](https://jowharshamshiri.github.io/nomion/installation/) - Setup instructions
-- [Getting Started](https://jowharshamshiri.github.io/nomion/getting-started/) - Tutorial walkthrough  
-- [Usage Guide](https://jowharshamshiri.github.io/nomion/usage/) - Examples
+- [Getting Started](https://jowharshamshiri.github.io/nomion/getting-started/) - Step-by-step tutorial
+- [Usage Guide](https://jowharshamshiri.github.io/nomion/usage/) - Usage examples
 - [API Reference](https://jowharshamshiri.github.io/nomion/api-reference/) - Command documentation
-- [Examples](https://jowharshamshiri.github.io/nomion/examples/) - Real-world use cases
+- [Examples](https://jowharshamshiri.github.io/nomion/examples/) - Use cases
 
-**Tool-Specific Guides:**
-- [Scrap Guide](https://jowharshamshiri.github.io/nomion/scrap-guide/) - File management
-- [Ldiff Guide](https://jowharshamshiri.github.io/nomion/ldiff-guide/) - Log analysis techniques
-- [Verbump Guide](https://jowharshamshiri.github.io/nomion/verbump-guide/) - Version management setup
+## Support & Contributing
 
-## Detailed Usage Examples
-
-### Basic Syntax
-
-```bash
-refac <root_dir> <old_string> <new_string> [options]
-```
-
-### Examples
-
-#### Basic Replacement
-
-```bash
-# Replace "oldname" with "newname" in current directory
-refac . "oldname" "newname"
-
-# Process specific directory
-refac /path/to/project "OldClass" "NewClass"
-```
-
-#### Dry Run (Preview Changes)
-
-```bash
-# See what would be changed without making modifications
-refac . "oldname" "newname" --dry-run
-```
-
-#### Operation Modes
-
-```bash
-# Only rename files and directories (skip content)
-refac . "oldname" "newname" --names-only
-
-# Only replace content (skip renaming)
-refac . "oldname" "newname" --content-only
-
-# Only process files (skip directories)
-refac . "oldname" "newname" --files-only
-
-# Only process directories (skip files)
-refac . "oldname" "newname" --dirs-only
-```
-
-#### Features
-
-```bash
-# Force operation without confirmation
-refac . "oldname" "newname" --force
-
-# Create backups before modifying files
-refac . "oldname" "newname" --backup
-
-# Verbose output with detailed information
-refac . "oldname" "newname" --verbose
-
-# Limit directory traversal depth
-refac . "oldname" "newname" --max-depth 3
-
-# Use multiple threads for faster processing
-refac . "oldname" "newname" --threads 8
-```
-
-#### Pattern Filtering
-
-```bash
-# Include only specific file types
-refac . "oldname" "newname" --include "*.rs" --include "*.toml"
-
-# Exclude specific patterns
-refac . "oldname" "newname" --exclude "*.log" --exclude "target/*"
-
-# Include hidden files
-refac . "oldname" "newname" --include ".*"
-```
-
-#### Output Formats
-
-```bash
-# JSON output for scripting
-refac . "oldname" "newname" --format json
-
-# Plain text output
-refac . "oldname" "newname" --format plain
-
-# Human-readable output (default)
-refac . "oldname" "newname" --format human
-```
-
-## Command Line Options
-
-| Option | Short | Description |
-|--------|-------|-------------|
-| `--dry-run` | `-d` | Show what would be changed without making changes |
-| `--force` | `-f` | Skip confirmation prompt |
-| `--verbose` | `-v` | Show detailed output |
-| `--backup` | `-b` | Create backup files before modifying content |
-| `--files-only` | | Only process files (skip directories) |
-| `--dirs-only` | | Only process directories (skip files) |
-| `--names-only` | | Skip content replacement, only rename files/directories |
-| `--content-only` | | Skip file/directory renaming, only replace content |
-| `--follow-symlinks` | | Follow symbolic links |
-| `--max-depth <N>` | | Maximum depth to search (0 = unlimited) |
-| `--threads <N>` | `-j` | Number of threads to use (0 = auto) |
-| `--include <PATTERN>` | | Include only files matching pattern |
-| `--exclude <PATTERN>` | | Exclude files matching pattern |
-| `--format <FORMAT>` | | Output format: human, json, plain |
-| `--progress <MODE>` | | Progress display: auto, always, never |
-| `--ignore-case` | `-i` | Ignore case when matching patterns |
-| `--regex` | `-r` | Use regex patterns instead of literal strings |
-| `--help` | `-h` | Show help information |
-| `--version` | `-V` | Show version information |
-
-## Safety Considerations
-
-### What Gets Modified
-
-- **File contents**: Text files only (binary files are automatically skipped)
-- **File names**: Any file containing the target string
-- **Directory names**: Any directory containing the target string
-
-### What Doesn't Get Modified
-
-- **Binary files**: Automatically detected and skipped for content replacement
-- **The tool itself**: Self-modification is prevented
-- **Symlink targets**: Unless `--follow-symlinks` is specified
-
-### Collision Prevention
-
-The tool checks for potential naming conflicts before making changes:
-
-- Files/directories that would overwrite existing items
-- Multiple sources trying to rename to the same target
-- Case-only differences on case-insensitive filesystems
-
-### Best Practices
-
-1. **Always use dry-run first**: `--dry-run` to preview changes
-2. **Use backups for important files**: `--backup` option
-3. **Test on a copy**: Work on a backup of important directories
-4. **Use version control**: Ensure your files are committed before running
-5. **Be specific with patterns**: Use include/exclude patterns to limit scope
-
-### Ldiff Tool
-
-The `ldiff` tool processes input lines, replacing repeated tokens with a substitute character to highlight patterns and differences. Perfect for log analysis and command output examination.
-
-#### Core Features
-
-- **Pattern Recognition**: Automatically identifies repeated tokens between lines
-- **ANSI Preservation**: Maintains terminal colors and formatting
-- **Customizable**: Use any character as a substitute
-- **Real-time**: Works with streaming input like `tail -f`
-
-#### Examples
-
-```bash
-# Basic usage with default substitute character
-echo -e "hello world\nhello universe" | ldiff
-# Output:
-# hello world
-# ░░░░░ universe
-
-# Log analysis
-tail -f /var/log/system.log | ldiff
-
-# Custom substitute character
-find /usr/local -type f | ldiff "*"
-
-# Analyze web server logs
-cat /var/log/nginx/access.log | ldiff "■"
-
-# Monitor processes
-ps aux | ldiff
-```
-
-#### Use Cases
-
-- **Log Analysis**: Find patterns in system and application logs
-- **Security Monitoring**: Identify repeated patterns in auth logs
-- **Performance Monitoring**: Track recurring patterns in metrics
-- **System Administration**: Analyze command output for patterns
-- **Development**: Debug application output patterns
-
-### Scrap Tool
-
-The `scrap` tool provides a local trash can using a `.scrap` folder for files you want to delete, with features for listing, searching, and cleaning up deleted files.
-
-#### Core Features
-
-- **Local trash can**: Move files/directories to `.scrap` with automatic conflict resolution
-- **Automatic setup**: Creates `.scrap` directory and updates `.gitignore` automatically
-- **Metadata tracking**: Remembers original file locations and timestamps
-- **Multiple operation modes**: List, clean, search, archive, and restore capabilities
-- **Git integration**: Automatically excludes `.scrap/` from version control
-- **Safety features**: Never overwrites existing files, provides confirmation prompts
-
-#### Basic Usage
-
-```bash
-# List contents of .scrap folder (default behavior)
-scrap
-
-# Move a file to .scrap folder
-scrap file.txt
-
-# Move a directory to .scrap folder  
-scrap old_code/
-```
-
-#### Commands
-
-##### List and Browse
-
-```bash
-# List contents (default when no arguments)
-scrap
-scrap list
-
-# Sort by different criteria
-scrap list --sort name
-scrap list --sort date
-scrap list --sort size
-```
-
-##### Search and Find
-
-```bash
-# Search by filename (supports regex)
-scrap find ".*\.log"
-scrap find "test.*"
-
-# Search in file contents as well
-scrap find "TODO" --content
-```
-
-##### Cleaning and Maintenance
-
-```bash
-# Remove items older than 30 days (default)
-scrap clean
-
-# Remove items older than 7 days
-scrap clean --days 7
-
-# Preview what would be removed
-scrap clean --days 30 --dry-run
-
-# Remove all items from .scrap folder
-scrap purge
-
-# Skip confirmation prompt
-scrap purge --force
-```
-
-##### Archive and Backup
-
-```bash
-# Archive .scrap contents to compressed file
-scrap archive
-
-# Archive with custom filename
-scrap archive --output backup-2024.tar.gz
-
-# Archive and remove original files
-scrap archive --remove
-```
-
-#### Examples
-
-```bash
-# Move files to local trash can
-scrap temp.log debug.txt old_backup/
-
-# Clean up workspace
-scrap clean --days 14              # Remove items older than 2 weeks
-scrap find "\.tmp$" | head -5       # Find temporary files
-
-# Archive old items
-scrap archive --output "archive-$(date +%Y%m%d).tar.gz" --remove
-
-# Handle name conflicts automatically
-scrap file.txt  # Creates .scrap/file.txt
-scrap file.txt  # Creates .scrap/file_1.txt
-scrap file.txt  # Creates .scrap/file_2.txt
-```
-
-#### Metadata and History
-
-The scrap tool automatically tracks:
-
-- **Original locations**: Where files came from
-- **Timestamps**: When files were scrapped
-- **Restore information**: Easy recovery to original locations
-
-```bash
-# View items with their original locations
-scrap list
-
-# Example output:
-# 📄 file.txt              1.2 KB  2 hours ago     from: /path/to/original/file.txt
-# 📁 old_project          15.3 MB  1 day ago       from: /home/user/old_project
-```
-
-#### Safety Features
-
-- **No overwrites**: Automatically renames to avoid conflicts
-- **Confirmation prompts**: Interactive confirmation for destructive operations
-- **Dry-run mode**: Preview changes before applying them
-- **Atomic operations**: Safe file system operations
-- **Error handling**: Clear messages for common issues
-- **Backup capability**: Archive functionality for long-term storage
-
-#### Integration with Git
-
-- Automatically adds `.scrap/` to `.gitignore`
-- Never commits temporary files to version control
-- Works seamlessly in Git repositories
-
-### Unscrap Tool
-
-The `unscrap` tool restores files from the `.scrap` folder back to their original locations or custom destinations.
-
-#### Basic Usage
-
-```bash
-# Restore last scrapped item
-unscrap
-
-# Restore specific file/directory
-unscrap filename.txt
-
-# Restore to custom location
-unscrap filename.txt --to /new/location/
-
-# Force overwrite if destination exists
-unscrap filename.txt --force
-```
-
-#### Examples
-
-```bash
-# Quick restore of last action
-unscrap
-
-# Restore specific items
-unscrap project_backup/
-unscrap important.txt --to ~/Documents/
-
-# Handle conflicts
-unscrap file.txt --force  # Overwrite existing file
-```
-
-#### How Restoration Works
-
-1. **Metadata lookup**: Finds original location from stored metadata
-2. **Path reconstruction**: Recreates directory structure if needed
-3. **Conflict detection**: Warns if destination already exists
-4. **Safe restoration**: Atomic move operations with error handling
-
-## Error Handling
-
-The tool provides error handling and reporting:
-
-- **Input validation**: Checks for invalid arguments and paths
-- **Permission errors**: Clear messages for insufficient permissions
-- **File system errors**: Handles locked files, missing directories, etc.
-- **Collision detection**: Prevents data loss from naming conflicts
-- **Graceful degradation**: Continues processing after non-critical errors
-
-## Performance Optimization Tips
-
-- Use `--threads` to increase parallelism for large datasets
-- Use `--files-only` or `--dirs-only` when appropriate
-- Use include/exclude patterns to limit processing scope
-- Consider `--max-depth` for deep directory structures
-
-## Output Examples
-
-### Human-Readable Output
-
-```
-=== REFAC TOOL ===
-Root directory: /path/to/project
-Old string: 'oldname'
-New string: 'newname'
-Mode: Full
-
-Phase 1: Discovering files and directories...
-Phase 2: Checking for naming collisions...
-
-=== CHANGE SUMMARY ===
-Content modifications: 15 file(s)
-File renames:         8 file(s)
-Directory renames:    3 directory(ies)
-Total changes:        26
-
-Do you want to proceed? (y/N) y
-
-Replacing content in files...
-Renaming files and directories...
-
-=== OPERATION COMPLETE ===
-Operation completed successfully!
-Total changes applied: 26
-```
-
-### JSON Output
-
-```json
-{
-  "summary": {
-    "content_changes": 15,
-    "file_renames": 8,
-    "directory_renames": 3,
-    "total_changes": 26
-  },
-  "result": "success",
-  "dry_run": false
-}
-```
-
-## Exit Codes
-
-| Code | Meaning |
-|------|---------|
-| 0 | Success |
-| 1 | General error |
-| 2 | Invalid arguments |
-| 3 | Permission denied |
-| 4 | File not found |
-| 5 | Naming collision detected |
-
-## Troubleshooting
-
-### Common Issues
-
-**"Permission denied" errors**
-
-- Run with appropriate permissions
-- Check file/directory ownership
-- Ensure files are not locked by other processes
-
-**"No changes found" when changes expected**
-
-- Verify the search string is correct (case-sensitive)
-- Check include/exclude patterns
-- Use `--verbose` to see what's being processed
-
-**"Naming collision detected"**
-
-- Review the collision report
-- Rename conflicting files manually
-- Use different target names
-
-**Binary files not being processed**
-
-- This is by design for safety
-- Use `--verbose` to see which files are skipped
-- Manually verify file types if needed
-
-### Debug Mode
-
-For detailed debugging information:
-
-```bash
-refac . "old" "new" --verbose --dry-run
-```
-
-## Contributing
-
-Contributions are welcome! Please read the contributing guidelines and submit pull requests for any improvements.
-
-### Development Setup
-
-```bash
-# Clone the repository
-git clone https://github.com/jowharshamshiri/nomion
-cd nomion-tool/refac_rs
-
-# Run tests
-cargo test
-
-# Run with test coverage
-cargo test --all-features
-
-# Build for release
-cargo build --release
-```
+- **Issues**: [GitHub Issues](https://github.com/jowharshamshiri/nomion/issues)
+- **Documentation**: [nomion.dev](https://nomion.dev)
+- **Source Code**: [GitHub Repository](https://github.com/jowharshamshiri/nomion)
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Changelog
-
-### Version 0.1.0
-
-- Initial release
-- Basic rename functionality
-- Safety features and collision detection
-- Multi-threading support
-- test suite
+MIT License - see the [LICENSE](https://github.com/jowharshamshiri/nomion/blob/main/LICENSE) file for details.

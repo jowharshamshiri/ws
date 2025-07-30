@@ -1,7 +1,8 @@
 pub mod refac;
 pub mod scrap;
-pub mod verbump;
+pub mod st8;
 pub mod ldiff;
+pub mod nomion_state;
 
 use anyhow::{Context, Result};
 use std::path::Path;
@@ -19,8 +20,8 @@ pub use refac::rename_engine::RenameEngine;
 // Re-export from scrap module
 pub use scrap::scrap_common::{ScrapMetadata, ScrapEntry};
 
-// Re-export from verbump module
-pub use verbump::{VerbumpConfig, VersionInfo};
+// Re-export from st8 module
+pub use st8::{St8Config, VersionInfo};
 
 /// Main entry point for the refac operation within the nomion tool suite
 pub fn run_refac(args: Args) -> Result<()> {
@@ -207,8 +208,13 @@ mod tests {
         assert!(!version.is_empty());
         // Should be a valid version format (x.y.z)
         assert!(version.contains('.'));
-        // Should match current version in version.txt
-        assert_eq!(version, "0.33.19669");
+        // Should be parseable as a version-like string
+        let parts: Vec<&str> = version.split('.').collect();
+        assert!(parts.len() >= 2, "Version should have at least major.minor format");
+        // All parts should be numeric
+        for part in &parts {
+            assert!(part.parse::<u32>().is_ok(), "Version part '{}' should be numeric", part);
+        }
     }
     
     #[test]

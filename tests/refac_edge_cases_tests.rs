@@ -528,5 +528,6 @@ fn create_test_args(root_dir: &Path, old_string: &str, new_string: &str) -> Args
         progress: nomion::cli::ProgressMode::Never,
         ignore_case: false,
         use_regex: false,
+        include_hidden: false,
     }
 }

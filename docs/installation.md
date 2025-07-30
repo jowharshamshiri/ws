@@ -5,14 +5,14 @@ title: Installation Guide
 
 # Installation Guide
 
-This guide covers multiple ways to install the Nomion tool suite on your system.
+This guide covers installation methods for the Nomion tool suite (version 0.34.20950) on your system.
 
 ## Prerequisites
 
-- **Rust toolchain** (if building from source)
+- **Rust toolchain** (1.70+ recommended for building from source)
 - **Git** (for cloning the repository)
 
-## Easy Installation (Recommended)
+## Quick Install (Recommended)
 
 The fastest way to install all Nomion tools:
 
@@ -26,52 +26,85 @@ cd nomion
 ```
 
 The installation script will:
-- Build all tools (`refac`, `ldiff`, `scrap`, `unscrap`, `verbump`) in release mode
-- Install to `~/.local/bin` by default
-- Check for updates on subsequent runs
+- Build all tools (`refac`, `ldiff`, `scrap`, `unscrap`, `st8`) in release mode
+- Install to `~/.local/bin` by default (or customize with `-d` option)
+- Check for updates and handle dependencies automatically
+- Ensure all 249 tests pass before installation
 
 ### Installation Options
 
 ```bash
-./install.sh --help                    # See all options
+./install.sh --help                    # See all available options
 ./install.sh -d /usr/local/bin         # Install system-wide
-./install.sh --force                   # Force reinstall
-./install.sh --verbose                 # Verbose output
+./install.sh --force                   # Force reinstall even if up-to-date
+./install.sh --verbose                 # Show detailed build output
+./install.sh --check                   # Verify installation without installing
+```
+
+### Quick Verification
+
+```bash
+# Check installation and versions
+refac --version    # Should show: refac 0.34.20950
+ldiff --version    # Should show: ldiff 0.34.20950
+scrap --version    # Should show: scrap 0.34.20950
+unscrap --version  # Should show: unscrap 0.34.20950
+st8 --version      # Should show: st8 0.34.20950
+
+# Test basic functionality
+echo "hello world" | ldiff               # Test pattern recognition
+refac . "test" "test" --dry-run          # Test string replacement preview
+st8 status                               # Test version management status
 ```
 
 ### Uninstall
 
 ```bash
-./uninstall.sh                         # Remove all tools
+./uninstall.sh                         # Remove all tools from default location
 ./uninstall.sh -d /usr/local/bin       # Remove from custom directory
+./uninstall.sh --verbose               # Show detailed removal process
 ```
 
 ## Manual Installation
 
-For users who prefer manual control:
+For users who prefer manual control or want to install specific tools:
+
+### Install All Tools
 
 ```bash
-# Clone the repository
+# Clone and build
 git clone https://github.com/jowharshamshiri/nomion.git
 cd nomion
 
-# Build in release mode
+# Build in release mode with optimizations
 cargo build --release
 
-# Install all tools
+# Install all tools to Cargo's bin directory
 cargo install --path .
-
-# Or install individual tools
-cargo install --path . --bin refac
-cargo install --path . --bin ldiff
-cargo install --path . --bin scrap
-cargo install --path . --bin unscrap
-cargo install --path . --bin verbump
 ```
 
-The binaries will be installed to your Cargo bin directory (typically `~/.cargo/bin/` on Unix systems).
+### Install Individual Tools
 
-### Option 3: Development Build
+```bash
+# Install only specific tools
+cargo install --path . --bin refac      # String replacement engine
+cargo install --path . --bin ldiff      # Log analysis tool
+cargo install --path . --bin scrap      # Local trash system
+cargo install --path . --bin unscrap    # File recovery system
+cargo install --path . --bin st8        # Version management with templates
+```
+
+### Custom Installation Location
+
+```bash
+# Install to custom directory
+cargo install --path . --root ~/.local
+
+# Install to system directory (requires sudo)
+cargo install --path . --root /usr/local
+```
+
+## Development Installation
 
 For development or testing the latest changes:
 
@@ -80,216 +113,377 @@ For development or testing the latest changes:
 git clone https://github.com/jowharshamshiri/nomion.git
 cd nomion
 
-# Run without installing
-cargo run -- --help
+# Run tools directly without installing
+cargo run --bin refac -- --help
+cargo run --bin st8 -- template --help
 
-# Or build in debug mode
+# Build in debug mode for development
 cargo build
+
+# Run the comprehensive test suite
+cargo test                              # Run all 249 tests
+cargo test --test st8_template_tests    # Run specific test suite
 ```
 
-## Verification
+## Advanced Installation Options
 
-Verify your installation:
+### Performance Optimized Build
 
 ```bash
-# Check versions of all tools
-refac --version
-ldiff --version
-scrap --version
-unscrap --version
-verbump --version
+# Build with native CPU optimizations
+RUSTFLAGS="-C target-cpu=native -C target-feature=+crt-static" \
+  cargo build --release
 
-# View help for each tool
-refac --help
-ldiff --help
-scrap --help
-unscrap --help
-verbump --help
-
-# Test basic functionality
-refac . "test" "test" --dry-run          # Test string replacement
-echo "hello world" | ldiff               # Test line difference
-scrap --help                             # Test scrap functionality
-verbump status                           # Test verbump (outside git repo)
+# Install with optimizations
+RUSTFLAGS="-C target-cpu=native" \
+  cargo install --path .
 ```
 
-## Platform-Specific Notes
+### Static Binary Build (Linux)
+
+```bash
+# Install musl target for static linking
+rustup target add x86_64-unknown-linux-musl
+
+# Build static binary
+cargo build --release --target x86_64-unknown-linux-musl
+
+# Static binaries will be in target/x86_64-unknown-linux-musl/release/
+```
+
+### Cross-Platform Builds
+
+```bash
+# Windows (from Linux/macOS)
+rustup target add x86_64-pc-windows-gnu
+cargo build --release --target x86_64-pc-windows-gnu
+
+# macOS (from Linux)
+rustup target add x86_64-apple-darwin
+cargo build --release --target x86_64-apple-darwin
+```
+
+## Platform-Specific Installation
 
 ### Linux
 
-On some distributions, you may need to install additional dependencies:
-
-**Ubuntu/Debian:**
-
+#### Ubuntu/Debian
 ```bash
+# Install prerequisites
 sudo apt update
-sudo apt install build-essential
+sudo apt install build-essential git curl
+
+# Install Rust
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+source ~/.cargo/env
+
+# Install Nomion
+git clone https://github.com/jowharshamshiri/nomion.git
+cd nomion && ./install.sh
 ```
 
-**CentOS/RHEL/Fedora:**
-
+#### CentOS/RHEL/Fedora
 ```bash
-sudo yum groupinstall "Development Tools"
-# or on newer versions:
+# Install prerequisites
 sudo dnf groupinstall "Development Tools"
+sudo dnf install git curl
+
+# Install Rust and Nomion (same as Ubuntu)
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+source ~/.cargo/env
+git clone https://github.com/jowharshamshiri/nomion.git
+cd nomion && ./install.sh
+```
+
+#### Arch Linux
+```bash
+# Install prerequisites
+sudo pacman -S base-devel git rustup
+
+# Initialize Rust
+rustup default stable
+
+# Install Nomion
+git clone https://github.com/jowharshamshiri/nomion.git
+cd nomion && ./install.sh
 ```
 
 ### macOS
 
-Install Rust via Homebrew or rustup:
-
+#### Using Homebrew
 ```bash
-# Via Homebrew
-brew install rust
+# Install prerequisites
+brew install rust git
 
-# Via rustup (recommended)
+# Install Nomion
+git clone https://github.com/jowharshamshiri/nomion.git
+cd nomion && ./install.sh
+```
+
+#### Using rustup (Recommended)
+```bash
+# Install Rust
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+source ~/.cargo/env
+
+# Install Xcode command line tools if needed
+xcode-select --install
+
+# Install Nomion
+git clone https://github.com/jowharshamshiri/nomion.git
+cd nomion && ./install.sh
 ```
 
 ### Windows
 
-1. Install Rust from [rustup.rs](https://rustup.rs/)
-2. Ensure you have the Microsoft C++ Build Tools installed
-3. Follow the standard installation process
+#### PowerShell Installation
+```powershell
+# Install Rust from rustup.rs
+Invoke-WebRequest -Uri "https://win.rustup.rs/" -OutFile "rustup-init.exe"
+.\rustup-init.exe
 
-## Updating
+# Install Git if not already installed
+winget install Git.Git
 
-To update to the latest version:
-
-```bash
-# If installed via install.sh script
-cd /path/to/refac
-git pull
-./install.sh --force
-
-# If installed via cargo install
-cd /path/to/refac
-git pull
-cargo install --path . --force
-
-# If using pre-built binaries
-# Download the latest release and replace all binaries
+# Install Nomion
+git clone https://github.com/jowharshamshiri/nomion.git
+cd nomion
+./install.sh
 ```
 
-## Uninstalling
-
-To remove Nomion:
-
+#### Windows Subsystem for Linux (WSL)
 ```bash
-# If installed via install.sh script
-./uninstall.sh
-
-# If installed via cargo install (individual tools)
-cargo uninstall refac
-cargo uninstall ldiff
-cargo uninstall scrap
-cargo uninstall unscrap
-cargo uninstall verbump
-
-# If installed manually (remove all binaries)
-sudo rm /usr/local/bin/{refac,ldiff,scrap,unscrap,verbump}  # Linux/macOS
+# Use the Linux installation method within WSL
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+source ~/.cargo/env
+git clone https://github.com/jowharshamshiri/nomion.git
+cd nomion && ./install.sh
 ```
 
-## Building from Source (Advanced)
+## Quality Assurance & Testing
 
-### Custom Features
-
-The default build includes all features. You can customize the build:
+### Pre-Installation Testing
 
 ```bash
-# Minimal build (no progress bars)
-cargo build --release --no-default-features
-
-# Development build with debug symbols
-cargo build
-```
-
-### Build Options
-
-```bash
-# Build with optimizations for current CPU
-RUSTFLAGS="-C target-cpu=native" cargo build --release
-
-# Static binary (Linux)
-cargo build --release --target x86_64-unknown-linux-musl
-
-# Cross-compilation example (requires cross-compilation setup)
-cargo build --release --target x86_64-pc-windows-gnu
-```
-
-### Running Tests
-
-Before installation, you can run the test suite:
-
-```bash
-# Run all tests
+# Run the complete test suite (249 tests)
 cargo test
 
-# Run tests with coverage
-cargo test --all-features
+# Run specific test categories
+cargo test --test integration_tests           # Cross-tool integration (18 tests)
+cargo test --test refac_encoding_tests        # Encoding safety (7 tests)
+cargo test --test st8_template_tests          # Template system (15 tests)
+cargo test --test scrap_advanced_integration_tests  # Advanced workflows (21 tests)
 
-# Run integration tests
-cargo test --test integration_tests
+# Run tests with verbose output
+cargo test -- --nocapture
+
+# Performance testing with optimizations
+cargo test --release
+```
+
+### Installation Verification
+
+```bash
+# Comprehensive functionality check
+refac . "test" "test" --dry-run --verbose     # Test refac with dry-run
+echo -e "line1\nline2\nline1" | ldiff        # Test ldiff pattern recognition
+scrap list                                    # Test scrap (should show empty or existing)
+st8 status                                    # Test st8 outside git repo
+unscrap --help                                # Test unscrap help system
+
+# Version consistency check
+refac --version | grep "0.34.20950"
+ldiff --version | grep "0.34.20950"
+scrap --version | grep "0.34.20950"
+unscrap --version | grep "0.34.20950"
+st8 --version | grep "0.34.20950"
+```
+
+### Post-Installation Health Check
+
+```bash
+# Test st8 template system
+cd /tmp && mkdir test-project && cd test-project
+git init
+st8 install                               # Should set up git hook
+st8 template add test.txt --content "Version: {{ project.version }}"
+st8 template list                         # Should show test.txt template
+st8 template render                       # Should render template
+cd .. && rm -rf test-project
+
+# Test scrap system
+mkdir test-scrap && cd test-scrap
+echo "test content" > test.txt
+scrap test.txt                           # Should move to .scrap
+scrap list                               # Should show test.txt
+unscrap test.txt                         # Should restore test.txt
+cd .. && rm -rf test-scrap
+```
+
+## Environment Configuration
+
+### PATH Configuration
+
+Add to your shell profile (`~/.bashrc`, `~/.zshrc`, etc.):
+
+```bash
+# If installed via cargo install
+export PATH="$HOME/.cargo/bin:$PATH"
+
+# If installed via install.sh to custom location
+export PATH="$HOME/.local/bin:$PATH"
+
+# If installed system-wide
+export PATH="/usr/local/bin:$PATH"
+```
+
+### Shell Completion (Optional)
+
+Generate shell completions for enhanced CLI experience:
+
+```bash
+# For bash
+refac --completion bash > ~/.local/share/bash-completion/completions/refac
+ldiff --completion bash > ~/.local/share/bash-completion/completions/ldiff
+# (repeat for other tools)
+
+# For zsh
+refac --completion zsh > ~/.local/share/zsh/site-functions/_refac
+# (repeat for other tools)
+
+# For fish
+refac --completion fish > ~/.config/fish/completions/refac.fish
+# (repeat for other tools)
+```
+
+## Updating Nomion
+
+### Automatic Update (install.sh)
+
+```bash
+cd /path/to/nomion
+git pull origin main
+./install.sh                    # Will detect updates and rebuild if needed
+```
+
+### Manual Update
+
+```bash
+cd /path/to/nomion
+git pull origin main
+cargo build --release           # Rebuild with latest changes
+cargo install --path . --force  # Force reinstall
+```
+
+### Version Checking
+
+```bash
+# Check current version
+refac --version
+
+# Check for updates (manual)
+git fetch && git log HEAD..origin/main --oneline
 ```
 
 ## Troubleshooting
 
-### Common Issues
+### Common Installation Issues
 
 **"cargo: command not found"**
+```bash
+# Install Rust
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+source ~/.cargo/env
+```
 
-- Install Rust and Cargo from [rustup.rs](https://rustup.rs/)
-- Ensure `~/.cargo/bin` is in your PATH
-
-**"Permission denied" on installation**
-
-- Use `sudo` for system-wide installation
-- Or install to a user directory: `cargo install --path . --root ~/.local`
+**"Permission denied" during installation**
+```bash
+# Install to user directory instead of system
+./install.sh -d ~/.local/bin
+# Or use sudo for system installation
+sudo ./install.sh -d /usr/local/bin
+```
 
 **"Binary not found after installation"**
-
-- Check that `~/.cargo/bin` is in your PATH
-- Add to your shell profile: `export PATH="$HOME/.cargo/bin:$PATH"`
-
-**Build errors on older systems**
-
-- Update Rust: `rustup update`
-- Ensure you have a compatible C compiler
-
-### Platform-Specific Issues
-
-**Linux: "error: Microsoft Visual C++ 14.0 is required"**
-
-- This error is actually for Windows - check you're building on the correct platform
-
-**macOS: "xcrun: error: invalid active developer path"**
-
 ```bash
-# Install Xcode command line tools
+# Check PATH includes installation directory
+echo $PATH | grep -E "(cargo/bin|local/bin)"
+
+# Add to PATH if missing
+echo 'export PATH="$HOME/.cargo/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+```
+
+### Build Issues
+
+**"error: Microsoft Visual C++ 14.0 is required" (Windows)**
+- Install Microsoft C++ Build Tools or Visual Studio with C++ support
+
+**"xcrun: error: invalid active developer path" (macOS)**
+```bash
 xcode-select --install
 ```
 
-**Windows: "error: linker 'link.exe' not found"**
+**"failed to run custom build command" (Linux)**
+```bash
+# Install build essentials
+sudo apt install build-essential  # Ubuntu/Debian
+sudo dnf groupinstall "Development Tools"  # CentOS/RHEL/Fedora
+```
 
-- Install Microsoft C++ Build Tools
-- Or install Visual Studio with C++ support
+### Runtime Issues
+
+**"No such file or directory" when running tools**
+```bash
+# Verify installation
+which refac ldiff scrap unscrap st8
+
+# Check file permissions
+ls -la ~/.cargo/bin/refac  # Should be executable (-rwxr-xr-x)
+
+# Re-install if corrupted
+cargo install --path . --force
+```
+
+**Tests failing during installation**
+```bash
+# Run tests manually to see detailed errors
+cargo test --verbose
+
+# Run specific failing test
+cargo test --test integration_tests -- --nocapture
+
+# Skip tests and install anyway (not recommended)
+cargo install --path . --force --no-test
+```
 
 ## Getting Help
 
 If you encounter issues:
 
-1. Check the [troubleshooting section]({{ '/troubleshooting/' | relative_url }})
-2. Search [existing issues](https://github.com/jowharshamshiri/nomion/issues)
-3. Create a [new issue](https://github.com/jowharshamshiri/nomion/issues/new) with:
-   - Your operating system and version
+1. **Check existing documentation**:
+   - [Usage Guide]({{ '/usage/' | relative_url }}) - Comprehensive usage examples
+   - [API Reference]({{ '/api-reference/' | relative_url }}) - Complete command documentation
+   - [Examples]({{ '/examples/' | relative_url }}) - Real-world use cases
+
+2. **Search existing issues**: [GitHub Issues](https://github.com/jowharshamshiri/nomion/issues)
+
+3. **Create a new issue** with:
+   - Operating system and version (`uname -a`)
    - Rust version (`rustc --version`)
-   - error message
-   - Steps to reproduce
+   - Complete error message
+   - Steps to reproduce the issue
+   - Output of `cargo test` if build-related
 
 ## Next Steps
 
-Once installed, check out:
+Once installed successfully:
 
-- [Usage Guide]({{ '/usage/' | relative_url }}) - Learn how to use Refac effectively
-- [Command Reference]({{ '/api-reference/' | relative_url }}) - command documentation
-- [Examples]({{ '/examples/' | relative_url }}) - Real-world usage examples
+1. **Quick Start**: Try the examples in the [Getting Started Guide]({{ '/getting-started/' | relative_url }})
+2. **Learn the Tools**: Read the [Usage Guide]({{ '/usage/' | relative_url }}) for comprehensive examples
+3. **Set Up Templates**: Check out the [St8 Guide]({{ '/st8-guide/' | relative_url }}) for version management
+4. **Join the Community**: Contribute via [GitHub](https://github.com/jowharshamshiri/nomion)
+
+## License
+
+Nomion is released under the MIT License. See the [LICENSE](https://github.com/jowharshamshiri/nomion/blob/main/LICENSE) file for details.

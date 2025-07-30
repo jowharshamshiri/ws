@@ -26,9 +26,9 @@ scrap [PATH...] [SUBCOMMAND] [OPTIONS]
 unscrap [NAME] [OPTIONS]
 ```
 
-### Verbump - Version Management
+### St8 - Version Management
 ```bash
-verbump [SUBCOMMAND] [OPTIONS]
+st8 [SUBCOMMAND] [OPTIONS]
 ```
 
 ---
@@ -479,11 +479,11 @@ unscrap data.txt --force          # Overwrite existing
 
 ---
 
-## Verbump Command Reference
+## St8 Command Reference
 
 ### Synopsis
 ```bash
-verbump [SUBCOMMAND] [OPTIONS]
+st8 [SUBCOMMAND] [OPTIONS]
 ```
 
 ### Subcommands
@@ -498,7 +498,7 @@ verbump [SUBCOMMAND] [OPTIONS]
 
 ### Configuration
 
-Create `.verbump.json` in repository root:
+Create `.st8.json` in repository root:
 ```json
 {
   "version": 1,
@@ -517,12 +517,12 @@ Create `.verbump.json` in repository root:
 
 ### Examples
 ```bash
-verbump install                 # Install git hook
-verbump install --force         # Force reinstall
-verbump show                    # Show version info
-verbump update                  # Manual update
-verbump status                  # Check status
-verbump uninstall              # Remove hook
+st8 install                 # Install git hook
+st8 install --force         # Force reinstall
+st8 show                    # Show version info
+st8 update                  # Manual update
+st8 status                  # Check status
+st8 uninstall              # Remove hook
 ```
 
 ---
@@ -535,13 +535,13 @@ verbump uninstall              # Remove hook
 refac --help
 scrap --help
 unscrap --help
-verbump --help
+st8 --help
 
 # Show versions
 refac --version
 scrap --version
 unscrap --version
-verbump --version
+st8 --version
 ```
 
 ### Resources

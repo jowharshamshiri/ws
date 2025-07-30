@@ -1,252 +1,290 @@
 ---
 layout: default
-title: Nomion - Command-Line Tool Suite
+title: Nomion - Developer Tool Suite
 toc: false
 ---
 
 # Nomion
 
-A tool suite for developers and system administrators, built for safety, reliability, and performance in daily development workflows.
+A tool suite for developers and system administrators that provides file operations, line analysis, version management, and development workflow automation.
 
-## Testing & Quality Assurance
-
-### Test Coverage
-- 231 tests across 8 test suites
-- Pre-operation validation prevents mid-execution failures
-- Edge case coverage: Concurrency, encoding, permissions, deep nesting scenarios
-- Zero compilation warnings across platforms
-- Memory safety through Rust's ownership model
-
-### Safety Features
-- Race condition prevention through proper operation ordering
-- UTF-8 and encoding issue detection
-- Atomic operations prevent partial failures
-- Collision detection prevents overwrites and conflicts
-- Binary file protection with automatic detection
+**Current Version**: 0.34.20950  
+**Build Status**: Clean compilation with zero warnings  
+**Test Status**: 249 tests passing across 8 test suites
 
 ## Tools Overview
 
-### Refac - Code Refactoring
-String replacement engine with language-aware processing and safety features.
+### Refac - Code Refactoring Engine
+Recursive string replacement with automatic encoding detection and safety features.
 
 ```bash
-refac . "oldname" "newname" --dry-run --verbose
-refac ./src "OldClass" "NewClass" --backup --include "*.rs"
+# Preview changes before applying
+refac ./src "OldClassName" "NewClassName" --dry-run --verbose
+
+# Refactor with backups and specific file types
+refac ./src "OldApi" "NewApi" --backup --include "*.rs" --include "*.toml"
+
+# Include hidden files like .nomion configurations
+refac . "st8" "new_st8" --include-hidden
 ```
 
-**Key Features**: Pre-validation, collision detection, multi-threaded processing, backup support, binary protection  
-**Developer Focus**: API migrations, bulk renames, content updates, safe refactoring  
-**[Full Guide]({{ '/refac-guide/' | relative_url }})**
+**Key Features**: Encoding detection (UTF-8, UTF-16, Windows-1252), pre-validation, collision detection, multi-threaded processing  
+**Developer Focus**: API migrations, bulk renames, safe refactoring, configuration updates  
+**[Complete Guide]({{ '/refac-guide/' | relative_url }})**
 
-### Ldiff - Log Analysis
-Real-time pattern recognition engine for logs and command output with ANSI color preservation.
+### Ldiff - Log Analysis Engine
+Real-time pattern recognition for logs and command output with ANSI color preservation.
 
 ```bash
+# Monitor logs in real-time
 tail -f /var/log/system.log | ldiff
+
+# Analyze different log sources with distinct markers
 journalctl -f | ldiff "■"
-ps aux | ldiff
+systemctl status | ldiff "●"
+cargo test --verbose | ldiff "█"
 ```
 
-**Key Features**: Real-time analysis, ANSI color preservation, customizable visualization, streaming support  
-**Developer Focus**: Debug analysis, pattern recognition, monitoring, test output parsing  
-**[Full Guide]({{ '/ldiff-guide/' | relative_url }})**
+**Key Features**: Real-time streaming, ANSI preservation, customizable visualization, pattern recognition  
+**Developer Focus**: Debug analysis, monitoring, test output parsing, system administration  
+**[Complete Guide]({{ '/ldiff-guide/' | relative_url }})**
 
-### Scrap - File Management
-Local trash system with metadata tracking, search capabilities, and git integration.
+### Scrap - Local Trash System
+Safe file disposal with metadata tracking, search capabilities, and git integration.
 
 ```bash
-scrap experimental_feature/ temp_logs/ *.bak
+# Move files to local trash instead of deleting
+scrap experimental_feature/ temp_logs/ *.bak old_tests/
+
+# Search and browse stored files
 scrap find "*.rs" --content "TODO"
-scrap archive backup-$(date +%Y%m%d).tar.gz --remove
-```
-
-**Key Features**: Metadata tracking, conflict resolution, search and discovery, git integration, archive support  
-**Developer Focus**: Experimental code cleanup, temporary file management, safe deletion  
-**[Full Guide]({{ '/scrap-guide/' | relative_url }})**
-
-### Unscrap - File Recovery
-Restoration system with automatic path reconstruction and conflict resolution.
-
-```bash
-unscrap                                    # Restore last scrapped item
-unscrap experimental_feature/              # Restore specific directory
-unscrap important.rs --to ~/backup/       # Custom destination
-```
-
-**Key Features**: Automatic recovery, custom destinations, conflict handling, batch restoration, undo operations  
-**Developer Focus**: Accident recovery, experiment rollback, selective restoration  
-**[Full Guide]({{ '/unscrap-guide/' | relative_url }})**
-
-### Verbump - Version Management
-Git-integrated versioning system with automatic bumping and multi-format support.
-
-```bash
-verbump install                           # Set up git hook
-verbump show                              # Display version info
-git commit -m "Add feature"               # Auto-increments version
-```
-
-**Key Features**: Git integration, automatic bumping, multi-format support, semantic versioning, audit logging  
-**Developer Focus**: Release automation, version consistency, CI/CD integration  
-**[Full Guide]({{ '/verbump-guide/' | relative_url }})**
-
-## Quick Start Examples
-
-### Log Analysis with Ldiff
-```bash
-# Find repeated patterns in log files
-tail -f /var/log/access.log | ldiff
-
-# Use custom substitute character
-journalctl -f | ldiff "*"
-
-# Analyze command output
-ps aux | ldiff
-find /usr/local -type f | ldiff
-```
-
-### Project Refactoring with Refac
-```bash
-# Preview changes first (recommended)
-refac . "oldname" "newname" --dry-run
-
-# Rename class throughout codebase
-refac ./src "OldClassName" "NewClassName"
-
-# Update only file contents, keep names
-refac ./config "old.example.com" "new.example.com" --content-only
-```
-
-### Safe File Management with Scrap/Unscrap
-```bash
-# Move files to .scrap instead of deleting
-scrap old_file.txt deprecated_feature/
-
-# See what you've scrapped
 scrap list --sort date
 
-# Restore the last thing you scrapped
-unscrap --undo
-
-# Find and restore specific files
-scrap find "*.log"
-unscrap access.log
+# Archive and clean up old items
+scrap archive --output backup-$(date +%Y%m%d).tar.gz --remove
+scrap clean --days 14
 ```
 
-### Automatic Versioning with Verbump
+**Key Features**: Metadata tracking, conflict resolution, content search, git integration, archive support  
+**Developer Focus**: Experimental code cleanup, safe file disposal, temporary file management  
+**[Complete Guide]({{ '/scrap-guide/' | relative_url }})**
+
+### Unscrap - File Recovery System
+Restore files from scrap with automatic path reconstruction and conflict resolution.
+
 ```bash
-# Set up automatic versioning in your project
-verbump install
-
-# Check current version info
-verbump show
-
-# Manually bump version
-verbump update --patch
+# Quick restore operations
+unscrap                                    # Restore last scrapped item
+unscrap experimental_feature/              # Restore specific directory
+unscrap important.rs --to ~/backup/       # Custom destination with conflict handling
 ```
 
-## Key Features
+**Key Features**: Automatic recovery, custom destinations, conflict handling, batch restoration  
+**Developer Focus**: Accident recovery, experiment rollback, selective file restoration  
+**[Complete Guide]({{ '/unscrap-guide/' | relative_url }})**
 
-- **Cross-Platform**: Works on Windows, macOS, and Linux
-- **Safety First**: Collision detection, confirmation prompts, and atomic operations
-- **Performance Optimized**: Multi-threaded processing and efficient algorithms
-- **User Friendly**: Clear error messages, help text, and intuitive commands
-- **Integration Ready**: Designed to work well in scripts and automation
+### St8 - Version Management with Templates
+Git-integrated versioning with template engine for automated file generation.
+
+```bash
+# Set up automatic versioning
+st8 install
+
+# Add templates that auto-update with version changes
+st8 template add src/version.h --content \
+"#define VERSION \"{{ project.version }}\"
+#define BUILD_DATE \"{{ datetime.date }}\""
+
+# Templates render automatically on commits
+git add . && git commit -m "New feature"  # Auto-increments version and renders templates
+```
+
+**Key Features**: Git integration, Tera template engine, automatic rendering, multi-format support  
+**Developer Focus**: Release automation, version consistency, file generation, CI/CD integration  
+**[Complete Guide]({{ '/st8-guide/' | relative_url }})**
+
+## Template System Examples
+
+The st8 template system supports Tera templating with these variables:
+- `{{ project.version }}` - Full version (e.g., "1.2.3")
+- `{{ project.name }}` - Project name from repository
+- `{{ project.major_version }}`, `{{ project.minor_version }}`, `{{ project.patch_version }}` - Version components
+- `{{ datetime.date }}`, `{{ datetime.time }}`, `{{ datetime.iso }}` - Build timestamps
+
+### C/C++ Version Header Template
+```bash
+st8 template add include/version.h --content \
+"#ifndef VERSION_H
+#define VERSION_H
+#define PROJECT_VERSION \"{{ project.version }}\"
+#define BUILD_DATE \"{{ datetime.date }}\"
+#endif"
+```
+
+### JavaScript Version Module Template
+```bash
+st8 template add src/version.js --content \
+"export const VERSION = {
+  full: '{{ project.version }}',
+  major: {{ project.major_version }},
+  buildDate: '{{ datetime.date }}'
+};"
+```
+
+### Docker Compose Template
+```bash
+st8 template add docker-compose.prod.yml --content \
+"version: '3.8'
+services:
+  app:
+    image: {{ project.name }}:{{ project.version }}
+    environment:
+      - VERSION={{ project.version }}"
+```
+
+## Quality Assurance & Testing
+
+### Test Suite Coverage
+- **249 Tests** across 8 test suites
+- **Pre-operation Validation** prevents mid-execution failures
+- **Edge Case Coverage**: Concurrency, encoding, permissions, deep nesting
+- **Memory Safety** through Rust's ownership model
+- **Zero Compilation Warnings** across platforms
+
+### Safety Features
+- **Race Condition Prevention** through proper operation ordering
+- **Encoding Detection** handles UTF-8, UTF-16, Windows-1252, and other text encodings
+- **Atomic Operations** prevent partial failures
+- **Collision Detection** prevents overwrites and conflicts
+- **Binary File Protection** with automatic detection
+
+### Test Categories
+| Test Suite | Tests | Focus Area |
+|------------|-------|------------|
+| `integration_tests` | 18 | Cross-tool integration |
+| `refac_concurrency_tests` | 9 | Multi-threading safety |
+| `refac_edge_cases_tests` | 14 | Complex scenarios |
+| `refac_encoding_tests` | 7 | Encoding safety |
+| `scrap_advanced_integration_tests` | 21 | Workflows |
+| `st8_template_tests` | 15 | Template system |
 
 ## Installation
 
 ### Quick Install
 ```bash
-git clone https://github.com/jowharshamshiri/nomion
+git clone https://github.com/jowharshamshiri/nomion.git
 cd nomion
 ./install.sh
 ```
 
-### Individual Tools
+### Verification
 ```bash
-# Install specific tools only
-cargo install --path . --bin refac
-cargo install --path . --bin ldiff
-cargo install --path . --bin scrap
-cargo install --path . --bin unscrap
-cargo install --path . --bin verbump
+# Check installation and versions
+refac --version    # Should show: refac 0.34.20950
+ldiff --version    # Should show: ldiff 0.34.20950
+scrap --version    # Should show: scrap 0.34.20950
+unscrap --version  # Should show: unscrap 0.34.20950
+st8 --version      # Should show: st8 0.34.20950
+
+# Test basic functionality
+echo "hello world" | ldiff
+st8 status
+refac --help
 ```
 
-**[📖 Detailed Installation Guide]({{ '/installation/' | relative_url }})**
+**[Installation Guide]({{ '/installation/' | relative_url }})**
 
-## Common Workflows
+## Usage Workflows
 
-### Development Workflow
+### Development Refactoring Workflow
 ```bash
-# 1. Refactor code safely
-refac ./src "OldApi" "NewApi" --dry-run
-refac ./src "OldApi" "NewApi"
+# 1. Safe preview of changes
+refac ./src "OldApi" "NewApi" --dry-run --verbose
 
-# 2. Clean up old files
-scrap legacy_code/ old_tests/
+# 2. Apply refactoring with backups
+refac ./src "OldApi" "NewApi" --backup
 
-# 3. Update version automatically
-verbump update
+# 3. Update configuration files
+refac ./config "old.endpoint" "new.endpoint" --content-only --include "*.toml"
+
+# 4. Clean up old test files
+scrap legacy_tests/ old_benchmarks/
+
+# 5. Update version and render templates
+st8 update --minor  # Templates auto-render with new version
 ```
 
 ### Log Analysis Workflow
 ```bash
-# 1. Monitor logs for patterns
+# 1. Monitor application logs in real-time
 tail -f /var/log/app.log | ldiff
 
-# 2. Analyze historical logs
-cat /var/log/app.log.1 | ldiff > patterns.txt
+# 2. Analyze historical patterns
+cat /var/log/app.log.1 | ldiff > patterns-yesterday.txt
 
-# 3. Compare different log sources
-cat /var/log/nginx/access.log | ldiff "█"
+# 3. Compare different deployments
+cat deployment-v1.log | ldiff "v1:" > patterns-v1.txt
+cat deployment-v2.log | ldiff "v2:" > patterns-v2.txt
+diff patterns-v1.txt patterns-v2.txt
 ```
 
-### File Cleanup Workflow
+### File Management Workflow
 ```bash
-# 1. Move questionable files to scrap
-scrap temp_files/ *.bak
+# 1. Move questionable files to safe storage
+scrap experimental_code/ temp_data/ *.backup
 
-# 2. Review what was moved
-scrap list
+# 2. Review and search stored files
+scrap list --sort date
+scrap find "important" --content
 
-# 3. Restore if needed, or clean up
-unscrap important.bak
-scrap clean --days 7
+# 3. Archive old items or restore needed files
+scrap archive --output archive-$(date +%Y%m%d).tar.gz
+unscrap important_config.toml --to ./config/
 ```
+
+## Key Features
+
+- **Cross-Platform**: Native support for Windows, macOS, and Linux
+- **Safety Features**: Collision detection, confirmation prompts, and atomic operations
+- **Performance**: Multi-threaded processing and algorithms
+- **Encoding Aware**: Automatic detection and preservation of text file encodings
+- **CLI Design**: Clear error messages, help text, and intuitive commands
+- **Integration Ready**: Designed for scripts, automation, and CI/CD pipelines
 
 ## Getting Help
 
-Each tool has comprehensive help:
+Each tool provides help documentation:
 ```bash
-refac --help
-ldiff --help
-scrap --help
-unscrap --help
-verbump --help
-```
-
-**Get versions:**
-```bash
-refac --version
-ldiff --version
-scrap --version
-unscrap --version
-verbump --version
+refac --help      # Refac documentation
+ldiff --help      # Log analysis usage guide
+scrap --help      # File management operations
+unscrap --help    # Recovery system guide
+st8 --help        # Version management and templates
+st8 template --help  # Template system commands
 ```
 
 ## Documentation
 
-- **[📖 Installation Guide]({{ '/installation/' | relative_url }})** - Detailed installation instructions
-- **[📖 Usage Guide]({{ '/usage/' | relative_url }})** - Comprehensive usage examples
-- **[📖 API Reference]({{ '/api-reference/' | relative_url }})** - Complete command-line reference
-- **[📖 Examples]({{ '/examples/' | relative_url }})** - Real-world usage examples
-- **[📖 Contributing]({{ '/contributing/' | relative_url }})** - How to contribute to the project
+- **[Installation Guide]({{ '/installation/' | relative_url }})** - Installation and setup
+- **[Getting Started]({{ '/getting-started/' | relative_url }})** - Step-by-step tutorial
+- **[Usage Guide]({{ '/usage/' | relative_url }})** - Usage examples
+- **[API Reference]({{ '/api-reference/' | relative_url }})** - Command-line reference
+- **[Examples]({{ '/examples/' | relative_url }})** - Use cases and workflows
+- **[Testing Guide]({{ '/testing/' | relative_url }})** - Test suite documentation
 
-## Support
+## Tool-Specific Guides
 
-- **Issues**: [GitHub Issues](https://github.com/jowharshamshiri/nomion/issues)
-- **Documentation**: [nomion.dev](https://nomion.dev)
+- **[Refac Guide]({{ '/refac-guide/' | relative_url }})** - Refactoring techniques
+- **[Ldiff Guide]({{ '/ldiff-guide/' | relative_url }})** - Log analysis and pattern recognition
+- **[Scrap Guide]({{ '/scrap-guide/' | relative_url }})** - File management practices
+- **[Unscrap Guide]({{ '/unscrap-guide/' | relative_url }})** - Recovery workflows
+- **[St8 Guide]({{ '/st8-guide/' | relative_url }})** - Version management and templates
+
+## Support & Community
+
+- **Issues & Bug Reports**: [GitHub Issues](https://github.com/jowharshamshiri/nomion/issues)
 - **Source Code**: [GitHub Repository](https://github.com/jowharshamshiri/nomion)
+- **Documentation**: [Documentation Site](https://jowharshamshiri.github.io/nomion/)
 
 ## License
 

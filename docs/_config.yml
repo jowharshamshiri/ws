@@ -3,7 +3,7 @@ title: Nomion - Command-Line Tool Suite
 description: >-
   Nomion is a tool suite for file operations, version management, 
   and development workflow automation. Includes refac (string replacement), scrap (local trash folder), 
-  unscrap (file restoration), and verbump (automatic versioning).
+  unscrap (file restoration), and st8 (automatic versioning).
 author: Bahram Shamshiri
 email: jowharshamshiri@gmail.com
 baseurl: "/nomion"
@@ -40,8 +40,8 @@ navigation:
         url: /scrap-guide/
       - title: Unscrap Guide
         url: /unscrap-guide/
-      - title: Verbump Guide
-        url: /verbump-guide/
+      - title: St8 Guide
+        url: /st8-guide/
   - title: Usage Guide
     url: /usage/
   - title: API Reference

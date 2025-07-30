@@ -82,6 +82,10 @@ pub struct Args {
     /// Use regex patterns instead of literal strings
     #[arg(short = 'r', long = "regex")]
     pub use_regex: bool,
+
+    /// Include hidden files and directories (starting with '.')
+    #[arg(long = "include-hidden")]
+    pub include_hidden: bool,
 }
 
 #[derive(ValueEnum, Debug, Clone, PartialEq)]
@@ -230,6 +234,7 @@ mod tests {
             progress: ProgressMode::Auto,
             ignore_case: false,
             use_regex: false,
+            include_hidden: false,
         };
 
         // Valid args should pass
@@ -282,6 +287,7 @@ mod tests {
             progress: ProgressMode::Auto,
             ignore_case: false,
             use_regex: false,
+            include_hidden: false,
         };
 
         // Test default mode
@@ -332,6 +338,7 @@ mod tests {
             progress: ProgressMode::Auto,
             ignore_case: false,
             use_regex: false,
+            include_hidden: false,
         };
 
         // Default should process everything

@@ -65,8 +65,8 @@ fn create_test_commits(dir: &Path, count: u32) -> Result<(), Box<dyn std::error:
 }
 
 #[test]
-fn test_verbump_help() {
-    Command::cargo_bin("verbump")
+fn test_st8_help() {
+    Command::cargo_bin("st8")
         .unwrap()
         .arg("--help")
         .assert()
@@ -75,20 +75,20 @@ fn test_verbump_help() {
 }
 
 #[test]
-fn test_verbump_version() {
-    Command::cargo_bin("verbump")
+fn test_st8_version() {
+    Command::cargo_bin("st8")
         .unwrap()
         .arg("--version")
         .assert()
         .success()
-        .stdout(predicate::str::contains("verbump"));
+        .stdout(predicate::str::contains("st8"));
 }
 
 #[test]
-fn test_verbump_outside_git_repo() {
+fn test_st8_outside_git_repo() {
     let temp_dir = TempDir::new().unwrap();
     
-    Command::cargo_bin("verbump")
+    Command::cargo_bin("st8")
         .unwrap()
         .arg("update")
         .current_dir(temp_dir.path())
@@ -98,12 +98,12 @@ fn test_verbump_outside_git_repo() {
 }
 
 #[test]
-fn test_verbump_show_in_git_repo() {
+fn test_st8_show_in_git_repo() {
     let temp_dir = TempDir::new().unwrap();
     setup_git_repo(temp_dir.path()).unwrap();
     create_test_commits(temp_dir.path(), 3).unwrap();
     
-    Command::cargo_bin("verbump")
+    Command::cargo_bin("st8")
         .unwrap()
         .arg("show")
         .current_dir(temp_dir.path())
@@ -117,27 +117,27 @@ fn test_verbump_show_in_git_repo() {
 }
 
 #[test]
-fn test_verbump_status_in_git_repo() {
+fn test_st8_status_in_git_repo() {
     let temp_dir = TempDir::new().unwrap();
     setup_git_repo(temp_dir.path()).unwrap();
     
-    Command::cargo_bin("verbump")
+    Command::cargo_bin("st8")
         .unwrap()
         .arg("status")
         .current_dir(temp_dir.path())
         .assert()
         .success()
-        .stdout(predicate::str::contains("Verbump Status"))
+        .stdout(predicate::str::contains("St8 Status"))
         .stdout(predicate::str::contains("Git Repository"))
         .stdout(predicate::str::contains("Hook Installed"))
         .stdout(predicate::str::contains("Enabled"));
 }
 
 #[test]
-fn test_verbump_status_outside_git_repo() {
+fn test_st8_status_outside_git_repo() {
     let temp_dir = TempDir::new().unwrap();
     
-    Command::cargo_bin("verbump")
+    Command::cargo_bin("st8")
         .unwrap()
         .arg("status")
         .current_dir(temp_dir.path())
@@ -147,12 +147,12 @@ fn test_verbump_status_outside_git_repo() {
 }
 
 #[test]
-fn test_verbump_update_creates_version_file() {
+fn test_st8_update_creates_version_file() {
     let temp_dir = TempDir::new().unwrap();
     setup_git_repo(temp_dir.path()).unwrap();
     create_test_commits(temp_dir.path(), 2).unwrap();
     
-    Command::cargo_bin("verbump")
+    Command::cargo_bin("st8")
         .unwrap()
         .arg("update")
         .arg("--force")
@@ -177,26 +177,26 @@ fn test_verbump_update_creates_version_file() {
 }
 
 #[test]
-fn test_verbump_install_hook() {
+fn test_st8_install_hook() {
     let temp_dir = TempDir::new().unwrap();
     setup_git_repo(temp_dir.path()).unwrap();
     
-    Command::cargo_bin("verbump")
+    Command::cargo_bin("st8")
         .unwrap()
         .arg("install")
         .current_dir(temp_dir.path())
         .assert()
         .success()
-        .stdout(predicate::str::contains("verbump installed successfully"));
+        .stdout(predicate::str::contains("st8 installed successfully"));
     
     // Check that pre-commit hook was created
     let hook_file = temp_dir.path().join(".git").join("hooks").join("pre-commit");
     assert!(hook_file.exists());
     
     let hook_content = fs::read_to_string(&hook_file).unwrap();
-    assert!(hook_content.contains("=== VERBUMP BLOCK START ==="));
-    assert!(hook_content.contains("=== VERBUMP BLOCK END ==="));
-    assert!(hook_content.contains("verbump"));
+    assert!(hook_content.contains("=== ST8 BLOCK START ==="));
+    assert!(hook_content.contains("=== ST8 BLOCK END ==="));
+    assert!(hook_content.contains("st8"));
     
     // Check that hook is executable
     #[cfg(unix)]
@@ -208,12 +208,12 @@ fn test_verbump_install_hook() {
 }
 
 #[test]
-fn test_verbump_install_hook_force() {
+fn test_st8_install_hook_force() {
     let temp_dir = TempDir::new().unwrap();
     setup_git_repo(temp_dir.path()).unwrap();
     
     // First installation
-    Command::cargo_bin("verbump")
+    Command::cargo_bin("st8")
         .unwrap()
         .arg("install")
         .current_dir(temp_dir.path())
@@ -221,7 +221,7 @@ fn test_verbump_install_hook_force() {
         .success();
     
     // Second installation without force should inform already installed
-    Command::cargo_bin("verbump")
+    Command::cargo_bin("st8")
         .unwrap()
         .arg("install")
         .current_dir(temp_dir.path())
@@ -230,18 +230,18 @@ fn test_verbump_install_hook_force() {
         .stdout(predicate::str::contains("already installed"));
     
     // Force installation should succeed
-    Command::cargo_bin("verbump")
+    Command::cargo_bin("st8")
         .unwrap()
         .arg("install")
         .arg("--force")
         .current_dir(temp_dir.path())
         .assert()
         .success()
-        .stdout(predicate::str::contains("verbump installed successfully"));
+        .stdout(predicate::str::contains("st8 installed successfully"));
 }
 
 #[test]
-fn test_verbump_install_hook_with_existing_hook() {
+fn test_st8_install_hook_with_existing_hook() {
     let temp_dir = TempDir::new().unwrap();
     setup_git_repo(temp_dir.path()).unwrap();
     
@@ -253,8 +253,8 @@ fn test_verbump_install_hook_with_existing_hook() {
     let existing_content = "#!/bin/bash\necho \"Existing hook\"\n";
     fs::write(&hook_file, existing_content).unwrap();
     
-    // Install verbump hook
-    Command::cargo_bin("verbump")
+    // Install st8 hook
+    Command::cargo_bin("st8")
         .unwrap()
         .arg("install")
         .current_dir(temp_dir.path())
@@ -264,16 +264,16 @@ fn test_verbump_install_hook_with_existing_hook() {
     // Check that both old and new content exist
     let updated_content = fs::read_to_string(&hook_file).unwrap();
     assert!(updated_content.contains("Existing hook"));
-    assert!(updated_content.contains("=== VERBUMP BLOCK START ==="));
+    assert!(updated_content.contains("=== ST8 BLOCK START ==="));
 }
 
 #[test]
-fn test_verbump_uninstall_hook() {
+fn test_st8_uninstall_hook() {
     let temp_dir = TempDir::new().unwrap();
     setup_git_repo(temp_dir.path()).unwrap();
     
     // Install hook first
-    Command::cargo_bin("verbump")
+    Command::cargo_bin("st8")
         .unwrap()
         .arg("install")
         .current_dir(temp_dir.path())
@@ -284,20 +284,20 @@ fn test_verbump_uninstall_hook() {
     assert!(hook_file.exists());
     
     // Uninstall hook
-    Command::cargo_bin("verbump")
+    Command::cargo_bin("st8")
         .unwrap()
         .arg("uninstall")
         .current_dir(temp_dir.path())
         .assert()
         .success()
-        .stdout(predicate::str::contains("verbump uninstalled"));
+        .stdout(predicate::str::contains("st8 uninstalled"));
     
-    // Hook file should be removed (since it only contained verbump)
+    // Hook file should be removed (since it only contained st8)
     assert!(!hook_file.exists());
 }
 
 #[test]
-fn test_verbump_uninstall_hook_with_other_content() {
+fn test_st8_uninstall_hook_with_other_content() {
     let temp_dir = TempDir::new().unwrap();
     setup_git_repo(temp_dir.path()).unwrap();
     
@@ -309,16 +309,16 @@ fn test_verbump_uninstall_hook_with_other_content() {
     let existing_content = "#!/bin/bash\necho \"Other hook content\"\n";
     fs::write(&hook_file, existing_content).unwrap();
     
-    // Install verbump hook
-    Command::cargo_bin("verbump")
+    // Install st8 hook
+    Command::cargo_bin("st8")
         .unwrap()
         .arg("install")
         .current_dir(temp_dir.path())
         .assert()
         .success();
     
-    // Uninstall verbump hook
-    Command::cargo_bin("verbump")
+    // Uninstall st8 hook
+    Command::cargo_bin("st8")
         .unwrap()
         .arg("uninstall")
         .current_dir(temp_dir.path())
@@ -329,16 +329,16 @@ fn test_verbump_uninstall_hook_with_other_content() {
     assert!(hook_file.exists());
     let remaining_content = fs::read_to_string(&hook_file).unwrap();
     assert!(remaining_content.contains("Other hook content"));
-    assert!(!remaining_content.contains("VERBUMP BLOCK"));
+    assert!(!remaining_content.contains("ST8 BLOCK"));
 }
 
 #[test]
-fn test_verbump_uninstall_no_hook() {
+fn test_st8_uninstall_no_hook() {
     let temp_dir = TempDir::new().unwrap();
     setup_git_repo(temp_dir.path()).unwrap();
     
     // Try to uninstall when no hook exists
-    Command::cargo_bin("verbump")
+    Command::cargo_bin("st8")
         .unwrap()
         .arg("uninstall")
         .current_dir(temp_dir.path())
@@ -348,30 +348,30 @@ fn test_verbump_uninstall_no_hook() {
 }
 
 #[test]
-fn test_verbump_default_behavior_install() {
+fn test_st8_default_behavior_install() {
     let temp_dir = TempDir::new().unwrap();
     setup_git_repo(temp_dir.path()).unwrap();
     
     // Default behavior should install hook if not installed
-    Command::cargo_bin("verbump")
+    Command::cargo_bin("st8")
         .unwrap()
         .current_dir(temp_dir.path())
         .assert()
         .success()
-        .stdout(predicate::str::contains("verbump installed successfully"));
+        .stdout(predicate::str::contains("st8 installed successfully"));
     
     let hook_file = temp_dir.path().join(".git").join("hooks").join("pre-commit");
     assert!(hook_file.exists());
 }
 
 #[test]
-fn test_verbump_default_behavior_update() {
+fn test_st8_default_behavior_update() {
     let temp_dir = TempDir::new().unwrap();
     setup_git_repo(temp_dir.path()).unwrap();
     create_test_commits(temp_dir.path(), 1).unwrap();
     
     // Install hook first
-    Command::cargo_bin("verbump")
+    Command::cargo_bin("st8")
         .unwrap()
         .arg("install")
         .current_dir(temp_dir.path())
@@ -379,7 +379,7 @@ fn test_verbump_default_behavior_update() {
         .success();
     
     // Default behavior should now update version
-    Command::cargo_bin("verbump")
+    Command::cargo_bin("st8")
         .unwrap()
         .current_dir(temp_dir.path())
         .assert()
@@ -391,7 +391,7 @@ fn test_verbump_default_behavior_update() {
 }
 
 #[test]
-fn test_verbump_with_git_tag() {
+fn test_st8_with_git_tag() {
     let temp_dir = TempDir::new().unwrap();
     setup_git_repo(temp_dir.path()).unwrap();
     create_test_commits(temp_dir.path(), 2).unwrap();
@@ -406,7 +406,7 @@ fn test_verbump_with_git_tag() {
     // Create more commits after tag
     create_test_commits(temp_dir.path(), 1).unwrap();
     
-    Command::cargo_bin("verbump")
+    Command::cargo_bin("st8")
         .unwrap()
         .arg("show")
         .current_dir(temp_dir.path())
@@ -417,7 +417,7 @@ fn test_verbump_with_git_tag() {
 }
 
 #[test]
-fn test_verbump_config_file() {
+fn test_st8_config_file() {
     let temp_dir = TempDir::new().unwrap();
     setup_git_repo(temp_dir.path()).unwrap();
     
@@ -427,9 +427,9 @@ fn test_verbump_config_file() {
   "enabled": true,
   "version_file": "custom_version.txt"
 }"#;
-    fs::write(temp_dir.path().join(".verbump.json"), config_content).unwrap();
+    fs::write(temp_dir.path().join(".st8.json"), config_content).unwrap();
     
-    Command::cargo_bin("verbump")
+    Command::cargo_bin("st8")
         .unwrap()
         .arg("update")
         .arg("--force")
@@ -447,11 +447,11 @@ fn test_verbump_config_file() {
 }
 
 #[test] 
-fn test_verbump_logging() {
+fn test_st8_logging() {
     let temp_dir = TempDir::new().unwrap();
     setup_git_repo(temp_dir.path()).unwrap();
     
-    Command::cargo_bin("verbump")
+    Command::cargo_bin("st8")
         .unwrap()
         .arg("install")
         .current_dir(temp_dir.path())
@@ -459,7 +459,7 @@ fn test_verbump_logging() {
         .success();
     
     // Check that log file was created
-    let log_file = temp_dir.path().join(".verbump.log");
+    let log_file = temp_dir.path().join(".st8.log");
     assert!(log_file.exists());
     
     let log_content = fs::read_to_string(&log_file).unwrap();
@@ -468,7 +468,7 @@ fn test_verbump_logging() {
 }
 
 #[test]
-fn test_verbump_auto_detect_cargo_toml() {
+fn test_st8_auto_detect_cargo_toml() {
     let temp_dir = TempDir::new().unwrap();
     setup_git_repo(temp_dir.path()).unwrap();
     create_test_commits(temp_dir.path(), 1).unwrap();
@@ -484,8 +484,8 @@ serde = "1.0"
 "#;
     fs::write(temp_dir.path().join("Cargo.toml"), cargo_content).unwrap();
     
-    // Run verbump update
-    Command::cargo_bin("verbump")
+    // Run st8 update
+    Command::cargo_bin("st8")
         .unwrap()
         .arg("update")
         .arg("--force")
@@ -505,7 +505,7 @@ serde = "1.0"
 }
 
 #[test]
-fn test_verbump_auto_detect_package_json() {
+fn test_st8_auto_detect_package_json() {
     let temp_dir = TempDir::new().unwrap();
     setup_git_repo(temp_dir.path()).unwrap();
     create_test_commits(temp_dir.path(), 2).unwrap();
@@ -522,8 +522,8 @@ fn test_verbump_auto_detect_package_json() {
 }"#;
     fs::write(temp_dir.path().join("package.json"), package_content).unwrap();
     
-    // Run verbump update
-    Command::cargo_bin("verbump")
+    // Run st8 update
+    Command::cargo_bin("st8")
         .unwrap()
         .arg("update")
         .arg("--force")
@@ -548,7 +548,7 @@ fn test_verbump_auto_detect_package_json() {
 }
 
 #[test]
-fn test_verbump_auto_detect_multiple_files() {
+fn test_st8_auto_detect_multiple_files() {
     let temp_dir = TempDir::new().unwrap();
     setup_git_repo(temp_dir.path()).unwrap();
     create_test_commits(temp_dir.path(), 1).unwrap();
@@ -576,8 +576,8 @@ version = "0.5.0"
 "#;
     fs::write(temp_dir.path().join("pyproject.toml"), pyproject_content).unwrap();
     
-    // Run verbump update
-    Command::cargo_bin("verbump")
+    // Run st8 update
+    Command::cargo_bin("st8")
         .unwrap()
         .arg("update")
         .arg("--force")
@@ -607,7 +607,7 @@ version = "0.5.0"
 }
 
 #[test]
-fn test_verbump_status_shows_detected_files() {
+fn test_st8_status_shows_detected_files() {
     let temp_dir = TempDir::new().unwrap();
     setup_git_repo(temp_dir.path()).unwrap();
     
@@ -615,7 +615,7 @@ fn test_verbump_status_shows_detected_files() {
     fs::write(temp_dir.path().join("Cargo.toml"), "[package]\nname = \"test\"\nversion = \"0.1.0\"").unwrap();
     fs::write(temp_dir.path().join("package.json"), "{\"name\": \"test\", \"version\": \"1.0.0\"}").unwrap();
     
-    Command::cargo_bin("verbump")
+    Command::cargo_bin("st8")
         .unwrap()
         .arg("status")
         .current_dir(temp_dir.path())
@@ -628,7 +628,7 @@ fn test_verbump_status_shows_detected_files() {
 }
 
 #[test]
-fn test_verbump_config_disable_auto_detect() {
+fn test_st8_config_disable_auto_detect() {
     let temp_dir = TempDir::new().unwrap();
     setup_git_repo(temp_dir.path()).unwrap();
     create_test_commits(temp_dir.path(), 1).unwrap();
@@ -640,7 +640,7 @@ fn test_verbump_config_disable_auto_detect() {
   "version_file": "version.txt",
   "auto_detect_project_files": false
 }"#;
-    fs::write(temp_dir.path().join(".verbump.json"), config_content).unwrap();
+    fs::write(temp_dir.path().join(".st8.json"), config_content).unwrap();
     
     // Create a Cargo.toml file
     let cargo_content = r#"[package]
@@ -649,8 +649,8 @@ version = "0.1.0"
 "#;
     fs::write(temp_dir.path().join("Cargo.toml"), cargo_content).unwrap();
     
-    // Run verbump update
-    Command::cargo_bin("verbump")
+    // Run st8 update
+    Command::cargo_bin("st8")
         .unwrap()
         .arg("update")
         .arg("--force")
@@ -672,7 +672,7 @@ version = "0.1.0"
 }
 
 #[test]
-fn test_verbump_manual_project_files() {
+fn test_st8_manual_project_files() {
     let temp_dir = TempDir::new().unwrap();
     setup_git_repo(temp_dir.path()).unwrap();
     create_test_commits(temp_dir.path(), 1).unwrap();
@@ -685,14 +685,14 @@ fn test_verbump_manual_project_files() {
   "auto_detect_project_files": false,
   "project_files": ["custom.json", "Cargo.toml"]
 }"#;
-    fs::write(temp_dir.path().join(".verbump.json"), config_content).unwrap();
+    fs::write(temp_dir.path().join(".st8.json"), config_content).unwrap();
     
     // Create the specified files
     fs::write(temp_dir.path().join("custom.json"), "{\"version\": \"1.0.0\"}").unwrap();
     fs::write(temp_dir.path().join("Cargo.toml"), "[package]\nname = \"manual\"\nversion = \"1.0.0\"").unwrap();
     
-    // Run verbump update
-    Command::cargo_bin("verbump")
+    // Run st8 update
+    Command::cargo_bin("st8")
         .unwrap()
         .arg("update")
         .arg("--force")
@@ -711,7 +711,7 @@ fn test_verbump_manual_project_files() {
 }
 
 #[test]
-fn test_verbump_no_update_when_version_unchanged() {
+fn test_st8_no_update_when_version_unchanged() {
     let temp_dir = TempDir::new().unwrap();
     setup_git_repo(temp_dir.path()).unwrap();
     create_test_commits(temp_dir.path(), 1).unwrap();
@@ -723,8 +723,8 @@ version = "0.1.0"
 "#;
     fs::write(temp_dir.path().join("Cargo.toml"), cargo_content).unwrap();
     
-    // Run verbump update first time
-    Command::cargo_bin("verbump")
+    // Run st8 update first time
+    Command::cargo_bin("st8")
         .unwrap()
         .arg("update")
         .arg("--force")
@@ -737,8 +737,8 @@ version = "0.1.0"
     let version_content = fs::read_to_string(temp_dir.path().join("version.txt")).unwrap();
     let version = version_content.trim();
     
-    // Run verbump update second time (no git changes)
-    Command::cargo_bin("verbump")
+    // Run st8 update second time (no git changes)
+    Command::cargo_bin("st8")
         .unwrap()
         .arg("update")
         .arg("--force")
@@ -757,7 +757,7 @@ version = "0.1.0"
     // Sleep a bit and run again to make sure file timestamp would change if modified
     std::thread::sleep(std::time::Duration::from_millis(100));
     
-    Command::cargo_bin("verbump")
+    Command::cargo_bin("st8")
         .unwrap()
         .arg("update")
         .arg("--force")

@@ -9,7 +9,7 @@ use nomion::{cli::Args, run_refac};
 /// These tests ensure encoding issues are caught during validation, not during execution
 
 #[test]
-fn test_invalid_utf8_encoding_validation() -> Result<()> {
+fn test_invalid_utf8_encoding_handling() -> Result<()> {
     let temp_dir = TempDir::new()?;
     
     // Create a file with invalid UTF-8 sequences
@@ -23,18 +23,24 @@ fn test_invalid_utf8_encoding_validation() -> Result<()> {
     
     let args = create_test_args(temp_dir.path(), "oldname", "newname");
     
-    // This should fail during validation phase, not execution
+    // With automatic encoding detection, this should now succeed
     let result = run_refac(args);
     
     match result {
-        Err(e) => {
-            let error_msg = e.to_string();
-            assert!(error_msg.contains("validation") || error_msg.contains("Cannot read file") || error_msg.contains("Failed to read file"), 
-                   "Expected encoding error to be caught, got: {}", error_msg);
-            println!("Correctly caught encoding issue: {}", error_msg);
-        },
         Ok(_) => {
-            panic!("Expected operation to fail for invalid UTF-8 file");
+            // Verify the operation succeeded and file was processed correctly
+            let output_file = temp_dir.path().join("newname_invalid_utf8.txt");
+            assert!(output_file.exists(), "File should have been renamed successfully");
+            println!("Successfully processed file with mixed encoding using automatic detection");
+        },
+        Err(e) => {
+            // If it fails, it should be for a different reason than encoding
+            let error_msg = e.to_string();
+            if error_msg.contains("binary") {
+                println!("File correctly identified as binary and skipped: {}", error_msg);
+            } else {
+                panic!("Unexpected error (encoding detection should handle this): {}", error_msg);
+            }
         }
     }
 
@@ -121,7 +127,7 @@ fn test_different_line_endings_handling() -> Result<()> {
 }
 
 #[test]
-fn test_large_file_with_encoding_issues() -> Result<()> {
+fn test_large_file_with_mixed_encoding() -> Result<()> {
     let temp_dir = TempDir::new()?;
     
     // Create a large file with potential encoding issues
@@ -143,18 +149,24 @@ fn test_large_file_with_encoding_issues() -> Result<()> {
     
     let args = create_test_args(temp_dir.path(), "oldname", "newname");
     
-    // Should fail during validation for large files too
+    // With automatic encoding detection, large files with mixed encoding should succeed
     let result = run_refac(args);
     
     match result {
-        Err(e) => {
-            let error_msg = e.to_string();
-            assert!(error_msg.contains("validation") || error_msg.contains("encoding") || error_msg.contains("Cannot read") || error_msg.contains("Failed to read"), 
-                   "Expected encoding error for large file with encoding issues, got: {}", error_msg);
-            println!("Correctly caught encoding issue in large file: {}", error_msg);
-        },
         Ok(_) => {
-            panic!("Expected operation to catch encoding issue in large file");
+            // Verify the operation succeeded and file was processed correctly
+            let output_file = temp_dir.path().join("newname_large_mixed.txt");
+            assert!(output_file.exists(), "Large file should have been renamed successfully");
+            println!("Successfully processed large file with mixed encoding using automatic detection");
+        },
+        Err(e) => {
+            // If it fails, it should be for a different reason than encoding
+            let error_msg = e.to_string();
+            if error_msg.contains("binary") {
+                println!("Large file correctly identified as binary and skipped: {}", error_msg);
+            } else {
+                panic!("Unexpected error (encoding detection should handle large files): {}", error_msg);
+            }
         }
     }
 
@@ -283,5 +295,6 @@ fn create_test_args(root_dir: &Path, old_string: &str, new_string: &str) -> Args
         progress: nomion::cli::ProgressMode::Never,
         ignore_case: false,
         use_regex: false,
+        include_hidden: false,
     }
 }

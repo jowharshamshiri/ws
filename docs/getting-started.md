@@ -14,7 +14,7 @@ Nomion is a suite of command-line utilities for developers and system administra
 - **refac**: Recursive string replacement in file names and contents
 - **scrap**: Local trash can for files you want to delete
 - **unscrap**: File restoration and undo operations  
-- **verbump**: Automatic version management via git hooks
+- **st8**: Automatic version management via git hooks
 
 ## Installation
 
@@ -27,7 +27,7 @@ cd nomion
 ./install.sh
 ```
 
-This installs all four tools (`refac`, `scrap`, `unscrap`, `verbump`) to `~/.local/bin`.
+This installs all four tools (`refac`, `scrap`, `unscrap`, `st8`) to `~/.local/bin`.
 
 ### Verify Installation
 
@@ -36,13 +36,13 @@ This installs all four tools (`refac`, `scrap`, `unscrap`, `verbump`) to `~/.loc
 refac --version
 scrap --version  
 unscrap --version
-verbump --version
+st8 --version
 
 # Quick help
 refac --help
 scrap --help
 unscrap --help
-verbump --help
+st8 --help
 ```
 
 ## Tool Overview
@@ -90,19 +90,19 @@ unscrap filename.txt
 unscrap filename.txt --to /new/path/
 ```
 
-### 🏷️ Verbump - Version Management
+### 🏷️ St8 - Version Management
 
 Automatic versioning via git hooks:
 
 ```bash
 # Install git hook
-verbump install
+st8 install
 
 # Show version info
-verbump show
+st8 show
 
 # Check status
-verbump status
+st8 status
 ```
 
 ## Quick Start Walkthrough
@@ -115,7 +115,7 @@ Let's create a sample project and try all tools:
 mkdir demo-project
 cd demo-project
 
-# Initialize git (for verbump)
+# Initialize git (for st8)
 git init
 git config user.name "Demo User"
 git config user.email "demo@example.com"
@@ -167,11 +167,11 @@ unscrap
 unscrap debug.log
 ```
 
-### Step 5: Try Verbump (Version Management)
+### Step 5: Try St8 (Version Management)
 
 ```bash
 # Install git hook for automatic versioning
-verbump install
+st8 install
 
 # Create a tag for versioning base
 git tag v1.0
@@ -182,7 +182,7 @@ git add .
 git commit -m "Update main.js"
 
 # Check version information
-verbump show
+st8 show
 
 # The version.txt file is automatically created/updated
 cat version.txt
@@ -204,7 +204,7 @@ refac ./src "OldClass" "NewClass" --dry-run
 refac ./src "OldClass" "NewClass"
 
 # 4. Set up automatic versioning
-verbump install
+st8 install
 
 # 5. If you need files back later
 unscrap debug.log
@@ -220,7 +220,7 @@ scrap clean --days 30
 scrap archive backup-2024.tar.gz --remove
 
 # Check version status across projects
-verbump status
+st8 status
 
 # Update configuration URLs
 refac ./config "old.api.com" "new.api.com" --content-only
@@ -255,8 +255,8 @@ refac . "oldname" "newname" --dry-run --verbose
 # Test scrap operations
 scrap --help  # Review options before using
 
-# Check verbump status before installation
-verbump status
+# Check st8 status before installation
+st8 status
 ```
 
 ### Use Version Control
@@ -266,8 +266,8 @@ verbump status
 git add .
 git commit -m "Before refactoring"
 
-# Use verbump to track changes automatically
-verbump install
+# Use st8 to track changes automatically
+st8 install
 
 # Apply refac changes
 refac . "oldname" "newname"
@@ -298,7 +298,7 @@ unscrap important_file.txt
 scrap target/ *.log temp/
 
 # 2. Set up versioning for the refactor
-verbump install
+st8 install
 git tag v1.0  # Mark pre-refactor state
 
 # 3. Rename classes and update imports
@@ -340,7 +340,7 @@ git init
 git add .
 git commit -m "Initial commit"
 git tag v0.1.0
-verbump install
+st8 install
 
 # Normal development - versions update automatically
 echo "new feature" >> src/main.rs
@@ -348,7 +348,7 @@ git add .
 git commit -m "Add new feature"  # Version bumped automatically
 
 # Check current version
-verbump show
+st8 show
 cat version.txt
 ```
 
@@ -380,14 +380,14 @@ scrap find "*.tmp" | xargs scrap
 scrap clean --days 7  # Remove old items
 ```
 
-### Verbump Optimization
+### St8 Optimization
 
 ```bash
 # Configure once per repository
-verbump install --force  # Update existing hook
+st8 install --force  # Update existing hook
 
 # Use custom version files for different tools
-echo '{"version_file": "src/version.rs"}' > .verbump.json
+echo '{"version_file": "src/version.rs"}' > .st8.json
 ```
 
 ## Best Practices
@@ -404,7 +404,7 @@ echo '{"version_file": "src/version.rs"}' > .verbump.json
 - Regular cleanup with `scrap clean` to remove old items
 - Archive before purging if you want long-term backup
 
-**Verbump:**
+**St8:**
 - Install hooks early in project lifecycle
 - Create meaningful git tags for major versions
 - Monitor logs for troubleshooting
@@ -417,14 +417,14 @@ git checkout -b feature-branch
 scrap temp_files/ debug_logs/         # Clear workspace
 refac ./src "OldAPI" "NewAPI" --dry-run  # Preview changes
 refac ./src "OldAPI" "NewAPI"         # Apply changes
-verbump install                       # Track versions
+st8 install                       # Track versions
 git add . && git commit -m "Refactor API"  # Auto-version
 ```
 
 ### 3. Project Organization
 
 - Use `.gitignore` for scrap folder (automatically handled)
-- Configure verbump early in project setup
+- Configure st8 early in project setup
 - Establish naming conventions before bulk refactoring
 - Keep restoration metadata for important files
 
@@ -437,12 +437,12 @@ git add . && git commit -m "Refactor API"  # Auto-version
 refac --help
 scrap --help  
 unscrap --help
-verbump --help
+st8 --help
 
 # Verbose output for debugging
 refac . "old" "new" --dry-run --verbose
 scrap find "pattern" --verbose
-verbump status
+st8 status
 ```
 
 ### Common Issues
@@ -457,10 +457,10 @@ verbump status
 - Verify file permissions
 - Review metadata with `scrap list`
 
-**Verbump not working:**
+**St8 not working:**
 - Ensure you're in a git repository
 - Check if hook is executable: `ls -la .git/hooks/pre-commit`
-- Verify verbump is in PATH
+- Verify st8 is in PATH
 
 ## Next Steps
 
@@ -469,7 +469,7 @@ verbump status
 1. **Tool-Specific Guides:**
    - [Scrap Guide]({{ '/scrap-guide/' | relative_url }}) - file management
    - [Unscrap Guide]({{ '/unscrap-guide/' | relative_url }}) - File restoration techniques
-   - [Verbump Guide]({{ '/verbump-guide/' | relative_url }}) - Version management setup
+   - [St8 Guide]({{ '/st8-guide/' | relative_url }}) - Version management setup
 
 2. **Resources:**
    - [Usage Guide]({{ '/usage/' | relative_url }}) - Detailed examples for all tools
@@ -495,8 +495,8 @@ unscrap                              # Restore last item
 unscrap file.txt                     # Restore specific file
 unscrap file.txt --to /new/path/     # Custom destination
 
-# === VERBUMP - Version Management ===
-verbump install                      # Install git hook
-verbump show                         # Display version info
-verbump status                       # Check configuration
+# === ST8 - Version Management ===
+st8 install                      # Install git hook
+st8 show                         # Display version info
+st8 status                       # Check configuration
 ```

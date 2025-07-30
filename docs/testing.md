@@ -27,7 +27,7 @@ Nomion maintains reliability and safety through testing and quality assurance pr
 | **refac_encoding_tests.rs** | 7 | Character encoding | UTF-8, BOM, invalid encodings |
 | **scrap_advanced_integration_tests.rs** | 21 | Advanced workflows | Archive, search, metadata management |
 | **scrap_integration_tests.rs** | 18 | Core functionality | Basic operations, git integration |
-| **verbump_integration_tests.rs** | 25 | Version management | Git hooks, multi-format support |
+| **st8_integration_tests.rs** | 25 | Version management | Git hooks, multi-format support |
 
 ## Safety Features
 
