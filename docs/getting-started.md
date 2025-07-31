@@ -13,8 +13,10 @@ Workspace is a suite of command-line utilities for developers and system adminis
 
 - **ws refactor**: Recursive string replacement in file names and contents
 - **ws scrap**: Local trash can for files you want to delete
-- **ws unscrap**: File restoration and undo operations  
-- **ws st8**: Automatic version management via git hooks
+- **ws ws unscrap**: File restoration and undo operations  
+- **ws git**: Git integration and version management via hooks
+- **ws template**: Template management and file generation
+- **ws update**: Manual version updates and template rendering
 - **ws ldiff**: Line difference visualization for pattern recognition
 
 ## Installation
@@ -39,9 +41,11 @@ ws --version
 # Quick help for all subcommands
 ws --help
 ws refactor --help
-ws scrap --help
-ws unscrap --help
-ws st8 --help
+ws ws scrap --help
+ws ws unscrap --help
+ws git --help
+ws template --help
+ws update --help
 ws ldiff --help
 ```
 
@@ -65,44 +69,50 @@ Local trash can for files you want to delete:
 
 ```bash
 # Move unwanted files to local trash can instead of deleting
-ws scrap temp_file.txt old_directory/
+ws ws scrap temp_file.txt old_directory/
 
 # List what's in trash
-ws scrap list
+ws ws scrap list
 
 # Find and clean up
-ws scrap find "*.log"
-ws scrap clean
+ws ws scrap find "*.log"
+ws ws scrap clean
 ```
 
-### ↩️ Unscrap - File Restoration
+### ↩️ Unws scrap - File Restoration
 
 Restore files from `.scrap` folder:
 
 ```bash
 # Restore last scrapped item
-ws unscrap
+ws ws unscrap
 
 # Restore specific file
-ws unscrap filename.txt
+ws ws unscrap filename.txt
 
 # Restore to custom location
-ws unscrap filename.txt --to /new/path/
+ws ws unscrap filename.txt --to /new/path/
 ```
 
-### 🏷️ St8 - Version Management
+### 🏷️ Git Integration & Templates
 
-Automatic versioning via git hooks:
+Automatic versioning via git hooks and template management:
 
 ```bash
 # Install git hook
-ws st8 install
+ws git install
 
 # Show version info
-ws st8 show
+ws git show
 
 # Check status
-st8 status
+ws git status
+
+# Add templates for automatic file generation
+ws template add version-info --template "Version: {{ project.version }}" --output VERSION.txt
+
+# Manual version update
+ws update
 ```
 
 ## Quick Start Walkthrough
@@ -115,7 +125,7 @@ Let's create a sample project and try all tools:
 mkdir demo-project
 cd demo-project
 
-# Initialize git (for st8)
+# Initialize git (for git integration)
 git init
 git config user.name "Demo User"
 git config user.email "demo@example.com"
@@ -135,10 +145,10 @@ git commit -m "Initial commit"
 
 ```bash
 # Preview changes
-refac . "oldFunction" "newFunction" --verbose
+ws refactor . "oldFunction" "newFunction" --verbose
 
 # Apply changes
-refac . "oldFunction" "newFunction"
+ws refactor . "oldFunction" "newFunction"
 
 # Check results
 cat *.js
@@ -148,32 +158,35 @@ cat *.js
 
 ```bash
 # Move temporary files to .scrap
-scrap temp.txt debug.log
+ws ws scrap temp.txt debug.log
 
 # List what's in .scrap
-scrap
+ws ws scrap list
 
 # Search for files
-scrap find "*.txt"
+ws ws scrap find "*.txt"
 ```
 
-### Step 4: Try Unscrap (File Restoration)
+### Step 4: Try Unws scrap (File Restoration)
 
 ```bash
 # Restore the last file moved
-unscrap
+ws ws unscrap
 
 # Or restore specific file
-unscrap debug.log
+ws ws unscrap debug.log
 ```
 
-### Step 5: Try St8 (Version Management)
+### Step 5: Try Git Integration & Templates
 
 ```bash
 # Install git hook for automatic versioning
-st8 install
+ws git install
 
-# Create a tag for versioning base
+# Add a template for version info
+ws template add version-file --template "Version: {{ project.version }}" --output version.txt
+
+# Create a tag for versioning base  
 git tag v1.0
 
 # Make some changes
@@ -182,7 +195,7 @@ git add .
 git commit -m "Update main.js"
 
 # Check version information
-st8 show
+ws git show
 
 # The version.txt file is automatically created/updated
 cat version.txt
@@ -197,33 +210,33 @@ cat version.txt
 git checkout -b feature-branch
 
 # 2. Move unwanted files to trash instead of deleting
-scrap temp.txt debug.log old_tests/
+ws scrap temp.txt debug.log old_tests/
 
 # 3. Refactor code as needed
-refac ./src "OldClass" "NewClass" --verbose
-refac ./src "OldClass" "NewClass"
+ws refactor ./src "OldClass" "NewClass" --verbose
+ws refactor ./src "OldClass" "NewClass"
 
 # 4. Set up automatic versioning
-st8 install
+ws git install
 
 # 5. If you need files back later
-unscrap debug.log
+ws unscrap debug.log
 ```
 
 ### Project Maintenance
 
 ```bash
 # Clean up old temporary files
-scrap clean --days 30
+ws scrap clean --days 30
 
 # Archive old items for backup
-scrap archive backup-2024.tar.gz --remove
+ws scrap archive backup-2024.tar.gz --remove
 
 # Check version status across projects
-st8 status
+ws git status
 
 # Update configuration URLs
-refac ./config "old.api.com" "new.api.com" --content-only
+ws refactor ./config "old.api.com" "new.api.com" --content-only
 ```
 
 ### Refactoring Modes
@@ -232,16 +245,16 @@ Refac supports different operation modes:
 
 ```bash
 # Only rename files/directories
-refac . "oldProject" "newProject" --names-only
+ws refactor . "oldProject" "newProject" --names-only
 
 # Only change file contents  
-refac . "api.old.com" "api.new.com" --content-only
+ws refactor . "api.old.com" "api.new.com" --content-only
 
 # Target specific file types
-refac ./src "OldStruct" "NewStruct" --include "*.rs"
+ws refactor ./src "OldStruct" "NewStruct" --include "*.rs"
 
 # Exclude unwanted areas
-refac . "oldname" "newname" --exclude "target/*" --exclude "*.log"
+ws refactor . "oldname" "newname" --exclude "target/*" --exclude "*.log"
 ```
 
 ## Safety Features
@@ -249,14 +262,14 @@ refac . "oldname" "newname" --exclude "target/*" --exclude "*.log"
 ### Always Preview First
 
 ```bash
-# Preview refac changes
-refac . "oldname" "newname" --verbose --verbose
+# Preview ws refactor changes
+ws refactor . "oldname" "newname" --verbose --verbose
 
-# Test scrap operations
-scrap --help  # Review options before using
+# Test ws scrap operations
+ws scrap --help  # Review options before using
 
-# Check st8 status before installation
-st8 status
+# Check ws git status before installation
+ws git status
 ```
 
 ### Use Version Control
@@ -266,27 +279,27 @@ st8 status
 git add .
 git commit -m "Before refactoring"
 
-# Use st8 to track changes automatically
-st8 install
+# Use ws git to track changes automatically
+ws git install
 
-# Apply refac changes
-refac . "oldname" "newname"
+# Apply ws refactor changes
+ws refactor . "oldname" "newname"
 
 # Scrap temporary files safely (tracked in metadata)
-scrap temp_*.txt build/debug/
+ws scrap temp_*.txt build/debug/
 ```
 
 ### Backup and Recovery
 
 ```bash
-# Create backups before refac operations
-refac . "oldname" "newname" --backup
+# Create backups before ws refactor operations
+ws refactor . "oldname" "newname" --backup
 
-# Archive scrap contents before cleaning
-scrap archive monthly-backup.tar.gz
+# Archive ws scrap contents before cleaning
+ws scrap archive monthly-backup.tar.gz
 
 # Restore files if needed
-unscrap important_file.txt
+ws unscrap important_file.txt
 ```
 
 ## Common Scenarios
@@ -295,21 +308,21 @@ unscrap important_file.txt
 
 ```bash
 # 1. Move build artifacts and logs out of the way
-scrap target/ *.log temp/
+ws scrap target/ *.log temp/
 
 # 2. Set up versioning for the refactor
-st8 install
+ws git install
 git tag v1.0  # Mark pre-refactor state
 
 # 3. Rename classes and update imports
-refac ./src "UserController" "AccountController" --verbose
-refac ./src "UserController" "AccountController" --include "*.rs"
+ws refactor ./src "UserController" "AccountController" --verbose
+ws refactor ./src "UserController" "AccountController" --include "*.rs"
 
 # 4. Update configuration files  
-refac ./config "old.server.com" "new.server.com" --content-only
+ws refactor ./config "old.server.com" "new.server.com" --content-only
 
 # 5. Restore any needed artifacts
-unscrap target/some-important-file
+ws unscrap target/some-important-file
 
 # Version is automatically updated due to git hook
 ```
@@ -318,14 +331,14 @@ unscrap target/some-important-file
 
 ```bash
 # Find and manage temporary files
-scrap find "*.tmp" "*.log" "*~"
+ws scrap find "*.tmp" "*.log" "*~"
 
 # Archive old test data
-scrap old_test_data/ legacy_configs/
-scrap archive test-archive-2024.tar.gz --remove
+ws scrap old_test_data/ legacy_configs/
+ws scrap archive test-archive-2024.tar.gz --remove
 
 # Update project URLs across all configs
-refac . "old.company.com" "new.company.com" \
+ws refactor . "old.company.com" "new.company.com" \
   --content-only \
   --include "*.env" \
   --include "*.yaml" \
@@ -340,7 +353,7 @@ git init
 git add .
 git commit -m "Initial commit"
 git tag v0.1.0
-st8 install
+ws git install
 
 # Normal development - versions update automatically
 echo "new feature" >> src/main.rs
@@ -348,7 +361,7 @@ git add .
 git commit -m "Add new feature"  # Version bumped automatically
 
 # Check current version
-st8 show
+ws git show
 cat version.txt
 ```
 
@@ -358,33 +371,33 @@ cat version.txt
 
 ```bash
 # Use multiple threads for large projects
-refac . "oldname" "newname" --threads 8
+ws refactor . "oldname" "newname" --threads 8
 
 # Limit search depth to avoid deep traversal
-refac . "oldname" "newname" --max-depth 3
+ws refactor . "oldname" "newname" --max-depth 3
 
 # Target specific areas
-refac ./src "oldname" "newname"
+ws refactor ./src "oldname" "newname"
 ```
 
 ### Scrap Efficiency
 
 ```bash
 # Batch operations for multiple files
-scrap file1.txt file2.txt dir1/ dir2/
+ws scrap file1.txt file2.txt dir1/ dir2/
 
 # Use patterns for bulk operations
-scrap find "*.tmp" | xargs scrap
+ws scrap find "*.tmp" | xargs scrap
 
 # Regular cleanup to maintain performance
-scrap clean --days 7  # Remove old items
+ws scrap clean --days 7  # Remove old items
 ```
 
 ### St8 Optimization
 
 ```bash
 # Configure once per repository
-st8 install --force  # Update existing hook
+ws git install --force  # Update existing hook
 
 # Use custom version files for different tools
 echo '{"version_file": "src/version.rs"}' > .st8.json
@@ -401,7 +414,7 @@ echo '{"version_file": "src/version.rs"}' > .st8.json
 
 **Scrap:**
 - Use instead of deleting files you might need later
-- Regular cleanup with `scrap clean` to remove old items
+- Regular cleanup with `ws scrap clean` to remove old items
 - Archive before purging if you want long-term backup
 
 **St8:**
@@ -414,17 +427,17 @@ echo '{"version_file": "src/version.rs"}' > .st8.json
 ```bash
 # Safe development cycle
 git checkout -b feature-branch
-scrap temp_files/ debug_logs/         # Clear workspace
-refac ./src "OldAPI" "NewAPI" --verbose  # Preview changes
-refac ./src "OldAPI" "NewAPI"         # Apply changes
-st8 install                       # Track versions
+ws scrap temp_files/ debug_logs/         # Clear workspace
+ws refactor ./src "OldAPI" "NewAPI" --verbose  # Preview changes
+ws refactor ./src "OldAPI" "NewAPI"         # Apply changes
+ws git install                       # Track versions
 git add . && git commit -m "Refactor API"  # Auto-version
 ```
 
 ### 3. Project Organization
 
-- Use `.gitignore` for scrap folder (automatically handled)
-- Configure st8 early in project setup
+- Use `.gitignore` for ws scrap folder (automatically handled)
+- Configure ws git early in project setup
 - Establish naming conventions before bulk refactoring
 - Keep restoration metadata for important files
 
@@ -434,15 +447,15 @@ git add . && git commit -m "Refactor API"  # Auto-version
 
 ```bash
 # Detailed help for each tool
-refac --help
-scrap --help  
-unscrap --help
-st8 --help
+ws refactor --help
+ws scrap --help  
+ws unscrap --help
+ws git --help
 
 # Verbose output for debugging
-refac . "old" "new" --verbose --verbose
-scrap find "pattern" --verbose
-st8 status
+ws refactor . "old" "new" --verbose --verbose
+ws scrap find "pattern" --verbose
+ws git status
 ```
 
 ### Common Issues
@@ -455,12 +468,12 @@ st8 status
 **Scrap operations failing:**
 - Check disk space for .scrap folder
 - Verify file permissions
-- Review metadata with `scrap list`
+- Review metadata with `ws scrap list`
 
-**St8 not working:**
+**Git integration not working:**
 - Ensure you're in a git repository
 - Check if hook is executable: `ls -la .git/hooks/pre-commit`
-- Verify st8 is in PATH
+- Verify ws git is in PATH
 
 ## Next Steps
 
@@ -468,7 +481,7 @@ st8 status
 
 1. **Tool-Specific Guides:**
    - [Scrap Guide]({{ '/scrap-guide/' | relative_url }}) - file management
-   - [Unscrap Guide]({{ '/unscrap-guide/' | relative_url }}) - File restoration techniques
+   - [Unws scrap Guide]({{ '/ws unscrap-guide/' | relative_url }}) - File restoration techniques
    - [St8 Guide]({{ '/st8-guide/' | relative_url }}) - Version management setup
 
 2. **Resources:**
@@ -480,23 +493,23 @@ st8 status
 
 ```bash
 # === REFAC - String Replacement ===
-refac . "old" "new" --verbose        # Preview changes
-refac . "old" "new" --include "*.rs" # Specific files
-refac . "old" "new" --names-only     # Rename only
+ws refactor . "old" "new" --verbose        # Preview changes
+ws refactor . "old" "new" --include "*.rs" # Specific files
+ws refactor . "old" "new" --names-only     # Rename only
 
 # === SCRAP - File Management ===
-scrap file.txt dir/                  # Move to .scrap
-scrap                                # List contents
-scrap find "*.log"                   # Search files
-scrap clean --days 30               # Remove old items
+ws scrap file.txt dir/                  # Move to .scrap
+ws scrap                                # List contents
+ws scrap find "*.log"                   # Search files
+ws scrap clean --days 30               # Remove old items
 
 # === UNSCRAP - File Restoration ===
-unscrap                              # Restore last item
-unscrap file.txt                     # Restore specific file
-unscrap file.txt --to /new/path/     # Custom destination
+ws unscrap                              # Restore last item
+ws unscrap file.txt                     # Restore specific file
+ws unscrap file.txt --to /new/path/     # Custom destination
 
 # === ST8 - Version Management ===
-st8 install                      # Install git hook
-st8 show                         # Display version info
-st8 status                       # Check configuration
+ws git install                      # Install git hook
+ws git show                         # Display version info
+ws git status                       # Check configuration
 ```

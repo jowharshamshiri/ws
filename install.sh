@@ -212,7 +212,7 @@ verify_installation() {
     if [ -x "$INSTALL_DIR/ws" ]; then
         local version=$("$INSTALL_DIR/ws" --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "unknown")
         success "ws installed successfully (version $version)"
-        success "All tools available as subcommands: ws refactor, ws st8, ws scrap, ws unscrap, ws ldiff"
+        success "All tools available as subcommands: ws refactor, ws git, ws scrap, ws unscrap, ws ldiff"
     else
         error "ws installation failed"
         exit 1
@@ -263,7 +263,7 @@ main() {
         log "  ws scrap temp_file.txt                            # Move file to .scrap folder"
         log "  ws scrap list                                     # List .scrap contents"
         log "  ws unscrap                                        # Restore last scrapped item"
-        log "  ws st8 install                                    # Install git hook for version bumping"
+        log "  ws git install                                    # Install git hook for version bumping"
         
         echo ""
         log "For more information:"
@@ -272,7 +272,7 @@ main() {
         log "  ws ldiff --help"
         log "  ws scrap --help"
         log "  ws unscrap --help"
-        log "  ws st8 --help"
+        log "  ws git --help"
     fi
 }
 

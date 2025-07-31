@@ -24,8 +24,8 @@ ws refactor ./src "OldClassName" "NewClassName" --verbose
 # Refactor with backups and specific file types
 ws refactor ./src "OldApi" "NewApi" --backup --include "*.rs" --include "*.toml"
 
-# Include hidden files like .ws configurations
-ws refactor . "st8" "new_st8" --include-hidden
+# Include hidden files like .ws configurations  
+ws refactor . "old_name" "new_name" --include-hidden
 ```
 
 **Key Features**: Encoding detection (UTF-8, UTF-16, Windows-1252), pre-validation, collision detection, multi-threaded processing  
@@ -83,17 +83,21 @@ ws unscrap important.rs --to ~/backup/       # Custom destination with conflict 
 **Developer Focus**: Accident recovery, experiment rollback, selective file restoration  
 **[Complete Guide]({{ '/unscrap-guide/' | relative_url }})**
 
-### St8 - Version Management with Templates
+### Git Integration & Template System
 Git-integrated versioning with template engine for automated file generation.
 
 ```bash
 # Set up automatic versioning
-ws st8 install
+ws git install
 
 # Add templates that auto-update with version changes
-ws st8 template add src/version.h --content \
-"#define VERSION \"{{ project.version }}\"
-#define BUILD_DATE \"{{ datetime.date }}\""
+ws template add version-header \
+  --template "#define VERSION \"{{ project.version }}\"
+#define BUILD_DATE \"{{ datetime.date }}\"" \
+  --output "src/version.h"
+
+# Manual version update and template rendering
+ws update --git-add
 
 # Templates render automatically on commits
 git add . && git commit -m "New feature"  # Auto-increments version and renders templates
@@ -105,7 +109,7 @@ git add . && git commit -m "New feature"  # Auto-increments version and renders 
 
 ## Template System Examples
 
-The st8 template system supports Tera templating with these variables:
+The template system supports Tera templating with these variables:
 - `{{ project.version }}` - Full version (e.g., "1.2.3")
 - `{{ project.name }}` - Project name from repository
 - `{{ project.major_version }}`, `{{ project.minor_version }}`, `{{ project.patch_version }}` - Version components
@@ -113,33 +117,39 @@ The st8 template system supports Tera templating with these variables:
 
 ### C/C++ Version Header Template
 ```bash
-ws st8 template add include/version.h --content \
+ws template add version-header \
+  --template \
 "#ifndef VERSION_H
 #define VERSION_H
 #define PROJECT_VERSION \"{{ project.version }}\"
 #define BUILD_DATE \"{{ datetime.date }}\"
-#endif"
+#endif" \
+  --output "include/version.h"
 ```
 
 ### JavaScript Version Module Template
 ```bash
-ws st8 template add src/version.js --content \
+ws template add version-js \
+  --template \
 "export const VERSION = {
   full: '{{ project.version }}',
   major: {{ project.major_version }},
   buildDate: '{{ datetime.date }}'
-};"
+};" \
+  --output "src/version.js"
 ```
 
 ### Docker Compose Template
 ```bash
-ws st8 template add docker-compose.prod.yml --content \
+ws template add docker-compose \
+  --template \
 "version: '3.8'
 services:
   app:
     image: {{ project.name }}:{{ project.version }}
     environment:
-      - VERSION={{ project.version }}"
+      - VERSION={{ project.version }}" \
+  --output "docker-compose.prod.yml"
 ```
 
 ## Quality Assurance & Testing
@@ -179,17 +189,13 @@ cd workspace
 
 ### Verification
 ```bash
-# Check installation and versions
-refac --version    # Should show: refac 0.34.20950
-ldiff --version    # Should show: ldiff 0.34.20950
-scrap --version    # Should show: scrap 0.34.20950
-unscrap --version  # Should show: unscrap 0.34.20950
-st8 --version      # Should show: st8 0.34.20950
+# Check installation and version
+ws --version       # Should show: ws 0.34.20950
 
 # Test basic functionality
-echo "hello world" | ldiff
-st8 status
-refac --help
+echo "hello world" | ws ldiff
+ws git status
+ws refactor --help
 ```
 
 **[Installation Guide]({{ '/installation/' | relative_url }})**
@@ -198,20 +204,20 @@ refac --help
 
 ### Development Refactoring Workflow
 ```bash
-# 1. Review changes (refac shows changes before applying)
-refac ./src "OldApi" "NewApi" --verbose
+# 1. Review changes (refactor shows changes before applying)
+ws refactor ./src "OldApi" "NewApi" --verbose
 
 # 2. Apply refactoring with backups
-refac ./src "OldApi" "NewApi" --backup
+ws refactor ./src "OldApi" "NewApi" --backup
 
 # 3. Update configuration files
-refac ./config "old.endpoint" "new.endpoint" --content-only --include "*.toml"
+ws refactor ./config "old.endpoint" "new.endpoint" --content-only --include "*.toml"
 
 # 4. Clean up old test files
-scrap legacy_tests/ old_benchmarks/
+ws scrap legacy_tests/ old_benchmarks/
 
 # 5. Update version and render templates
-st8 update --minor  # Templates auto-render with new version
+ws update --git-add  # Templates auto-render with new version
 ```
 
 ### Log Analysis Workflow
@@ -255,12 +261,13 @@ unscrap important_config.toml --to ./config/
 
 Each tool provides help documentation:
 ```bash
-refac --help      # Refac documentation
-ldiff --help      # Log analysis usage guide
-scrap --help      # File management operations
-unscrap --help    # Recovery system guide
-st8 --help        # Version management and templates
-st8 template --help  # Template system commands
+ws refactor --help   # Refac documentation
+ws ldiff --help      # Log analysis usage guide
+ws scrap --help      # File management operations
+ws unscrap --help    # Recovery system guide
+ws git --help        # Git integration and version management
+ws template --help   # Template system commands
+ws update --help     # Version update commands
 ```
 
 ## Documentation

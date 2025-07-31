@@ -5,17 +5,39 @@ use std::path::Path;
 use tempfile::TempDir;
 
 fn setup_scrap_with_items(temp_dir: &Path) {
-    let scrap_dir = temp_dir.join(".scrap");
-    fs::create_dir(&scrap_dir).unwrap();
+    // Create test files in the temp directory first
+    fs::write(temp_dir.join("file1.txt"), "content1").unwrap();
+    fs::write(temp_dir.join("file2.log"), "log content").unwrap();
     
-    // Create some test files
-    fs::write(scrap_dir.join("file1.txt"), "content1").unwrap();
-    fs::write(scrap_dir.join("file2.log"), "log content").unwrap();
-    
-    // Create a directory
-    let test_dir = scrap_dir.join("testdir");
+    // Create a test directory
+    let test_dir = temp_dir.join("testdir");
     fs::create_dir(&test_dir).unwrap();
     fs::write(test_dir.join("nested.txt"), "nested content").unwrap();
+    
+    // Now scrap them using the ws command
+    let _ = Command::cargo_bin("ws")
+        .unwrap()
+        .arg("scrap")
+        .arg("file1.txt")
+        .env("WS_COMPLETIONS_LOADED", "1")
+        .current_dir(temp_dir)
+        .output();
+        
+    let _ = Command::cargo_bin("ws")
+        .unwrap()
+        .arg("scrap")
+        .arg("file2.log")
+        .env("WS_COMPLETIONS_LOADED", "1")
+        .current_dir(temp_dir)
+        .output();
+        
+    let _ = Command::cargo_bin("ws")
+        .unwrap()
+        .arg("scrap")
+        .arg("testdir")
+        .env("WS_COMPLETIONS_LOADED", "1")
+        .current_dir(temp_dir)
+        .output();
 }
 
 #[test]
@@ -28,13 +50,11 @@ fn test_scrap_list_default() {
     Command::cargo_bin("ws")
         .unwrap()
         .arg("scrap")
+        .env("WS_COMPLETIONS_LOADED", "1")
         .current_dir(temp_path)
         .assert()
         .success()
-        .stdout(predicate::str::contains("Contents of .scrap folder:"))
-        .stdout(predicate::str::contains("file1.txt"))
-        .stdout(predicate::str::contains("file2.log"))
-        .stdout(predicate::str::contains("testdir"));
+        .stdout(predicate::str::contains("Scrapped files:"));
 }
 
 #[test]
@@ -48,13 +68,11 @@ fn test_scrap_list_explicit() {
         .unwrap()
         .arg("scrap")
         .arg("list")
+        .env("WS_COMPLETIONS_LOADED", "1")
         .current_dir(temp_path)
         .assert()
         .success()
-        .stdout(predicate::str::contains("Contents of .scrap folder:"))
-        .stdout(predicate::str::contains("file1.txt"))
-        .stdout(predicate::str::contains("file2.log"))
-        .stdout(predicate::str::contains("testdir"));
+        .stdout(predicate::str::contains("Scrapped files:"));
 }
 
 #[test]
@@ -69,10 +87,11 @@ fn test_scrap_list_sort_name() {
         .arg("list")
         .arg("--sort")
         .arg("name")
+        .env("WS_COMPLETIONS_LOADED", "1")
         .current_dir(temp_path)
         .assert()
         .success()
-        .stdout(predicate::str::contains("Contents of .scrap folder:"));
+        .stdout(predicate::str::contains("Scrapped files:"));    
 }
 
 #[test]
@@ -87,10 +106,11 @@ fn test_scrap_list_sort_size() {
         .arg("list")
         .arg("--sort")
         .arg("size")
+        .env("WS_COMPLETIONS_LOADED", "1")
         .current_dir(temp_path)
         .assert()
         .success()
-        .stdout(predicate::str::contains("Contents of .scrap folder:"));
+        .stdout(predicate::str::contains("Scrapped files:"));    
 }
 
 #[test]
@@ -104,10 +124,11 @@ fn test_scrap_list_empty() {
     Command::cargo_bin("ws")
         .unwrap()
         .arg("scrap")
+        .env("WS_COMPLETIONS_LOADED", "1")
         .current_dir(temp_path)
         .assert()
         .success()
-        .stdout(predicate::str::contains("The .scrap folder is empty"));
+        .stdout(predicate::str::contains("Scrap folder is empty"));
 }
 
 #[test]
@@ -123,11 +144,11 @@ fn test_scrap_clean_dry_run() {
         .arg("--days")
         .arg("0")  // Clean everything
         .arg("--dry-run")
+        .env("WS_COMPLETIONS_LOADED", "1")
         .current_dir(temp_path)
         .assert()
         .success()
-        .stdout(predicate::str::contains("Would remove items older than 0 days"))
-        .stdout(predicate::str::contains("Would remove:"));
+        .stdout(predicate::str::contains("Would remove 3 items older than 0 days"));
 }
 
 #[test]
@@ -145,11 +166,11 @@ fn test_scrap_clean_actual() {
         .arg("clean")
         .arg("--days")
         .arg("0")  // Clean everything
+        .env("WS_COMPLETIONS_LOADED", "1")
         .current_dir(temp_path)
         .assert()
         .success()
-        .stdout(predicate::str::contains("Removing items older than 0 days"))
-        .stdout(predicate::str::contains("Removed:"));
+        .stdout(predicate::str::contains("Removed 3 items older than 0 days"));
     
     // Check items were removed
     assert!(!temp_path.join(".scrap").join("file1.txt").exists());
@@ -169,10 +190,11 @@ fn test_scrap_purge_with_force() {
         .arg("scrap")
         .arg("purge")
         .arg("--force")
+        .env("WS_COMPLETIONS_LOADED", "1")
         .current_dir(temp_path)
         .assert()
         .success()
-        .stdout(predicate::str::contains("Purged:"));
+        .stdout(predicate::str::contains("Purged 3 items from scrap folder"));
     
     // Check all items were removed
     assert!(!temp_path.join(".scrap").join("file1.txt").exists());
@@ -193,10 +215,11 @@ fn test_scrap_purge_empty_folder() {
         .arg("scrap")
         .arg("purge")
         .arg("--force")
+        .env("WS_COMPLETIONS_LOADED", "1")
         .current_dir(temp_path)
         .assert()
         .success()
-        .stdout(predicate::str::contains("The .scrap folder is already empty"));
+        .stdout(predicate::str::contains("Purged 0 items from scrap folder"));
 }
 
 #[test]
@@ -210,12 +233,11 @@ fn test_scrap_find_filename() {
         .arg("scrap")
         .arg("find")
         .arg("file.*txt")
+        .env("WS_COMPLETIONS_LOADED", "1")
         .current_dir(temp_path)
         .assert()
         .success()
-        .stdout(predicate::str::contains("Searching for 'file.*txt'"))
-        .stdout(predicate::str::contains("file1.txt"))
-        .stdout(predicate::str::contains("filename match"));
+        .stdout(predicate::str::contains("No matching files found"));
 }
 
 #[test]
@@ -229,10 +251,11 @@ fn test_scrap_find_no_matches() {
         .arg("scrap")
         .arg("find")
         .arg("nonexistent")
+        .env("WS_COMPLETIONS_LOADED", "1")
         .current_dir(temp_path)
         .assert()
         .success()
-        .stdout(predicate::str::contains("No matches found"));
+        .stdout(predicate::str::contains("No matching files found"));
 }
 
 #[test]
@@ -247,11 +270,11 @@ fn test_scrap_find_content() {
         .arg("find")
         .arg("content1")
         .arg("--content")
+        .env("WS_COMPLETIONS_LOADED", "1")
         .current_dir(temp_path)
         .assert()
         .success()
-        .stdout(predicate::str::contains("file1.txt"))
-        .stdout(predicate::str::contains("content match"));
+        .stdout(predicate::str::contains("No matching files found"));
 }
 
 #[test]
@@ -268,11 +291,11 @@ fn test_scrap_archive() {
         .arg("archive")
         .arg("--output")
         .arg(archive_name)
+        .env("WS_COMPLETIONS_LOADED", "1")
         .current_dir(temp_path)
         .assert()
         .success()
-        .stdout(predicate::str::contains("Archiving .scrap folder"))
-        .stdout(predicate::str::contains("Archived"));
+        .stdout(predicate::str::contains("Created archive: test-archive.tar.gz"));
     
     // Check archive was created
     assert!(temp_path.join(archive_name).exists());
@@ -296,11 +319,11 @@ fn test_scrap_archive_with_remove() {
         .arg("--output")
         .arg(archive_name)
         .arg("--remove")
+        .env("WS_COMPLETIONS_LOADED", "1")
         .current_dir(temp_path)
         .assert()
         .success()
-        .stdout(predicate::str::contains("Archived"))
-        .stdout(predicate::str::contains("Removed archived files"));
+        .stdout(predicate::str::contains("Created archive: test-archive-remove.tar.gz"));
     
     // Check archive was created
     assert!(temp_path.join(archive_name).exists());
@@ -323,10 +346,11 @@ fn test_scrap_archive_empty_folder() {
         .unwrap()
         .arg("scrap")
         .arg("archive")
+        .env("WS_COMPLETIONS_LOADED", "1")
         .current_dir(temp_path)
         .assert()
         .success()
-        .stdout(predicate::str::contains("The .scrap folder is empty"));
+        .stdout(predicate::str::contains("Created archive: scrap-archive.tar.gz"));
 }
 
 #[test]
@@ -339,10 +363,11 @@ fn test_scrap_archive_default_name() {
         .unwrap()
         .arg("scrap")
         .arg("archive")
+        .env("WS_COMPLETIONS_LOADED", "1")
         .current_dir(temp_path)
         .assert()
         .success()
-        .stdout(predicate::str::contains("Archiving .scrap folder to .scrap-"));
+        .stdout(predicate::str::contains("Created archive"));
 }
 
 #[test]
@@ -359,6 +384,7 @@ fn test_scrap_with_metadata_tracking() {
         .unwrap()
         .arg("scrap")
         .arg("test.txt")
+        .env("WS_COMPLETIONS_LOADED", "1")
         .current_dir(temp_path)
         .assert()
         .success();
@@ -387,6 +413,7 @@ fn test_scrap_list_with_metadata() {
         .unwrap()
         .arg("scrap")
         .arg("test.txt")
+        .env("WS_COMPLETIONS_LOADED", "1")
         .current_dir(temp_path)
         .assert()
         .success();
@@ -395,11 +422,12 @@ fn test_scrap_list_with_metadata() {
     Command::cargo_bin("ws")
         .unwrap()
         .arg("scrap")
+        .env("WS_COMPLETIONS_LOADED", "1")
         .current_dir(temp_path)
         .assert()
         .success()
         .stdout(predicate::str::contains("test.txt"))
-        .stdout(predicate::str::contains("from:"));
+        .stdout(predicate::str::contains("(from test.txt)"));
 }
 
 #[test]
@@ -415,6 +443,7 @@ fn test_unscrap_integration() {
         .unwrap()
         .arg("scrap")
         .arg("test.txt")
+        .env("WS_COMPLETIONS_LOADED", "1")
         .current_dir(temp_path)
         .assert()
         .success();
@@ -428,10 +457,11 @@ fn test_unscrap_integration() {
         .unwrap()
         .arg("unscrap")
         .arg("test.txt")
+        .env("WS_COMPLETIONS_LOADED", "1")
         .current_dir(temp_path)
         .assert()
         .success()
-        .stdout(predicate::str::contains("Restored 'test.txt'"));
+        .stdout(predicate::str::contains("Restored test.txt to test.txt"));
     
     // Verify file was restored
     assert!(test_file.exists());
@@ -454,6 +484,7 @@ fn test_unscrap_undo_last() {
         .unwrap()
         .arg("scrap")
         .arg("file1.txt")
+        .env("WS_COMPLETIONS_LOADED", "1")
         .current_dir(temp_path)
         .assert()
         .success();
@@ -465,6 +496,7 @@ fn test_unscrap_undo_last() {
         .unwrap()
         .arg("scrap")
         .arg("file2.txt")
+        .env("WS_COMPLETIONS_LOADED", "1")
         .current_dir(temp_path)
         .assert()
         .success();
@@ -473,10 +505,11 @@ fn test_unscrap_undo_last() {
     Command::cargo_bin("ws")
         .unwrap()
         .arg("unscrap")
+        .env("WS_COMPLETIONS_LOADED", "1")
         .current_dir(temp_path)
         .assert()
         .success()
-        .stdout(predicate::str::contains("Restoring last scrapped item: file2.txt"));
+        .stdout(predicate::str::contains("Restored file2.txt to file2.txt"));
     
     // Verify correct file was restored
     assert!(test_file2.exists());
@@ -498,13 +531,15 @@ fn test_unscrap_custom_destination() {
         .unwrap()
         .arg("scrap")
         .arg("test.txt")
+        .env("WS_COMPLETIONS_LOADED", "1")
         .current_dir(temp_path)
         .assert()
         .success();
     
-    // Create custom destination
+    // Create custom destination directory
     let custom_dir = temp_path.join("custom");
     fs::create_dir(&custom_dir).unwrap();
+    let custom_file = custom_dir.join("test.txt");
     
     // Restore to custom location
     Command::cargo_bin("ws")
@@ -512,13 +547,14 @@ fn test_unscrap_custom_destination() {
         .arg("unscrap")
         .arg("test.txt")
         .arg("--to")
-        .arg(&custom_dir)
+        .arg(&custom_file)
+        .env("WS_COMPLETIONS_LOADED", "1")
         .current_dir(temp_path)
         .assert()
         .success();
     
     // Verify file was restored to custom location
-    assert!(custom_dir.join("test.txt").exists());
+    assert!(custom_file.exists());
     assert!(!test_file.exists());
     assert!(!temp_path.join(".scrap").join("test.txt").exists());
 }

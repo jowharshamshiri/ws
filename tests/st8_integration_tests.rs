@@ -68,11 +68,11 @@ fn create_test_commits(dir: &Path, count: u32) -> Result<(), Box<dyn std::error:
 fn test_st8_help() {
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
+        .arg("git")
         .arg("--help")
         .assert()
         .success()
-        .stdout(predicate::str::contains("Automatic version bumping"));
+        .stdout(predicate::str::contains("Git integration commands"));
 }
 
 #[test]
@@ -91,7 +91,6 @@ fn test_st8_outside_git_repo() {
     
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
         .arg("update")
         .current_dir(temp_dir.path())
         .assert()
@@ -107,7 +106,7 @@ fn test_st8_show_in_git_repo() {
     
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
+        .arg("git")
         .arg("show")
         .current_dir(temp_dir.path())
         .assert()
@@ -126,7 +125,7 @@ fn test_st8_status_in_git_repo() {
     
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
+        .arg("git")
         .arg("status")
         .current_dir(temp_dir.path())
         .assert()
@@ -143,7 +142,7 @@ fn test_st8_status_outside_git_repo() {
     
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
+        .arg("git")
         .arg("status")
         .current_dir(temp_dir.path())
         .assert()
@@ -159,7 +158,6 @@ fn test_st8_update_creates_version_file() {
     
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
         .arg("update")
         .current_dir(temp_dir.path())
         .assert()
@@ -182,27 +180,27 @@ fn test_st8_update_creates_version_file() {
 }
 
 #[test]
-fn test_st8_install_hook() {
+fn test_ws_git_install_hook() {
     let temp_dir = TempDir::new().unwrap();
     setup_git_repo(temp_dir.path()).unwrap();
     
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
+        .arg("git")
         .arg("install")
         .current_dir(temp_dir.path())
         .assert()
         .success()
-        .stdout(predicate::str::contains("st8 installed successfully"));
+        .stdout(predicate::str::contains("Git hook installed successfully"));
     
     // Check that pre-commit hook was created
     let hook_file = temp_dir.path().join(".git").join("hooks").join("pre-commit");
     assert!(hook_file.exists());
     
     let hook_content = fs::read_to_string(&hook_file).unwrap();
-    assert!(hook_content.contains("=== ST8 BLOCK START ==="));
-    assert!(hook_content.contains("=== ST8 BLOCK END ==="));
-    assert!(hook_content.contains("st8"));
+    assert!(hook_content.contains("=== WS BLOCK START ==="));
+    assert!(hook_content.contains("=== WS BLOCK END ==="));
+    assert!(hook_content.contains("ws update --git-add"));
     
     // Check that hook is executable
     #[cfg(unix)]
@@ -214,14 +212,14 @@ fn test_st8_install_hook() {
 }
 
 #[test]
-fn test_st8_install_hook_already_installed() {
+fn test_ws_git_install_hook_already_installed() {
     let temp_dir = TempDir::new().unwrap();
     setup_git_repo(temp_dir.path()).unwrap();
     
     // First installation
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
+        .arg("git")
         .arg("install")
         .current_dir(temp_dir.path())
         .assert()
@@ -230,7 +228,7 @@ fn test_st8_install_hook_already_installed() {
     // Second installation without force should inform already installed
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
+        .arg("git")
         .arg("install")
         .current_dir(temp_dir.path())
         .assert()
@@ -240,7 +238,7 @@ fn test_st8_install_hook_already_installed() {
     // Second installation should succeed (already installed is not an error)
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
+        .arg("git")
         .arg("install")
         .current_dir(temp_dir.path())
         .assert()
@@ -263,7 +261,7 @@ fn test_st8_install_hook_with_existing_hook() {
     // Install st8 hook
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
+        .arg("git")
         .arg("install")
         .current_dir(temp_dir.path())
         .assert()
@@ -272,7 +270,7 @@ fn test_st8_install_hook_with_existing_hook() {
     // Check that both old and new content exist
     let updated_content = fs::read_to_string(&hook_file).unwrap();
     assert!(updated_content.contains("Existing hook"));
-    assert!(updated_content.contains("=== ST8 BLOCK START ==="));
+    assert!(updated_content.contains("=== WS BLOCK START ==="));
 }
 
 #[test]
@@ -283,7 +281,7 @@ fn test_st8_uninstall_hook() {
     // Install hook first
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
+        .arg("git")
         .arg("install")
         .current_dir(temp_dir.path())
         .assert()
@@ -295,12 +293,12 @@ fn test_st8_uninstall_hook() {
     // Uninstall hook
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
+        .arg("git")
         .arg("uninstall")
         .current_dir(temp_dir.path())
         .assert()
         .success()
-        .stdout(predicate::str::contains("st8 uninstalled"));
+        .stdout(predicate::str::contains("Git hook uninstalled successfully"));
     
     // Hook file should be removed (since it only contained st8)
     assert!(!hook_file.exists());
@@ -322,7 +320,7 @@ fn test_st8_uninstall_hook_with_other_content() {
     // Install st8 hook
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
+        .arg("git")
         .arg("install")
         .current_dir(temp_dir.path())
         .assert()
@@ -331,7 +329,7 @@ fn test_st8_uninstall_hook_with_other_content() {
     // Uninstall st8 hook
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
+        .arg("git")
         .arg("uninstall")
         .current_dir(temp_dir.path())
         .assert()
@@ -352,7 +350,7 @@ fn test_st8_uninstall_no_hook() {
     // Try to uninstall when no hook exists
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
+        .arg("git")
         .arg("uninstall")
         .current_dir(temp_dir.path())
         .assert()
@@ -368,11 +366,11 @@ fn test_st8_default_behavior_install() {
     // Default behavior should install hook if not installed
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
+        .arg("git")
         .current_dir(temp_dir.path())
         .assert()
         .success()
-        .stdout(predicate::str::contains("st8 installed successfully"));
+        .stdout(predicate::str::contains("Git hook installed successfully"));
     
     let hook_file = temp_dir.path().join(".git").join("hooks").join("pre-commit");
     assert!(hook_file.exists());
@@ -387,7 +385,7 @@ fn test_st8_default_behavior_update() {
     // Install hook first
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
+        .arg("git")
         .arg("install")
         .current_dir(temp_dir.path())
         .assert()
@@ -396,7 +394,7 @@ fn test_st8_default_behavior_update() {
     // Default behavior should now update version
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
+        .arg("git")
         .current_dir(temp_dir.path())
         .assert()
         .success()
@@ -424,7 +422,7 @@ fn test_st8_with_git_tag() {
     
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
+        .arg("git")
         .arg("show")
         .current_dir(temp_dir.path())
         .assert()
@@ -448,7 +446,6 @@ fn test_st8_config_file() {
     
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
         .arg("update")
         .current_dir(temp_dir.path())
         .assert()
@@ -470,7 +467,7 @@ fn test_st8_logging() {
     
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
+        .arg("git")
         .arg("install")
         .current_dir(temp_dir.path())
         .assert()
@@ -505,7 +502,6 @@ serde = "1.0"
     // Run st8 update
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
         .arg("update")
         .current_dir(temp_dir.path())
         .assert()
@@ -543,7 +539,6 @@ fn test_st8_auto_detect_package_json() {
     // Run st8 update
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
         .arg("update")
         .current_dir(temp_dir.path())
         .assert()
@@ -597,7 +592,6 @@ version = "0.5.0"
     // Run st8 update
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
         .arg("update")
         .current_dir(temp_dir.path())
         .assert()
@@ -635,7 +629,7 @@ fn test_st8_status_shows_detected_files() {
     
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
+        .arg("git")
         .arg("status")
         .current_dir(temp_dir.path())
         .assert()
@@ -671,7 +665,6 @@ version = "0.1.0"
     // Run st8 update
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
         .arg("update")
         .current_dir(temp_dir.path())
         .assert()
@@ -713,7 +706,6 @@ fn test_st8_manual_project_files() {
     // Run st8 update
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
         .arg("update")
         .current_dir(temp_dir.path())
         .assert()
@@ -745,7 +737,6 @@ version = "0.1.0"
     // Run st8 update first time
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
         .arg("update")
         .current_dir(temp_dir.path())
         .assert()
@@ -759,7 +750,6 @@ version = "0.1.0"
     // Run st8 update second time (no git changes)
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
         .arg("update")
         .current_dir(temp_dir.path())
         .assert()
@@ -778,7 +768,6 @@ version = "0.1.0"
     
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
         .arg("update")
         .current_dir(temp_dir.path())
         .assert()
@@ -802,7 +791,7 @@ fn test_st8_logging_in_workspace_directory() {
     // Install st8 to trigger logging
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
+        .arg("git")
         .arg("install")
         .current_dir(temp_dir.path())
         .assert()
@@ -820,7 +809,7 @@ fn test_st8_logging_in_workspace_directory() {
     // Trigger another logging action (uninstall)
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
+        .arg("git")
         .arg("uninstall")
         .current_dir(temp_dir.path())
         .assert()
@@ -858,7 +847,6 @@ fn test_st8_update_with_git_add() {
     // Run st8 update with --git-add flag
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
         .arg("update")
         .arg("--git-add")
         .current_dir(temp_dir.path())
@@ -912,7 +900,6 @@ fn test_st8_update_without_git_add() {
     // Run st8 update without --git-add flag
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
         .arg("update")
         .current_dir(temp_dir.path())
         .assert()
@@ -946,7 +933,7 @@ fn test_st8_install_hook_includes_git_add() {
     
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
+        .arg("git")
         .arg("install")
         .current_dir(temp_dir.path())
         .assert()

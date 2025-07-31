@@ -1,5 +1,6 @@
 use anyhow::{Context, Result};
-use clap::{Parser, Subcommand};
+use clap::{CommandFactory, Parser, Subcommand};
+use clap_complete::{generate, Shell};
 use colored::Colorize;
 use workspace::st8::{St8Config, VersionInfo, detect_project_files, update_version_file, TemplateManager};
 use workspace::workspace_state::WorkspaceState;
@@ -12,6 +13,7 @@ use std::process::{self, Command};
 #[derive(Parser, Debug)]
 #[command(name = "ws")]
 #[command(about = "Workspace workspace tools - comprehensive file operations, version management, and development workflow automation")]
+#[command(after_help = "Shell completions are automatically set up on first run. To enable permanently, add the completion commands shown in stderr to your shell config (~/.bashrc, ~/.zshrc, etc.).")]
 #[command(version = workspace::get_version())]
 struct Args {
     #[command(subcommand)]
@@ -26,10 +28,26 @@ enum Commands {
         args: workspace::cli::Args,
     },
     
-    /// Automatic version bumping based on git commits and changes
-    St8 {
+    /// Git integration commands for version management and hooks
+    Git {
         #[command(subcommand)]
-        command: Option<St8Commands>,
+        command: Option<GitCommands>,
+    },
+    
+    /// Template management commands
+    Template {
+        #[command(subcommand)]
+        action: TemplateAction,
+    },
+    
+    /// Update project state (version, templates) manually (normally done automatically via git hook)
+    Update {
+        /// Run update even when not in a git repository
+        #[arg(long)]
+        no_git: bool,
+        /// Add updated files to git staging area after state update
+        #[arg(long)]
+        git_add: bool,
     },
     
     /// Local trash can using a .scrap folder for files you want to delete
@@ -61,43 +79,27 @@ enum Commands {
 }
 
 #[derive(Subcommand, Debug)]
-enum St8Commands {
-    /// Install st8 as a pre-commit hook in the current git repository
+enum GitCommands {
+    /// Install version management as a pre-commit hook in the current git repository
     Install {
         /// Force reinstallation even if already installed
         #[arg(short, long)]
         force: bool,
     },
     
-    /// Remove st8 from pre-commit hooks
+    /// Remove version management from pre-commit hooks
     #[command(alias = "unhook")]
     Uninstall,
     
     /// Show current version information without updating
     Show,
     
-    /// Update project state (version, templates) manually (normally done automatically via git hook)
-    Update {
-        /// Run update even when not in a git repository
-        #[arg(long)]
-        no_git: bool,
-        /// Add updated files to git staging area after state update
-        #[arg(long)]
-        git_add: bool,
-    },
-    
-    /// Show st8 status and configuration
+    /// Show git integration status and configuration
     Status,
-    
-    /// Template management commands
-    Template {
-        #[command(subcommand)]
-        action: St8TemplateAction,
-    },
 }
 
 #[derive(Subcommand, Debug)]
-enum St8TemplateAction {
+enum TemplateAction {
     /// Add a new template
     Add {
         /// Template name
@@ -193,6 +195,13 @@ enum ScrapCommands {
 }
 
 fn main() {
+    // Setup shell completions on first run (but not when running as a git hook)
+    if !is_running_as_git_hook() {
+        if let Err(e) = setup_shell_completions() {
+            eprintln!("{}: Failed to setup completions: {:#}", "Warning".yellow(), e);
+        }
+    }
+    
     if let Err(e) = run() {
         eprintln!("{}: {:#}", "Error".red(), e);
         process::exit(1);
@@ -221,8 +230,16 @@ fn run() -> Result<()> {
             }
         }
         
-        Commands::St8 { command } => {
-            run_st8_command(command)?;
+        Commands::Git { command } => {
+            run_git_command(command)?;
+        }
+        
+        Commands::Template { action } => {
+            handle_template_command(action)?;
+        }
+        
+        Commands::Update { no_git, git_add } => {
+            update_state(no_git, git_add)?;
         }
         
         Commands::Scrap { paths, command } => {
@@ -241,14 +258,12 @@ fn run() -> Result<()> {
     Ok(())
 }
 
-fn run_st8_command(command: Option<St8Commands>) -> Result<()> {
+fn run_git_command(command: Option<GitCommands>) -> Result<()> {
     match command {
-        Some(St8Commands::Install { force }) => install_hook(force)?,
-        Some(St8Commands::Uninstall) => uninstall_hook()?,
-        Some(St8Commands::Show) => show_version()?,
-        Some(St8Commands::Update { no_git, git_add }) => update_state(no_git, git_add)?,
-        Some(St8Commands::Status) => show_status()?,
-        Some(St8Commands::Template { action }) => handle_template_command(action)?,
+        Some(GitCommands::Install { force }) => install_hook(force)?,
+        Some(GitCommands::Uninstall) => uninstall_hook()?,
+        Some(GitCommands::Show) => show_version()?,
+        Some(GitCommands::Status) => show_status()?,
         None => {
             // Default behavior: install hook if not installed, otherwise update state
             if is_hook_installed()? {
@@ -377,8 +392,8 @@ fn install_hook(force: bool) -> Result<()> {
     
     // Check if already installed
     if !force && is_hook_installed()? {
-        println!("{} st8 is already installed as a pre-commit hook", "Info".blue());
-        println!("{} Use 'ws st8 install --force' to reinstall", "Tip".yellow());
+        println!("{} Git hook is already installed", "Info".blue());
+        println!("{} Use 'ws git install --force' to reinstall", "Tip".yellow());
         return Ok(());
     }
     
@@ -387,7 +402,7 @@ fn install_hook(force: bool) -> Result<()> {
         .context("Failed to get current executable path")?;
     
     let st8_block = format!(
-        "#!/bin/bash\n# === ST8 BLOCK START ===\n# DO NOT EDIT THIS BLOCK MANUALLY\n# Use 'ws st8 uninstall' to remove this hook\n{} st8 update --git-add\n# === ST8 BLOCK END ===\n",
+        "#!/bin/bash\n# === WS BLOCK START ===\n# DO NOT EDIT THIS BLOCK MANUALLY\n# Use 'ws git uninstall' to remove this hook\n{} ws update --git-add\n# === WS BLOCK END ===\n",
         current_exe.display()
     );
     
@@ -427,7 +442,7 @@ fn install_hook(force: bool) -> Result<()> {
         fs::set_permissions(&hook_file, perms)?;
     }
     
-    println!("{} st8 installed successfully as a pre-commit hook", "Success".green());
+    println!("{} Git hook installed successfully", "Success".green());
     println!("{} Version will be automatically updated on each commit", "Info".blue());
     
     Ok(())
@@ -449,8 +464,8 @@ fn uninstall_hook() -> Result<()> {
     let existing_content = fs::read_to_string(&hook_file)
         .context("Failed to read pre-commit hook")?;
     
-    if !existing_content.contains("=== ST8 BLOCK START ===") {
-        println!("{} st8 is not installed in the pre-commit hook", "Info".yellow());
+    if !existing_content.contains("=== WS BLOCK START ===") {
+        println!("{} Git hook is not installed", "Info".yellow());
         return Ok(());
     }
     
@@ -468,7 +483,7 @@ fn uninstall_hook() -> Result<()> {
         log_action(&format!("Removed st8 block from pre-commit hook: {}", hook_file.display()));
     }
     
-    println!("{} st8 uninstalled from pre-commit hook", "Success".green());
+    println!("{} Git hook uninstalled successfully", "Success".green());
     
     Ok(())
 }
@@ -660,13 +675,13 @@ fn show_status() -> Result<()> {
     Ok(())
 }
 
-fn handle_template_command(action: St8TemplateAction) -> Result<()> {
+fn handle_template_command(action: TemplateAction) -> Result<()> {
     let project_root = get_project_root()?;
     let state = WorkspaceState::load(&project_root)?;
     let mut template_manager = TemplateManager::new(&state)?;
     
     match action {
-        St8TemplateAction::Add { name, template, output, description } => {
+        TemplateAction::Add { name, template, output, description } => {
             let template_path = std::path::Path::new(&template);
             let template_content = if template_path.exists() {
                 fs::read_to_string(&template)
@@ -683,7 +698,7 @@ fn handle_template_command(action: St8TemplateAction) -> Result<()> {
             println!("{} Added template '{}' → {}", "Success".green(), name, output);
         }
         
-        St8TemplateAction::Remove { name } => {
+        TemplateAction::Remove { name } => {
             let removed = template_manager.remove_template(&name)?;
             if removed {
                 println!("{} Removed template '{}'", "Success".green(), name);
@@ -692,7 +707,7 @@ fn handle_template_command(action: St8TemplateAction) -> Result<()> {
             }
         }
         
-        St8TemplateAction::List => {
+        TemplateAction::List => {
             let templates = template_manager.list_templates();
             if templates.is_empty() {
                 println!("{} No templates configured", "Info".blue());
@@ -711,7 +726,7 @@ fn handle_template_command(action: St8TemplateAction) -> Result<()> {
             }
         }
         
-        St8TemplateAction::Enable { name, disable } => {
+        TemplateAction::Enable { name, disable } => {
             let enabled = !disable;
             let updated = template_manager.set_template_enabled(&name, enabled)?;
             if updated {
@@ -722,7 +737,7 @@ fn handle_template_command(action: St8TemplateAction) -> Result<()> {
             }
         }
         
-        St8TemplateAction::Render => {
+        TemplateAction::Render => {
             let version_info = VersionInfo::calculate()?;
             let project_name = state.project_name.as_deref();
             
@@ -738,7 +753,7 @@ fn handle_template_command(action: St8TemplateAction) -> Result<()> {
             }
         }
         
-        St8TemplateAction::Show { name } => {
+        TemplateAction::Show { name } => {
             if let Some(template) = template_manager.get_template(&name) {
                 println!("{}", format!("Template: {}", template.name).bold());
                 println!("  {}: {}", "Output".cyan(), template.output_path);
@@ -797,7 +812,7 @@ fn is_hook_installed() -> Result<bool> {
     let content = fs::read_to_string(&hook_file)
         .context("Failed to read pre-commit hook")?;
     
-    Ok(content.contains("=== ST8 BLOCK START ==="))
+    Ok(content.contains("=== WS BLOCK START ==="))
 }
 
 fn remove_st8_block(content: &str) -> String {
@@ -807,12 +822,12 @@ fn remove_st8_block(content: &str) -> String {
     let ends_with_newline = content.ends_with('\n');
     
     for line in lines {
-        if line.contains("=== ST8 BLOCK START ===") {
+        if line.contains("=== WS BLOCK START ===") {
             in_st8_block = true;
             continue;
         }
         
-        if line.contains("=== ST8 BLOCK END ===") {
+        if line.contains("=== WS BLOCK END ===") {
             in_st8_block = false;
             continue;
         }
@@ -901,4 +916,167 @@ fn add_files_to_git(files: &[String]) -> Result<Vec<String>> {
     }
     
     Ok(added_files)
+}
+
+fn is_running_as_git_hook() -> bool {
+    // Check if we're running in a git hook context
+    // Git hooks set GIT_DIR environment variable
+    if env::var("GIT_DIR").is_ok() {
+        return true;
+    }
+    
+    // Check if parent process looks like a git hook execution
+    if let Ok(exe_path) = env::current_exe() {
+        if let Some(parent_dir) = exe_path.parent() {
+            // If we're being called from a .git/hooks directory context
+            if parent_dir.to_string_lossy().contains(".git/hooks") {
+                return true;
+            }
+        }
+    }
+    
+    // Check if we're running with typical git hook arguments/context
+    if let Ok(git_index_file) = env::var("GIT_INDEX_FILE") {
+        if !git_index_file.is_empty() {
+            return true;
+        }
+    }
+    
+    false
+}
+
+fn setup_shell_completions() -> Result<()> {
+    // Check if we've already set up completions for this session
+    if env::var("WS_COMPLETIONS_LOADED").is_ok() {
+        return Ok(());
+    }
+    
+    // Detect current shell
+    let shell = detect_current_shell()?;
+    
+    // Generate completion script and output shell commands to enable it
+    generate_and_activate_completions(shell)?;
+    
+    Ok(())
+}
+
+fn detect_current_shell() -> Result<Shell> {
+    // Try to detect shell from environment variables
+    if let Ok(shell) = env::var("SHELL") {
+        if shell.contains("bash") {
+            return Ok(Shell::Bash);
+        } else if shell.contains("zsh") {
+            return Ok(Shell::Zsh);
+        } else if shell.contains("fish") {
+            return Ok(Shell::Fish);
+        }
+    }
+    
+    // Check for shell-specific environment variables
+    if env::var("ZSH_VERSION").is_ok() {
+        return Ok(Shell::Zsh);
+    } else if env::var("BASH_VERSION").is_ok() {
+        return Ok(Shell::Bash);
+    } else if env::var("FISH_VERSION").is_ok() {
+        return Ok(Shell::Fish);
+    }
+    
+    // Default to bash if we can't detect
+    Ok(Shell::Bash)
+}
+
+fn generate_and_activate_completions(shell: Shell) -> Result<()> {
+    
+    // Generate completion script to a temporary string
+    let mut completion_script = Vec::new();
+    {
+        let mut app = Args::command();
+        let name = app.get_name().to_string();
+        generate(shell, &mut app, name, &mut completion_script);
+    }
+    
+    let completion_content = String::from_utf8(completion_script)
+        .context("Failed to convert completion script to string")?;
+    
+    // Create completion directory if it doesn't exist
+    let completion_dir = get_completion_dir(shell)?;
+    fs::create_dir_all(&completion_dir)
+        .context("Failed to create completion directory")?;
+    
+    // Write completion script to appropriate location
+    let completion_file = get_completion_file_path(shell, &completion_dir)?;
+    fs::write(&completion_file, &completion_content)
+        .context("Failed to write completion script")?;
+    
+    // Output shell-specific activation commands to stderr so they can be sourced
+    output_activation_commands(shell, &completion_file)?;
+    
+    Ok(())
+}
+
+fn get_completion_dir(shell: Shell) -> Result<PathBuf> {
+    let home = env::var("HOME").context("HOME environment variable not set")?;
+    let home_path = PathBuf::from(home);
+    
+    match shell {
+        Shell::Bash => Ok(home_path.join(".local/share/bash-completion/completions")),
+        Shell::Zsh => {
+            // Try XDG first, then fallback to standard zsh location
+            if let Ok(xdg_data) = env::var("XDG_DATA_HOME") {
+                Ok(PathBuf::from(xdg_data).join("zsh/site-functions"))
+            } else {
+                Ok(home_path.join(".local/share/zsh/site-functions"))
+            }
+        },
+        Shell::Fish => {
+            if let Ok(xdg_data) = env::var("XDG_DATA_HOME") {
+                Ok(PathBuf::from(xdg_data).join("fish/completions"))
+            } else {
+                Ok(home_path.join(".local/share/fish/completions"))
+            }
+        },
+        Shell::PowerShell => Ok(home_path.join("Documents/PowerShell/Modules")),
+        _ => Ok(home_path.join(".local/share/completions")), // fallback
+    }
+}
+
+fn get_completion_file_path(shell: Shell, completion_dir: &PathBuf) -> Result<PathBuf> {
+    match shell {
+        Shell::Bash => Ok(completion_dir.join("ws")),
+        Shell::Zsh => Ok(completion_dir.join("_ws")),
+        Shell::Fish => Ok(completion_dir.join("ws.fish")),
+        Shell::PowerShell => Ok(completion_dir.join("ws.ps1")),
+        _ => Ok(completion_dir.join("ws")),
+    }
+}
+
+fn output_activation_commands(shell: Shell, completion_file: &PathBuf) -> Result<()> {
+    let file_path = completion_file.to_string_lossy();
+    
+    match shell {
+        Shell::Bash => {
+            eprintln!("# To enable ws completions for this session, run:");
+            eprintln!("source '{}'", file_path);
+            eprintln!("# To enable permanently, add the above line to your ~/.bashrc");
+        },
+        Shell::Zsh => {
+            eprintln!("# To enable ws completions for this session, run:");
+            eprintln!("fpath=(\"{}\" $fpath)", completion_file.parent().unwrap().to_string_lossy());
+            eprintln!("autoload -U compinit && compinit");
+            eprintln!("# To enable permanently, add the above lines to your ~/.zshrc");
+        },
+        Shell::Fish => {
+            eprintln!("# ws completions have been installed to: {}", file_path);
+            eprintln!("# Fish will automatically load completions from this location");
+        },
+        Shell::PowerShell => {
+            eprintln!("# To enable ws completions, add this to your PowerShell profile:");
+            eprintln!(". '{}'", file_path);
+        },
+        _ => {
+            eprintln!("# Completion script generated at: {}", file_path);
+        }
+    }
+    
+    Ok(())
 }

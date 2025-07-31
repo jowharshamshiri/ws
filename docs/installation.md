@@ -53,12 +53,14 @@ ws refactor --help # Test refactor subcommand
 ws ldiff --help    # Test ldiff subcommand
 ws scrap --help    # Test scrap subcommand
 ws unscrap --help  # Test unscrap subcommand
-ws st8 --help      # Test st8 subcommand
+ws git --help      # Test git integration subcommand
+ws template --help # Test template subcommand
+ws update --help   # Test update subcommand
 
 # Test basic functionality
 echo "hello world" | ws ldiff               # Test pattern recognition
 ws refactor . "test" "test" --verbose       # Test string replacement preview
-ws st8 status                               # Test version management status
+ws git status                               # Test git integration status
 ```
 
 ### Uninstall
@@ -114,8 +116,8 @@ git clone https://github.com/jowharshamshiri/workspace.git
 cd workspace
 
 # Run tools directly without installing
-cargo run --bin refac -- --help
-cargo run --bin st8 -- template --help
+cargo run -- refactor --help
+cargo run -- template --help
 
 # Build in debug mode for development
 cargo build
@@ -285,38 +287,34 @@ cargo test --release
 
 ```bash
 # Comprehensive functionality check
-refac . "test" "test" --verbose     # Test refac (shows preview automatically)
-echo -e "line1\nline2\nline1" | ldiff        # Test ldiff pattern recognition
-scrap list                                    # Test scrap (should show empty or existing)
-st8 status                                    # Test st8 outside git repo
-unscrap --help                                # Test unscrap help system
+ws refactor . "test" "test" --verbose        # Test refactor (shows preview automatically)
+echo -e "line1\nline2\nline1" | ws ldiff     # Test ldiff pattern recognition
+ws scrap list                                # Test scrap (should show empty or existing)
+ws git status                                # Test git integration outside git repo
+ws unscrap --help                            # Test unscrap help system
 
 # Version consistency check
-refac --version | grep "0.34.20950"
-ldiff --version | grep "0.34.20950"
-scrap --version | grep "0.34.20950"
-unscrap --version | grep "0.34.20950"
-st8 --version | grep "0.34.20950"
+ws --version | grep "0.34.20950"
 ```
 
 ### Post-Installation Health Check
 
 ```bash
-# Test st8 template system
+# Test template system
 cd /tmp && mkdir test-project && cd test-project
 git init
-st8 install                               # Should set up git hook
-st8 template add test.txt --content "Version: {{ project.version }}"
-st8 template list                         # Should show test.txt template
-st8 template render                       # Should render template
+ws git install                           # Should set up git hook
+ws template add test-template --template "Version: {{ project.version }}" --output test.txt
+ws template list                         # Should show test-template
+ws template render                       # Should render template
 cd .. && rm -rf test-project
 
 # Test scrap system
 mkdir test-scrap && cd test-scrap
 echo "test content" > test.txt
-scrap test.txt                           # Should move to .scrap
-scrap list                               # Should show test.txt
-unscrap test.txt                         # Should restore test.txt
+ws scrap test.txt                        # Should move to .scrap
+ws scrap list                            # Should show test.txt
+ws unscrap test.txt                      # Should restore test.txt
 cd .. && rm -rf test-scrap
 ```
 
@@ -436,10 +434,10 @@ sudo dnf groupinstall "Development Tools"  # CentOS/RHEL/Fedora
 **"No such file or directory" when running tools**
 ```bash
 # Verify installation
-which refac ldiff scrap unscrap st8
+which ws
 
 # Check file permissions
-ls -la ~/.cargo/bin/refac  # Should be executable (-rwxr-xr-x)
+ls -la ~/.cargo/bin/ws  # Should be executable (-rwxr-xr-x)
 
 # Re-install if corrupted
 cargo install --path . --force
@@ -481,7 +479,7 @@ Once installed successfully:
 
 1. **Quick Start**: Try the examples in the [Getting Started Guide]({{ '/getting-started/' | relative_url }})
 2. **Learn the Tools**: Read the [Usage Guide]({{ '/usage/' | relative_url }}) for comprehensive examples
-3. **Set Up Templates**: Check out the [St8 Guide]({{ '/st8-guide/' | relative_url }}) for version management
+3. **Set Up Templates**: Check out the [St8 Guide]({{ '/st8-guide/' | relative_url }}) for git integration and templates
 4. **Join the Community**: Contribute via [GitHub](https://github.com/jowharshamshiri/workspace)
 
 ## License

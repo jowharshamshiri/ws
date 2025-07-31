@@ -12,6 +12,7 @@ fn test_scrap_creates_directory() {
     Command::cargo_bin("ws")
         .unwrap()
         .arg("scrap")
+        .env("WS_COMPLETIONS_LOADED", "1")
         .current_dir(temp_path)
         .assert()
         .success();
@@ -34,6 +35,7 @@ fn test_scrap_updates_gitignore() {
     Command::cargo_bin("ws")
         .unwrap()
         .arg("scrap")
+        .env("WS_COMPLETIONS_LOADED", "1")
         .current_dir(temp_path)
         .assert()
         .success();
@@ -57,6 +59,7 @@ fn test_scrap_does_not_duplicate_gitignore_entry() {
     Command::cargo_bin("ws")
         .unwrap()
         .arg("scrap")
+        .env("WS_COMPLETIONS_LOADED", "1")
         .current_dir(temp_path)
         .assert()
         .success();
@@ -83,7 +86,7 @@ fn test_scrap_move_file() {
         .current_dir(temp_path)
         .assert()
         .success()
-        .stdout(predicate::str::contains("Moved 'test.txt' to"));
+        .stdout(predicate::str::contains("Moved test.txt to .scrap/test.txt"));
     
     // Check file was moved
     assert!(!test_file.exists());
@@ -113,7 +116,7 @@ fn test_scrap_move_directory() {
         .current_dir(temp_path)
         .assert()
         .success()
-        .stdout(predicate::str::contains("Moved 'testdir' to"));
+        .stdout(predicate::str::contains("Moved testdir to .scrap/testdir"));
     
     // Check directory was moved
     assert!(!test_dir.exists());
@@ -238,10 +241,11 @@ fn test_scrap_no_args_prints_directory() {
     Command::cargo_bin("ws")
         .unwrap()
         .arg("scrap")
+        .env("WS_COMPLETIONS_LOADED", "1")
         .current_dir(temp_path)
         .assert()
         .success()
-        .stdout(predicate::str::contains(".scrap"));
+        .stdout(predicate::str::contains("Scrap folder is empty"));
 }
 
 #[test]
@@ -436,6 +440,7 @@ fn test_scrap_handles_gitignore_without_newline() {
     Command::cargo_bin("ws")
         .unwrap()
         .arg("scrap")
+        .env("WS_COMPLETIONS_LOADED", "1")
         .current_dir(temp_path)
         .assert()
         .success();
@@ -458,6 +463,7 @@ fn test_scrap_handles_empty_gitignore() {
     Command::cargo_bin("ws")
         .unwrap()
         .arg("scrap")
+        .env("WS_COMPLETIONS_LOADED", "1")
         .current_dir(temp_path)
         .assert()
         .success();

@@ -57,7 +57,6 @@ fn test_template_list_empty() {
     
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
         .args(["template", "list"])
         .current_dir(temp_dir.path())
         .assert()
@@ -73,7 +72,6 @@ fn test_template_add_and_list() {
     // Add a template
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
         .args([
             "template", "add", "changelog",
             "--template", "# {{ project.name }} v{{ project.version }}\n\nRelease notes",
@@ -88,7 +86,6 @@ fn test_template_add_and_list() {
     // List templates
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
         .args(["template", "list"])
         .current_dir(temp_dir.path())
         .assert()
@@ -105,7 +102,6 @@ fn test_template_show() {
     // Add a template
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
         .args([
             "template", "add", "release",
             "--template", "Version {{ project.version }} released",
@@ -118,7 +114,6 @@ fn test_template_show() {
     // Show template details
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
         .args(["template", "show", "release"])
         .current_dir(temp_dir.path())
         .assert()
@@ -136,7 +131,6 @@ fn test_template_show_nonexistent() {
     
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
         .args(["template", "show", "nonexistent"])
         .current_dir(temp_dir.path())
         .assert()
@@ -152,7 +146,6 @@ fn test_template_enable_disable() {
     // Add a template
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
         .args([
             "template", "add", "notes",
             "--template", "Notes for {{ project.version }}",
@@ -165,7 +158,6 @@ fn test_template_enable_disable() {
     // Disable template
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
         .args(["template", "enable", "notes", "--disable"])
         .current_dir(temp_dir.path())
         .assert()
@@ -175,7 +167,6 @@ fn test_template_enable_disable() {
     // Verify disabled in list
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
         .args(["template", "list"])
         .current_dir(temp_dir.path())
         .assert()
@@ -185,7 +176,6 @@ fn test_template_enable_disable() {
     // Enable template
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
         .args(["template", "enable", "notes"])
         .current_dir(temp_dir.path())
         .assert()
@@ -200,7 +190,6 @@ fn test_template_enable_nonexistent() {
     
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
         .args(["template", "enable", "nonexistent"])
         .current_dir(temp_dir.path())
         .assert()
@@ -216,7 +205,6 @@ fn test_template_render() {
     // Add templates
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
         .args([
             "template", "add", "version",
             "--template", "Version: {{ project.version }}",
@@ -228,7 +216,6 @@ fn test_template_render() {
     
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
         .args([
             "template", "add", "info",
             "--template", "Project: {{ project.name | default(value='Unknown') }}\nVersion: {{ project.version }}\nDate: {{ datetime.date }}",
@@ -241,7 +228,6 @@ fn test_template_render() {
     // Render templates
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
         .args(["template", "render"])
         .current_dir(temp_dir.path())
         .assert()
@@ -268,7 +254,6 @@ fn test_template_render_no_enabled() {
     // Add a disabled template
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
         .args([
             "template", "add", "disabled",
             "--template", "{{ project.version }}",
@@ -280,7 +265,6 @@ fn test_template_render_no_enabled() {
     
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
         .args(["template", "enable", "disabled", "--disable"])
         .current_dir(temp_dir.path())
         .assert()
@@ -289,7 +273,6 @@ fn test_template_render_no_enabled() {
     // Render should report no enabled templates
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
         .args(["template", "render"])
         .current_dir(temp_dir.path())
         .assert()
@@ -305,7 +288,6 @@ fn test_template_remove() {
     // Add a template
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
         .args([
             "template", "add", "temp",
             "--template", "temporary",
@@ -318,7 +300,6 @@ fn test_template_remove() {
     // Verify it exists
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
         .args(["template", "list"])
         .current_dir(temp_dir.path())
         .assert()
@@ -328,7 +309,6 @@ fn test_template_remove() {
     // Remove template
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
         .args(["template", "remove", "temp"])
         .current_dir(temp_dir.path())
         .assert()
@@ -338,7 +318,6 @@ fn test_template_remove() {
     // Verify it's gone
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
         .args(["template", "list"])
         .current_dir(temp_dir.path())
         .assert()
@@ -353,7 +332,6 @@ fn test_template_remove_nonexistent() {
     
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
         .args(["template", "remove", "nonexistent"])
         .current_dir(temp_dir.path())
         .assert()
@@ -374,7 +352,6 @@ fn test_template_add_from_file() {
     // Add template from file
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
         .args([
             "template", "add", "release",
             "--template", template_file.to_str().unwrap(),
@@ -389,7 +366,6 @@ fn test_template_add_from_file() {
     // Show template to verify content was read from file
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
         .args(["template", "show", "release"])
         .current_dir(temp_dir.path())
         .assert()
@@ -404,7 +380,6 @@ fn test_template_add_from_nonexistent_file() {
     
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
         .args([
             "template", "add", "test",
             "--template", "nonexistent_file.txt",
@@ -424,7 +399,6 @@ fn test_template_integration_with_update() {
     // Add a template
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
         .args([
             "template", "add", "version_info",
             "--template", "Current version: {{ project.version }}\nProject: {{ project.name }}",
@@ -437,7 +411,6 @@ fn test_template_integration_with_update() {
     // Update version (which should render templates automatically)
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
         .args(["update", "--no-git"])
         .current_dir(temp_dir.path())
         .assert()
@@ -459,7 +432,6 @@ fn test_template_status_integration() {
     // Add templates
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
         .args([
             "template", "add", "enabled_template",
             "--template", "enabled",
@@ -471,7 +443,6 @@ fn test_template_status_integration() {
     
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
         .args([
             "template", "add", "disabled_template",
             "--template", "disabled",
@@ -483,7 +454,6 @@ fn test_template_status_integration() {
     
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
         .args(["template", "enable", "disabled_template", "--disable"])
         .current_dir(temp_dir.path())
         .assert()
@@ -492,8 +462,7 @@ fn test_template_status_integration() {
     // Check status shows templates
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
-        .args(["status"])
+        .args(["git", "status"])
         .current_dir(temp_dir.path())
         .assert()
         .success()
@@ -525,7 +494,6 @@ Generated on {{ datetime.iso }}
     
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
         .args([
             "template", "add", "complex",
             "--template", complex_template,
@@ -538,7 +506,6 @@ Generated on {{ datetime.iso }}
     // Render template
     Command::cargo_bin("ws")
         .unwrap()
-        .arg("st8")
         .args(["template", "render"])
         .current_dir(temp_dir.path())
         .assert()

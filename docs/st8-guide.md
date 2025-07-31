@@ -106,7 +106,7 @@ st8 update
 st8 update --no-git
 
 # Update and automatically stage changed files
-st8 update --git-add
+ws update --git-add
 ```
 
 ### Check Status
@@ -153,7 +153,7 @@ If you prefer manual control:
 
 1. Configure: Set `"enabled": false` in `.st8.json`
 2. Update manually: Run `st8 update` when needed
-3. Optionally use `st8 update --git-add` to automatically stage updated files
+3. Optionally use `ws update --git-add` to automatically stage updated files
 4. Commit the version file changes manually
 
 ### CI/CD Integration

@@ -29,6 +29,9 @@ version = "0.4"
 features = ["derive", "color"]
 version = "4.4"
 
+[dependencies.clap_complete]
+version = "4.5"
+
 [dependencies.serde]
 features = ["derive"]
 version = "1.0"
@@ -49,7 +52,7 @@ license = "MIT"
 name = "workspace"
 readme = "README.md"
 repository = "https://github.com/jowharshamshiri/workspace"
-version = "0.39.35824"
+version = "0.40.36332"
 
 [profile.dev]
 debug = true

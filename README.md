@@ -16,7 +16,9 @@ All tools are accessed via `ws <subcommand>` - no separate binaries to manage.
 | **ws ldiff** | Line difference visualization for pattern recognition | Log analysis, debug pattern detection, monitoring |
 | **ws scrap** | Local trash can with metadata tracking | Safe file disposal, experimental cleanup |
 | **ws unscrap** | File restoration from scrap folder | Accident recovery, experiment rollback |
-| **ws st8** | Automated version management with templates | Release automation, version consistency, file generation |
+| **ws git** | Git integration and version management | Git hook management, version display, status |
+| **ws template** | Template management and rendering | File generation, version headers, deployment configs |
+| **ws update** | Manual project state updates | Version updates, template rendering |
 
 ## Quick Start Examples
 
@@ -32,7 +34,7 @@ ws refactor ./src "OldClassName" "NewClassName" --backup
 ws refactor ./config "old.api.url" "new.api.url" --content-only --include "*.toml"
 
 # Include hidden files
-ws refactor . "st8" "new_st8" --include-hidden
+ws refactor . "old_name" "new_name" --include-hidden
 ```
 
 ### Log Pattern Analysis with ws ldiff
@@ -64,27 +66,35 @@ ws unscrap experimental_feature/
 ws unscrap important.txt --to ~/backup/
 ```
 
-### Version Management with St8 Templates
+### Version Management and Templates
 ```bash
 # Set up automatic versioning
-ws st8 install
+ws git install
 
 # Add a template for generating version headers
-ws st8 template add version-header.h --content \
-"#ifndef VERSION_H
+ws template add version-header \
+  --template "#ifndef VERSION_H
 #define VERSION_H
 #define VERSION \"{{ project.version }}\"
 #define VERSION_MAJOR {{ project.major_version }}
 #define VERSION_MINOR {{ project.minor_version }}
 #define VERSION_PATCH {{ project.patch_version }}
 #define BUILD_DATE \"{{ datetime.date }}\"
-#endif"
+#endif" \
+  --output "include/version.h"
 
 # Add template for deployment config
-ws st8 template add deploy.yml --file-path ./deploy.template.yml
+ws template add deploy --template deploy.template.yml --output deploy.yml
 
 # List templates
-ws st8 template list
+ws template list
+
+# Show git status and version info
+ws git status
+ws git show
+
+# Manual version update and template rendering
+ws update --git-add
 
 # Templates render automatically when version updates
 git add . && git commit -m "Add new feature"  # Auto-increments version and renders templates
@@ -199,7 +209,7 @@ ws unscrap important.txt --to ~/Documents/     # Custom destination
 ws unscrap config.toml --force                 # Overwrite existing
 ```
 
-### St8 - Version Management with Templates
+### Git Integration & Template System
 
 **Core Features:**
 - **Git Integration**: Automatic version bumping on commits
@@ -218,7 +228,8 @@ ws unscrap config.toml --force                 # Overwrite existing
 
 #### C/C++ Version Header
 ```bash
-ws st8 template add include/version.h --content \
+ws template add version-header \
+  --template \
 "#ifndef VERSION_H
 #define VERSION_H
 
@@ -230,12 +241,14 @@ ws st8 template add include/version.h --content \
 #define BUILD_DATE \"{{ datetime.date }}\"
 #define BUILD_TIME \"{{ datetime.time }}\"
 
-#endif // VERSION_H"
+#endif // VERSION_H" \
+  --output "include/version.h"
 ```
 
 #### JavaScript/Node.js Version Module
 ```bash
-st8 template add src/version.js --content \
+ws template add version-js \
+  --template \
 "// Auto-generated version file - DO NOT EDIT
 export const VERSION = {
   full: '{{ project.version }}',
@@ -247,12 +260,14 @@ export const VERSION = {
   buildTime: '{{ datetime.time }}'
 };
 
-export default VERSION;"
+export default VERSION;" \
+  --output "src/version.js"
 ```
 
 #### Docker Compose with Version
 ```bash
-ws st8 template add docker-compose.prod.yml --content \
+ws template add docker-compose \
+  --template \
 "version: '3.8'
 services:
   app:
@@ -263,12 +278,14 @@ services:
     labels:
       - \"version={{ project.version }}\"
       - \"build.date={{ datetime.date }}\"
-      - \"build.time={{ datetime.time }}\""
+      - \"build.time={{ datetime.time }}\"" \
+  --output "docker-compose.prod.yml"
 ```
 
 #### Kubernetes Deployment Manifest
 ```bash
-ws st8 template add k8s/deployment.yml --content \
+ws template add k8s-deployment \
+  --template \
 "apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -294,15 +311,17 @@ spec:
         - name: VERSION
           value: \"{{ project.version }}\"
         - name: BUILD_DATE
-          value: \"{{ datetime.date }}\""
+          value: \"{{ datetime.date }}\"" \
+  --output "k8s/deployment.yml"
 ```
 
 #### Python Version Module
 ```bash
-ws st8 template add __version__.py --content \
+ws template add python-version \
+  --template \
 "\"\"\"
 Auto-generated version information.
-This file is automatically updated by st8 on version changes.
+This file is automatically updated on version changes.
 \"\"\"
 
 __version__ = '{{ project.version }}'
@@ -321,39 +340,39 @@ VERSION_INFO = {
     'patch': __patch__,
     'build_date': __build_date__,
     'build_time': __build_time__,
-}"
+}" \
+  --output "__version__.py"
 ```
 
 **Template Management Workflow:**
 ```bash
-# Set up st8 in your project
-ws st8 install
+# Set up git integration in your project
+ws git install
 
 # Add templates for your project
-ws st8 template add src/version.h --file-path ./templates/version.h.template
-ws st8 template add package.json --content "{ \"version\": \"{{ project.version }}\" }"
+ws template add version-header --template ./templates/version.h.template --output src/version.h
+ws template add package-version --template "{ \"version\": \"{{ project.version }}\" }" --output package.json
 
 # List templates
-ws st8 template list
+ws template list
 
 # Show template details
-ws st8 template show src/version.h
+ws template show version-header
 
 # Test template rendering
-ws st8 template render
+ws template render
 
 # Enable/disable templates
-ws st8 template enable src/version.h
-ws st8 template enable --all
+ws template enable version-header --disable  # Disable template
+ws template enable version-header            # Enable template
 
 # Version updates render templates automatically
 git add . && git commit -m "New feature"
 # -> Version auto-increments from 1.2.3 to 1.2.4
 # -> Templates re-render with new version
 
-# Manual version update
-ws st8 update --minor  # 1.2.4 -> 1.3.0
-ws st8 update --major  # 1.3.0 -> 2.0.0
+# Manual version update and template rendering
+ws update --git-add  # Update version and stage files
 ```
 
 ## Installation
@@ -391,11 +410,11 @@ ws refactor --help
 ws ldiff --help
 ws scrap --help
 ws unscrap --help
-ws st8 --help
+ws git --help
 
 # Test basic functionality
 echo "test" | ws ldiff
-ws st8 status
+ws git status
 ```
 
 ## Quality Assurance & Testing
@@ -416,7 +435,7 @@ ws st8 status
 | `refac_encoding_tests` | 7 | UTF-8/encoding safety |
 | `scrap_advanced_integration_tests` | 21 | Advanced scrap workflows |
 | `scrap_integration_tests` | 18 | Core scrap functionality |
-| `st8_integration_tests` | 25 | Version management |
+| `st8_integration_tests` | 25 | Git integration & version management |
 | `st8_template_tests` | 15 | Template system |
 
 ### Quality Standards
@@ -461,15 +480,30 @@ cargo test --release
 | `--include <PATTERN>` | | Include files matching pattern |
 | `--exclude <PATTERN>` | | Exclude files matching pattern |
 
-### St8 Template Commands
+### Template Commands
 | Command | Description |
 |---------|-------------|
-| `st8 template add <name>` | Add new template |
-| `st8 template list` | List templates |
-| `st8 template show <name>` | Show template details |
-| `st8 template enable <name>` | Enable template |
-| `st8 template remove <name>` | Remove template |
-| `st8 template render` | Render templates |
+| `ws template add <name>` | Add new template |
+| `ws template list` | List templates |
+| `ws template show <name>` | Show template details |
+| `ws template enable <name>` | Enable/disable template |
+| `ws template remove <name>` | Remove template |
+| `ws template render` | Render templates |
+
+### Git Integration Commands
+| Command | Description |
+|---------|-------------|
+| `ws git install` | Install git pre-commit hook |
+| `ws git uninstall` | Remove git pre-commit hook |
+| `ws git show` | Show current version info |
+| `ws git status` | Show git integration status |
+
+### Update Commands  
+| Command | Description |
+|---------|-------------|
+| `ws update` | Update version and render templates |
+| `ws update --git-add` | Update and stage files |
+| `ws update --no-git` | Update without git checks |
 
 ## Safety Features
 
@@ -492,23 +526,23 @@ cargo test --release
 
 ### API Migration Workflow
 ```bash
-# 1. Review the migration (refac shows changes before applying)
-refac ./src "oldapi.v1" "newapi.v2" --verbose
+# 1. Review the migration (refactor shows changes before applying)
+ws refactor ./src "oldapi.v1" "newapi.v2" --verbose
 
 # 2. Update source code
-refac ./src "oldapi.v1" "newapi.v2" --backup --include "*.rs"
+ws refactor ./src "oldapi.v1" "newapi.v2" --backup --include "*.rs"
 
 # 3. Update configuration
-refac ./config "oldapi.v1" "newapi.v2" --content-only --include "*.toml"
+ws refactor ./config "oldapi.v1" "newapi.v2" --content-only --include "*.toml"
 
 # 4. Update documentation
-refac ./docs "oldapi.v1" "newapi.v2" --include "*.md"
+ws refactor ./docs "oldapi.v1" "newapi.v2" --include "*.md"
 
 # 5. Clean up old files
-scrap old_api_tests/ legacy_configs/
+ws scrap old_api_tests/ legacy_configs/
 
 # 6. Update version and generate deployment files
-st8 update --minor
+ws update --git-add
 # Templates render automatically with new version
 ```
 
