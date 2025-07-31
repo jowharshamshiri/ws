@@ -5,7 +5,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use tera::{Context as TeraContext, Tera};
 
-use crate::nomion_state::NomionState;
+use crate::workspace_state::WorkspaceState;
 use crate::st8::VersionInfo;
 
 /// Template configuration and metadata
@@ -27,8 +27,8 @@ pub struct TemplateManager {
 
 impl TemplateManager {
     /// Initialize template manager for a project
-    pub fn new(nomion_state: &NomionState) -> Result<Self> {
-        let templates_dir = nomion_state.tool_dir("st8").join("templates");
+    pub fn new(workspace_state: &WorkspaceState) -> Result<Self> {
+        let templates_dir = workspace_state.tool_dir("st8").join("templates");
         fs::create_dir_all(&templates_dir)
             .context("Failed to create templates directory")?;
         
@@ -258,8 +258,8 @@ mod tests {
     use super::*;
     use tempfile::TempDir;
     
-    fn create_test_state(temp_dir: &Path) -> NomionState {
-        NomionState::initialize(temp_dir).unwrap()
+    fn create_test_state(temp_dir: &Path) -> WorkspaceState {
+        WorkspaceState::initialize(temp_dir).unwrap()
     }
     
     #[test]

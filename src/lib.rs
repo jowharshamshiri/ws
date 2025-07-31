@@ -2,7 +2,7 @@ pub mod refac;
 pub mod scrap;
 pub mod st8;
 pub mod ldiff;
-pub mod nomion_state;
+pub mod workspace_state;
 
 use anyhow::{Context, Result};
 use std::path::Path;
@@ -19,11 +19,15 @@ pub use refac::rename_engine::RenameEngine;
 
 // Re-export from scrap module
 pub use scrap::scrap_common::{ScrapMetadata, ScrapEntry};
+pub use scrap::{run_scrap, run_unscrap};
+
+// Re-export from ldiff module
+pub use ldiff::run_ldiff;
 
 // Re-export from st8 module
 pub use st8::{St8Config, VersionInfo};
 
-/// Main entry point for the refac operation within the nomion tool suite
+/// Main entry point for the refac operation within the workspace tool suite
 pub fn run_refac(args: Args) -> Result<()> {
     let engine = RenameEngine::new(args)?;
     engine.execute()

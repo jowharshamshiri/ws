@@ -5,7 +5,7 @@ title: Examples
 
 # Real-World Examples
 
-Learn how to use the Nomion tool suite through practical examples for common development workflows, combining refactoring, project cleanup, and version control.
+Learn how to use the Workspace tool suite through practical examples for common development workflows, combining refactoring, project cleanup, and version control.
 
 ## Development Workflows
 
@@ -643,8 +643,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Install Nomion
-        run: cargo install --git https://github.com/jowharshamshiri/nomion
+      - name: Install Workspace
+        run: cargo install --git https://github.com/jowharshamshiri/workspace
         
       - name: Check for deprecated patterns
         run: |
@@ -818,7 +818,7 @@ echo "Refactoring workflow complete!"
 **Scenario**: Establishing a consistent workflow for a development team.
 
 ```bash
-# team-setup.sh - Setup Nomion for team development
+# team-setup.sh - Setup Workspace for team development
 
 # 1. Install all tools for the team
 ./install.sh
@@ -884,7 +884,7 @@ echo "  ./safe-refactor.sh old new - Safe refactoring"
 
 ### Release Pipeline Integration
 
-**Scenario**: Integrating Nomion into a CI/CD pipeline.
+**Scenario**: Integrating Workspace into a CI/CD pipeline.
 
 ```bash
 # release-pipeline.sh - Automated release preparation
@@ -922,4 +922,4 @@ echo "Release pipeline complete!"
 echo "Artifact: releases/app-v$RELEASE_VERSION.tar.gz"
 ```
 
-These examples demonstrate how the Nomion tool suite provides a solution for development workflow management, combining safe refactoring, intelligent file management, and automatic version tracking.
+These examples demonstrate how the Workspace tool suite provides a solution for development workflow management, combining safe refactoring, intelligent file management, and automatic version tracking.

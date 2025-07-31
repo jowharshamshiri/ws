@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Nomion Tools Installation Script
-# This script builds and installs all nomion tools (refac, ldiff, scrap, unscrap, st8)
+# Workspace Tools Installation Script
+# This script builds and installs all workspace tools (refac, ldiff, scrap, unscrap, st8)
 # Multiple runs will update to the latest version
 
 set -e  # Exit on any error
@@ -24,7 +24,7 @@ VERBOSE=false
 usage() {
     echo "Usage: $0 [OPTIONS]"
     echo ""
-    echo "Install Nomion Tools (refac, ldiff, scrap, unscrap, st8)"
+    echo "Install Workspace Tools (refac, ldiff, scrap, unscrap, st8)"
     echo ""
     echo "OPTIONS:"
     echo "  -d, --dir DIR        Installation directory (default: $DEFAULT_INSTALL_DIR)"
@@ -92,12 +92,12 @@ verbose_log() {
 # Check if we're in the right directory
 check_project_directory() {
     if [ ! -f "Cargo.toml" ]; then
-        error "Cargo.toml not found. Please run this script from the nomion project root directory."
+        error "Cargo.toml not found. Please run this script from the workspace project root directory."
         exit 1
     fi
     
     if ! grep -q "name = \"refac\"" Cargo.toml; then
-        error "This doesn't appear to be the nomion project directory."
+        error "This doesn't appear to be the workspace project directory."
         exit 1
     fi
     
@@ -201,7 +201,7 @@ check_installation_needed() {
 
 # Build the project
 build_project() {
-    log "Building nomion tools..."
+    log "Building workspace tools..."
     
     if [ "$VERBOSE" = true ]; then
         cargo build --release
@@ -275,7 +275,7 @@ check_path() {
 
 # Main installation function
 main() {
-    log "Starting Nomion Tools installation..."
+    log "Starting Workspace Tools installation..."
     log "Installation directory: $INSTALL_DIR"
     
     check_project_directory
@@ -289,7 +289,7 @@ main() {
         check_path
         
         echo ""
-        success "🎉 Nomion Tools installation completed!"
+        success "🎉 Workspace Tools installation completed!"
         success "Tools installed: refac, ldiff, scrap, unscrap, st8"
         success "Version: $PROJECT_VERSION"
         success "Location: $INSTALL_DIR"

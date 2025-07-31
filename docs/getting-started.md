@@ -3,13 +3,13 @@ layout: default
 title: Getting Started
 ---
 
-# Getting Started with Nomion
+# Getting Started with Workspace
 
-This guide will help you get up and running with the Nomion tool suite quickly. Learn the core concepts and basic usage patterns for all four tools.
+This guide will help you get up and running with the Workspace tool suite quickly. Learn the core concepts and basic usage patterns for all four tools.
 
-## What is Nomion?
+## What is Workspace?
 
-Nomion is a suite of command-line utilities for developers and system administrators:
+Workspace is a suite of command-line utilities for developers and system administrators:
 
 - **refac**: Recursive string replacement in file names and contents
 - **scrap**: Local trash can for files you want to delete
@@ -22,8 +22,8 @@ Nomion is a suite of command-line utilities for developers and system administra
 
 ```bash
 # Clone and install all tools
-git clone https://github.com/jowharshamshiri/nomion.git
-cd nomion
+git clone https://github.com/jowharshamshiri/workspace.git
+cd workspace
 ./install.sh
 ```
 

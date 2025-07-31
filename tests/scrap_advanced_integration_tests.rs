@@ -25,8 +25,9 @@ fn test_scrap_list_default() {
     setup_scrap_with_items(temp_path);
     
     // Test default list behavior (no arguments)
-    Command::cargo_bin("scrap")
+    Command::cargo_bin("ws")
         .unwrap()
+        .arg("scrap")
         .current_dir(temp_path)
         .assert()
         .success()
@@ -43,8 +44,9 @@ fn test_scrap_list_explicit() {
     setup_scrap_with_items(temp_path);
     
     // Test explicit list command
-    Command::cargo_bin("scrap")
+    Command::cargo_bin("ws")
         .unwrap()
+        .arg("scrap")
         .arg("list")
         .current_dir(temp_path)
         .assert()
@@ -61,8 +63,9 @@ fn test_scrap_list_sort_name() {
     let temp_path = temp_dir.path();
     setup_scrap_with_items(temp_path);
     
-    Command::cargo_bin("scrap")
+    Command::cargo_bin("ws")
         .unwrap()
+        .arg("scrap")
         .arg("list")
         .arg("--sort")
         .arg("name")
@@ -78,8 +81,9 @@ fn test_scrap_list_sort_size() {
     let temp_path = temp_dir.path();
     setup_scrap_with_items(temp_path);
     
-    Command::cargo_bin("scrap")
+    Command::cargo_bin("ws")
         .unwrap()
+        .arg("scrap")
         .arg("list")
         .arg("--sort")
         .arg("size")
@@ -97,8 +101,9 @@ fn test_scrap_list_empty() {
     // Create empty .scrap folder
     fs::create_dir(temp_path.join(".scrap")).unwrap();
     
-    Command::cargo_bin("scrap")
+    Command::cargo_bin("ws")
         .unwrap()
+        .arg("scrap")
         .current_dir(temp_path)
         .assert()
         .success()
@@ -111,8 +116,9 @@ fn test_scrap_clean_dry_run() {
     let temp_path = temp_dir.path();
     setup_scrap_with_items(temp_path);
     
-    Command::cargo_bin("scrap")
+    Command::cargo_bin("ws")
         .unwrap()
+        .arg("scrap")
         .arg("clean")
         .arg("--days")
         .arg("0")  // Clean everything
@@ -133,8 +139,9 @@ fn test_scrap_clean_actual() {
     // First check items exist
     assert!(temp_path.join(".scrap").join("file1.txt").exists());
     
-    Command::cargo_bin("scrap")
+    Command::cargo_bin("ws")
         .unwrap()
+        .arg("scrap")
         .arg("clean")
         .arg("--days")
         .arg("0")  // Clean everything
@@ -157,8 +164,9 @@ fn test_scrap_purge_with_force() {
     // Check items exist
     assert!(temp_path.join(".scrap").join("file1.txt").exists());
     
-    Command::cargo_bin("scrap")
+    Command::cargo_bin("ws")
         .unwrap()
+        .arg("scrap")
         .arg("purge")
         .arg("--force")
         .current_dir(temp_path)
@@ -180,8 +188,9 @@ fn test_scrap_purge_empty_folder() {
     // Create empty .scrap folder
     fs::create_dir(temp_path.join(".scrap")).unwrap();
     
-    Command::cargo_bin("scrap")
+    Command::cargo_bin("ws")
         .unwrap()
+        .arg("scrap")
         .arg("purge")
         .arg("--force")
         .current_dir(temp_path)
@@ -196,8 +205,9 @@ fn test_scrap_find_filename() {
     let temp_path = temp_dir.path();
     setup_scrap_with_items(temp_path);
     
-    Command::cargo_bin("scrap")
+    Command::cargo_bin("ws")
         .unwrap()
+        .arg("scrap")
         .arg("find")
         .arg("file.*txt")
         .current_dir(temp_path)
@@ -214,8 +224,9 @@ fn test_scrap_find_no_matches() {
     let temp_path = temp_dir.path();
     setup_scrap_with_items(temp_path);
     
-    Command::cargo_bin("scrap")
+    Command::cargo_bin("ws")
         .unwrap()
+        .arg("scrap")
         .arg("find")
         .arg("nonexistent")
         .current_dir(temp_path)
@@ -230,8 +241,9 @@ fn test_scrap_find_content() {
     let temp_path = temp_dir.path();
     setup_scrap_with_items(temp_path);
     
-    Command::cargo_bin("scrap")
+    Command::cargo_bin("ws")
         .unwrap()
+        .arg("scrap")
         .arg("find")
         .arg("content1")
         .arg("--content")
@@ -250,8 +262,9 @@ fn test_scrap_archive() {
     
     let archive_name = "test-archive.tar.gz";
     
-    Command::cargo_bin("scrap")
+    Command::cargo_bin("ws")
         .unwrap()
+        .arg("scrap")
         .arg("archive")
         .arg("--output")
         .arg(archive_name)
@@ -276,8 +289,9 @@ fn test_scrap_archive_with_remove() {
     
     let archive_name = "test-archive-remove.tar.gz";
     
-    Command::cargo_bin("scrap")
+    Command::cargo_bin("ws")
         .unwrap()
+        .arg("scrap")
         .arg("archive")
         .arg("--output")
         .arg(archive_name)
@@ -305,8 +319,9 @@ fn test_scrap_archive_empty_folder() {
     // Create empty .scrap folder
     fs::create_dir(temp_path.join(".scrap")).unwrap();
     
-    Command::cargo_bin("scrap")
+    Command::cargo_bin("ws")
         .unwrap()
+        .arg("scrap")
         .arg("archive")
         .current_dir(temp_path)
         .assert()
@@ -320,8 +335,9 @@ fn test_scrap_archive_default_name() {
     let temp_path = temp_dir.path();
     setup_scrap_with_items(temp_path);
     
-    Command::cargo_bin("scrap")
+    Command::cargo_bin("ws")
         .unwrap()
+        .arg("scrap")
         .arg("archive")
         .current_dir(temp_path)
         .assert()
@@ -339,8 +355,9 @@ fn test_scrap_with_metadata_tracking() {
     fs::write(&test_file, "test content").unwrap();
     
     // Scrap the file
-    Command::cargo_bin("scrap")
+    Command::cargo_bin("ws")
         .unwrap()
+        .arg("scrap")
         .arg("test.txt")
         .current_dir(temp_path)
         .assert()
@@ -366,16 +383,18 @@ fn test_scrap_list_with_metadata() {
     let test_file = temp_path.join("test.txt");
     fs::write(&test_file, "test content").unwrap();
     
-    Command::cargo_bin("scrap")
+    Command::cargo_bin("ws")
         .unwrap()
+        .arg("scrap")
         .arg("test.txt")
         .current_dir(temp_path)
         .assert()
         .success();
     
     // List should show metadata info
-    Command::cargo_bin("scrap")
+    Command::cargo_bin("ws")
         .unwrap()
+        .arg("scrap")
         .current_dir(temp_path)
         .assert()
         .success()
@@ -392,8 +411,9 @@ fn test_unscrap_integration() {
     let test_file = temp_path.join("test.txt");
     fs::write(&test_file, "test content").unwrap();
     
-    Command::cargo_bin("scrap")
+    Command::cargo_bin("ws")
         .unwrap()
+        .arg("scrap")
         .arg("test.txt")
         .current_dir(temp_path)
         .assert()
@@ -404,8 +424,9 @@ fn test_unscrap_integration() {
     assert!(temp_path.join(".scrap").join("test.txt").exists());
     
     // Restore the file
-    Command::cargo_bin("unscrap")
+    Command::cargo_bin("ws")
         .unwrap()
+        .arg("unscrap")
         .arg("test.txt")
         .current_dir(temp_path)
         .assert()
@@ -429,8 +450,9 @@ fn test_unscrap_undo_last() {
     fs::write(&test_file1, "content1").unwrap();
     fs::write(&test_file2, "content2").unwrap();
     
-    Command::cargo_bin("scrap")
+    Command::cargo_bin("ws")
         .unwrap()
+        .arg("scrap")
         .arg("file1.txt")
         .current_dir(temp_path)
         .assert()
@@ -439,16 +461,18 @@ fn test_unscrap_undo_last() {
     // Wait a bit to ensure different timestamps
     std::thread::sleep(std::time::Duration::from_millis(10));
     
-    Command::cargo_bin("scrap")
+    Command::cargo_bin("ws")
         .unwrap()
+        .arg("scrap")
         .arg("file2.txt")
         .current_dir(temp_path)
         .assert()
         .success();
     
     // Undo last (should restore file2.txt)
-    Command::cargo_bin("unscrap")
+    Command::cargo_bin("ws")
         .unwrap()
+        .arg("unscrap")
         .current_dir(temp_path)
         .assert()
         .success()
@@ -470,8 +494,9 @@ fn test_unscrap_custom_destination() {
     let test_file = temp_path.join("test.txt");
     fs::write(&test_file, "test content").unwrap();
     
-    Command::cargo_bin("scrap")
+    Command::cargo_bin("ws")
         .unwrap()
+        .arg("scrap")
         .arg("test.txt")
         .current_dir(temp_path)
         .assert()
@@ -482,8 +507,9 @@ fn test_unscrap_custom_destination() {
     fs::create_dir(&custom_dir).unwrap();
     
     // Restore to custom location
-    Command::cargo_bin("unscrap")
+    Command::cargo_bin("ws")
         .unwrap()
+        .arg("unscrap")
         .arg("test.txt")
         .arg("--to")
         .arg(&custom_dir)

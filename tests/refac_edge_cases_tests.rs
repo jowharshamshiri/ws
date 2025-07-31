@@ -4,7 +4,7 @@ use std::io::Write;
 use std::path::Path;
 use std::os::unix::fs::PermissionsExt;
 use tempfile::TempDir;
-use nomion::{cli::Args, run_refac};
+use workspace::{cli::Args, run_refac};
 
 /// Critical edge case tests for refac tool - mission critical scenarios
 /// These tests cover complex directory structures, empty directory cleanup,
@@ -523,11 +523,12 @@ fn create_test_args(root_dir: &Path, pattern: &str, substitute: &str) -> Args {
         max_depth: 0,
         exclude_patterns: vec![],
         include_patterns: vec![],
-        format: nomion::cli::OutputFormat::Plain,
+        format: workspace::cli::OutputFormat::Plain,
         threads: 1,
-        progress: nomion::cli::ProgressMode::Never,
+        progress: workspace::cli::ProgressMode::Never,
         ignore_case: false,
         use_regex: false,
         include_hidden: false,
+        binary_names: false,
     }
 }

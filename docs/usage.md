@@ -5,7 +5,7 @@ title: Usage Guide
 
 # Usage Guide
 
-This guide covers all aspects of using the Nomion tool suite for string replacement, line analysis, project cleanup, and version management.
+This guide covers all aspects of using the Workspace tool suite for string replacement, line analysis, project cleanup, and version management.
 
 ## Tools Overview
 
@@ -753,4 +753,4 @@ fi
 - See [Unscrap Tool Guide]({{ '/unscrap-guide/' | relative_url }}) for restoration workflows
 - See [St8 Tool Guide]({{ '/st8-guide/' | relative_url }}) for version management setup
 - See [Examples]({{ '/examples/' | relative_url }}) for more real-world scenarios
-- Report issues at [GitHub Issues](https://github.com/jowharshamshiri/nomion/issues)
+- Report issues at [GitHub Issues](https://github.com/jowharshamshiri/workspace/issues)

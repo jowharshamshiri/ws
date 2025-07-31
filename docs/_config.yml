@@ -1,12 +1,12 @@
 # Site settings
-title: Nomion - Command-Line Tool Suite
+title: Workspace - Command-Line Tool Suite
 description: >-
-  Nomion is a tool suite for file operations, version management, 
+  Workspace is a tool suite for file operations, version management, 
   and development workflow automation. Includes refac (string replacement), scrap (local trash folder), 
   unscrap (file restoration), and st8 (automatic versioning).
 author: Bahram Shamshiri
 email: jowharshamshiri@gmail.com
-baseurl: "/nomion"
+baseurl: "/workspace"
 url: "https://jowharshamshiri.github.io"
 
 # Build settings
@@ -52,10 +52,10 @@ navigation:
     url: /contributing/
 
 # GitHub repository information
-repository: jowharshamshiri/nomion
+repository: jowharshamshiri/workspace
 github:
-  repository_name: nomion
-  repository_nwo: jowharshamshiri/nomion
+  repository_name: workspace
+  repository_nwo: jowharshamshiri/workspace
 
 # Exclude files from processing
 exclude:

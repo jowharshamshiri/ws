@@ -1,22 +1,6 @@
 [[bin]]
-name = "refac"
-path = "src/bin/refac.rs"
-
-[[bin]]
-name = "scrap"
-path = "src/bin/scrap.rs"
-
-[[bin]]
-name = "unscrap"
-path = "src/bin/unscrap.rs"
-
-[[bin]]
-name = "st8"
-path = "src/bin/st8.rs"
-
-[[bin]]
-name = "ldiff"
-path = "src/bin/ldiff.rs"
+name = "ws"
+path = "src/bin/ws.rs"
 
 [dependencies]
 anyhow = "1.0"
@@ -58,14 +42,14 @@ tempfile = "3.8"
 [package]
 authors = ["Bahram Shamshiri <jowharshamshiri@gmail.com>"]
 categories = ["command-line-utilities", "filesystem"]
-description = "Nomion - A tool suite for file operations, version management, and development workflow automation"
+description = "Workspace - A tool suite for file operations, version management, and development workflow automation"
 edition = "2021"
 keywords = ["development-tools", "filesystem", "automation", "workflow"]
 license = "MIT"
-name = "nomion"
+name = "workspace"
 readme = "README.md"
-repository = "https://github.com/jowharshamshiri/nomion"
-version = "0.37.31851"
+repository = "https://github.com/jowharshamshiri/workspace"
+version = "0.38.31859"
 
 [profile.dev]
 debug = true

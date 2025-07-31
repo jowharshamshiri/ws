@@ -1,25 +1,67 @@
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use colored::Colorize;
-use nomion::st8::{St8Config, VersionInfo, detect_project_files, update_version_file, TemplateManager};
-use nomion::nomion_state::NomionState;
+use workspace::st8::{St8Config, VersionInfo, detect_project_files, update_version_file, TemplateManager};
+use workspace::workspace_state::WorkspaceState;
 use std::env;
 use std::fs::{self, OpenOptions};
 use std::io::Write;
 use std::path::PathBuf;
-use std::process::Command;
+use std::process::{self, Command};
 
 #[derive(Parser, Debug)]
-#[command(name = "st8")]
-#[command(about = "Automatic version bumping based on git commits and changes - part of the nomion tool suite")]
-#[command(version = nomion::get_version())]
+#[command(name = "ws")]
+#[command(about = "Workspace workspace tools - comprehensive file operations, version management, and development workflow automation")]
+#[command(version = workspace::get_version())]
 struct Args {
     #[command(subcommand)]
-    command: Option<Commands>,
+    command: Commands,
 }
 
 #[derive(Subcommand, Debug)]
 enum Commands {
+    /// Recursive string replacement in file/folder names and contents with collision detection
+    Refactor {
+        #[command(flatten)]
+        args: workspace::cli::Args,
+    },
+    
+    /// Automatic version bumping based on git commits and changes
+    St8 {
+        #[command(subcommand)]
+        command: Option<St8Commands>,
+    },
+    
+    /// Local trash can using a .scrap folder for files you want to delete
+    Scrap {
+        /// Paths to files or directories to move to .scrap folder
+        paths: Vec<std::path::PathBuf>,
+        #[command(subcommand)]
+        command: Option<ScrapCommands>,
+    },
+    
+    /// Restore files from .scrap folder to their original locations
+    Unscrap {
+        /// Name of file/directory in .scrap to restore
+        name: Option<String>,
+        /// Force restore even if destination exists
+        #[arg(short, long)]
+        force: bool,
+        /// Restore to a different location
+        #[arg(short = 't', long)]
+        to: Option<std::path::PathBuf>,
+    },
+    
+    /// Process input lines, replacing repeated tokens with a substitute character
+    Ldiff {
+        /// Character to use for substitution (default: ░)
+        #[arg(default_value = "░")]
+        substitute_char: String,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+enum St8Commands {
     /// Install st8 as a pre-commit hook in the current git repository
     Install {
         /// Force reinstallation even if already installed
@@ -50,12 +92,12 @@ enum Commands {
     /// Template management commands
     Template {
         #[command(subcommand)]
-        action: TemplateAction,
+        action: St8TemplateAction,
     },
 }
 
 #[derive(Subcommand, Debug)]
-enum TemplateAction {
+enum St8TemplateAction {
     /// Add a new template
     Add {
         /// Template name
@@ -99,10 +141,61 @@ enum TemplateAction {
     },
 }
 
+#[derive(Subcommand, Debug)]
+enum ScrapCommands {
+    /// List contents of .scrap folder
+    #[command(alias = "ls")]
+    List {
+        /// Sort by: name, date, size
+        #[arg(short, long, default_value = "date")]
+        sort: String,
+    },
+
+    /// Clean old items from .scrap folder
+    Clean {
+        /// Remove items older than N days
+        #[arg(short, long, default_value = "30")]
+        days: u64,
+        
+        /// Show what would be removed without actually removing
+        #[arg(short = 'n', long)]
+        dry_run: bool,
+    },
+
+    /// Remove all items from .scrap folder
+    Purge {
+        /// Skip confirmation prompt
+        #[arg(short, long)]
+        force: bool,
+    },
+
+    /// Search for files in .scrap folder
+    #[command(alias = "search")]
+    Find {
+        /// Pattern to search for (supports regex)
+        pattern: String,
+        
+        /// Search in file contents as well
+        #[arg(short, long)]
+        content: bool,
+    },
+
+    /// Archive .scrap folder contents  
+    Archive {
+        /// Output archive file name (defaults to .scrap-YYYY-MM-DD.tar.gz)
+        #[arg(short, long)]
+        output: Option<std::path::PathBuf>,
+        
+        /// Remove files after archiving
+        #[arg(short, long)]
+        remove: bool,
+    },
+}
+
 fn main() {
     if let Err(e) = run() {
         eprintln!("{}: {:#}", "Error".red(), e);
-        std::process::exit(1);
+        process::exit(1);
     }
 }
 
@@ -110,12 +203,52 @@ fn run() -> Result<()> {
     let args = Args::parse();
     
     match args.command {
-        Some(Commands::Install { force }) => install_hook(force)?,
-        Some(Commands::Uninstall) => uninstall_hook()?,
-        Some(Commands::Show) => show_version()?,
-        Some(Commands::Update { no_git, git_add }) => update_state(no_git, git_add)?,
-        Some(Commands::Status) => show_status()?,
-        Some(Commands::Template { action }) => handle_template_command(action)?,
+        Commands::Refactor { args } => {
+            match workspace::run_refac(args) {
+                Ok(()) => {}
+                Err(error) => {
+                    eprintln!("{} {}", "ERROR:".red().bold(), error);
+                    
+                    // Print error chain if available
+                    let mut source = error.source();
+                    while let Some(err) = source {
+                        eprintln!("  Caused by: {}", err);
+                        source = err.source();
+                    }
+                    
+                    process::exit(1);
+                }
+            }
+        }
+        
+        Commands::St8 { command } => {
+            run_st8_command(command)?;
+        }
+        
+        Commands::Scrap { paths, command } => {
+            run_scrap_command(paths, command)?;
+        }
+        
+        Commands::Unscrap { name, force, to } => {
+            run_unscrap_command(name, force, to)?;
+        }
+        
+        Commands::Ldiff { substitute_char } => {
+            run_ldiff_command(substitute_char)?;
+        }
+    }
+    
+    Ok(())
+}
+
+fn run_st8_command(command: Option<St8Commands>) -> Result<()> {
+    match command {
+        Some(St8Commands::Install { force }) => install_hook(force)?,
+        Some(St8Commands::Uninstall) => uninstall_hook()?,
+        Some(St8Commands::Show) => show_version()?,
+        Some(St8Commands::Update { no_git, git_add }) => update_state(no_git, git_add)?,
+        Some(St8Commands::Status) => show_status()?,
+        Some(St8Commands::Template { action }) => handle_template_command(action)?,
         None => {
             // Default behavior: install hook if not installed, otherwise update state
             if is_hook_installed()? {
@@ -129,6 +262,103 @@ fn run() -> Result<()> {
     Ok(())
 }
 
+fn run_scrap_command(paths: Vec<std::path::PathBuf>, command: Option<ScrapCommands>) -> Result<()> {
+    let mut args = Vec::new();
+    
+    // Convert clap ScrapCommands to original scrap binary arguments
+    match command {
+        Some(ScrapCommands::List { sort }) => {
+            args.push("list".to_string());
+            args.push("--sort".to_string());
+            args.push(sort);
+        }
+        Some(ScrapCommands::Clean { days, dry_run }) => {
+            args.push("clean".to_string());
+            args.push("--days".to_string());
+            args.push(days.to_string());
+            if dry_run {
+                args.push("--dry-run".to_string());
+            }
+        }
+        Some(ScrapCommands::Purge { force }) => {
+            args.push("purge".to_string());
+            if force {
+                args.push("--force".to_string());
+            }
+        }
+        Some(ScrapCommands::Find { pattern, content }) => {
+            args.push("find".to_string());
+            args.push(pattern);
+            if content {
+                args.push("--content".to_string());
+            }
+        }
+        Some(ScrapCommands::Archive { output, remove }) => {
+            args.push("archive".to_string());
+            if let Some(output_path) = output {
+                args.push("--output".to_string());
+                args.push(output_path.to_string_lossy().to_string());
+            }
+            if remove {
+                args.push("--remove".to_string());
+            }
+        }
+        None => {
+            // Add all paths as arguments
+            for path in paths {
+                args.push(path.to_string_lossy().to_string());
+            }
+        }
+    }
+    
+    workspace::run_scrap(args)
+}
+
+fn run_unscrap_command(name: Option<String>, force: bool, to: Option<std::path::PathBuf>) -> Result<()> {
+    let mut args = Vec::new();
+    
+    // Add name if provided
+    if let Some(name) = name {
+        args.push(name);
+    }
+    
+    // Add force flag if set
+    if force {
+        args.push("--force".to_string());
+    }
+    
+    // Add to destination if provided
+    if let Some(to_path) = to {
+        args.push("--to".to_string());
+        args.push(to_path.to_string_lossy().to_string());
+    }
+    
+    workspace::run_unscrap(args)
+}
+
+fn run_ldiff_command(substitute_char: String) -> Result<()> {
+    // Check if input is available from stdin
+    if atty::is(atty::Stream::Stdin) {
+        eprintln!("{}: No input provided. ldiff reads from stdin.", "Error".red());
+        eprintln!("Usage examples:");
+        eprintln!("  cat /var/log/system.log | tail -n 100 | ws ldiff");
+        eprintln!("  find / | ws ldiff");
+        eprintln!("  ws ldiff < input.txt");
+        std::process::exit(1);
+    }
+
+    // Validate substitute character
+    let substitute_char = substitute_char.chars().next()
+        .context("Substitute character cannot be empty")?;
+
+    // Process stdin directly using the ldiff library
+    workspace::ldiff::process_stdin(substitute_char)
+        .context("Failed to process input from stdin")?;
+
+    Ok(())
+}
+
+// St8 helper functions
 fn install_hook(force: bool) -> Result<()> {
     if !is_git_repository() {
         anyhow::bail!("Not in a git repository. Please run st8 from within a git repository.");
@@ -148,7 +378,7 @@ fn install_hook(force: bool) -> Result<()> {
     // Check if already installed
     if !force && is_hook_installed()? {
         println!("{} st8 is already installed as a pre-commit hook", "Info".blue());
-        println!("{} Use 'st8 install --force' to reinstall", "Tip".yellow());
+        println!("{} Use 'ws st8 install --force' to reinstall", "Tip".yellow());
         return Ok(());
     }
     
@@ -157,7 +387,7 @@ fn install_hook(force: bool) -> Result<()> {
         .context("Failed to get current executable path")?;
     
     let st8_block = format!(
-        "#!/bin/bash\n# === ST8 BLOCK START ===\n# DO NOT EDIT THIS BLOCK MANUALLY\n# Use 'st8 uninstall' to remove this hook\n{} update --git-add\n# === ST8 BLOCK END ===\n",
+        "#!/bin/bash\n# === ST8 BLOCK START ===\n# DO NOT EDIT THIS BLOCK MANUALLY\n# Use 'ws st8 uninstall' to remove this hook\n{} st8 update --git-add\n# === ST8 BLOCK END ===\n",
         current_exe.display()
     );
     
@@ -288,7 +518,7 @@ fn update_state(no_git: bool, git_add: bool) -> Result<()> {
         
         // Render templates after version update
         if let Ok(project_root) = get_project_root() {
-            if let Ok(state) = NomionState::load(&project_root) {
+            if let Ok(state) = WorkspaceState::load(&project_root) {
                 if let Ok(template_manager) = TemplateManager::new(&state) {
                     match template_manager.render_all_templates(&version_info, state.project_name.as_deref()) {
                         Ok(rendered_files) => {
@@ -397,7 +627,7 @@ fn show_status() -> Result<()> {
     // Show template status
     match get_project_root() {
         Ok(project_root) => {
-            match NomionState::load(&project_root) {
+            match WorkspaceState::load(&project_root) {
                 Ok(state) => {
                     match TemplateManager::new(&state) {
                         Ok(template_manager) => {
@@ -430,13 +660,13 @@ fn show_status() -> Result<()> {
     Ok(())
 }
 
-fn handle_template_command(action: TemplateAction) -> Result<()> {
+fn handle_template_command(action: St8TemplateAction) -> Result<()> {
     let project_root = get_project_root()?;
-    let state = NomionState::load(&project_root)?;
+    let state = WorkspaceState::load(&project_root)?;
     let mut template_manager = TemplateManager::new(&state)?;
     
     match action {
-        TemplateAction::Add { name, template, output, description } => {
+        St8TemplateAction::Add { name, template, output, description } => {
             let template_path = std::path::Path::new(&template);
             let template_content = if template_path.exists() {
                 fs::read_to_string(&template)
@@ -453,7 +683,7 @@ fn handle_template_command(action: TemplateAction) -> Result<()> {
             println!("{} Added template '{}' → {}", "Success".green(), name, output);
         }
         
-        TemplateAction::Remove { name } => {
+        St8TemplateAction::Remove { name } => {
             let removed = template_manager.remove_template(&name)?;
             if removed {
                 println!("{} Removed template '{}'", "Success".green(), name);
@@ -462,7 +692,7 @@ fn handle_template_command(action: TemplateAction) -> Result<()> {
             }
         }
         
-        TemplateAction::List => {
+        St8TemplateAction::List => {
             let templates = template_manager.list_templates();
             if templates.is_empty() {
                 println!("{} No templates configured", "Info".blue());
@@ -481,7 +711,7 @@ fn handle_template_command(action: TemplateAction) -> Result<()> {
             }
         }
         
-        TemplateAction::Enable { name, disable } => {
+        St8TemplateAction::Enable { name, disable } => {
             let enabled = !disable;
             let updated = template_manager.set_template_enabled(&name, enabled)?;
             if updated {
@@ -492,7 +722,7 @@ fn handle_template_command(action: TemplateAction) -> Result<()> {
             }
         }
         
-        TemplateAction::Render => {
+        St8TemplateAction::Render => {
             let version_info = VersionInfo::calculate()?;
             let project_name = state.project_name.as_deref();
             
@@ -508,7 +738,7 @@ fn handle_template_command(action: TemplateAction) -> Result<()> {
             }
         }
         
-        TemplateAction::Show { name } => {
+        St8TemplateAction::Show { name } => {
             if let Some(template) = template_manager.get_template(&name) {
                 println!("{}", format!("Template: {}", template.name).bold());
                 println!("  {}: {}", "Output".cyan(), template.output_path);
@@ -600,12 +830,13 @@ fn remove_st8_block(content: &str) -> String {
 }
 
 fn log_action(message: &str) {
-    let timestamp = chrono::Local::now().format("%Y-%m-%d %H:%M:%S");
+    use chrono::prelude::*;
+    let timestamp = Local::now().format("%Y-%m-%d %H:%M:%S");
     let log_entry = format!("[{}] {}\n", timestamp, message);
     
-    // Try to append to log file in .nomion/st8/logs/, but don't fail if we can't
+    // Try to append to log file in .ws/st8/logs/, but don't fail if we can't
     if let Ok(git_root) = get_git_root() {
-        if let Ok(state) = NomionState::load(&git_root) {
+        if let Ok(state) = WorkspaceState::load(&git_root) {
             let logs_dir = state.tool_dir("st8").join("logs");
             let log_file = logs_dir.join("st8.log");
             
@@ -670,52 +901,4 @@ fn add_files_to_git(files: &[String]) -> Result<Vec<String>> {
     }
     
     Ok(added_files)
-}
-
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    
-    #[test]
-    fn test_remove_st8_block() {
-        let content = r#"#!/bin/bash
-# Some existing content
-echo "Before st8"
-
-# === ST8 BLOCK START ===
-# DO NOT EDIT THIS BLOCK MANUALLY
-/path/to/st8 update --git-add
-# === ST8 BLOCK END ===
-
-echo "After st8"
-"#;
-        
-        let result = remove_st8_block(content);
-        assert!(!result.contains("ST8 BLOCK"));
-        assert!(result.contains("Before st8"));
-        assert!(result.contains("After st8"));
-    }
-    
-    #[test]
-    fn test_remove_st8_block_only() {
-        let content = r#"#!/bin/bash
-# === ST8 BLOCK START ===
-/path/to/st8 update --git-add
-# === ST8 BLOCK END ===
-"#;
-        
-        let result = remove_st8_block(content);
-        assert_eq!(result.trim(), "#!/bin/bash");
-    }
-    
-    #[test]
-    fn test_remove_st8_block_none() {
-        let content = r#"#!/bin/bash
-echo "No st8 block here"
-"#;
-        
-        let result = remove_st8_block(content);
-        assert_eq!(result, content);
-    }
 }

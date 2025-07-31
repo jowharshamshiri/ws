@@ -372,7 +372,7 @@ const BINARY_EXTENSIONS: &[&str] = &[
     
     // Videos and multimedia
     "mp4", "avi", "mkv", "mov", "wmv", "flv", "webm", "m4v", "3gp", "3g2",
-    "mpg", "mpeg", "asf", "rm", "rmvb", "vob", "ts", "mts", "m2ts", "f4v",
+    "mpg", "mpeg", "asf", "rm", "rmvb", "vob", "mts", "m2ts", "f4v",
     "ogv", "divx", "xvid", "mxf", "amv", "drc", "gif", "gifv", "mng", "qt",
     "yuv", "roq", "svi", "viv", "vp8", "vp9", "av1",
     

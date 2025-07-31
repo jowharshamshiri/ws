@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 #[derive(Parser, Debug, Clone)]
 #[command(name = "refac")]
-#[command(version = crate::get_version(), about = "A robust cross-platform tool for recursive string replacement in file/folder names and contents - part of the nomion tool suite")]
+#[command(version = crate::get_version(), about = "A robust cross-platform tool for recursive string replacement in file/folder names and contents - part of the workspace tool suite")]
 #[command(long_about = None)]
 pub struct Args {
     /// Root directory to search in
@@ -86,6 +86,10 @@ pub struct Args {
     /// Include hidden files and directories (starting with '.')
     #[arg(long = "include-hidden")]
     pub include_hidden: bool,
+
+    /// Include binary file names in renaming operations (content will still be skipped)
+    #[arg(long = "binary-names")]
+    pub binary_names: bool,
 }
 
 #[derive(ValueEnum, Debug, Clone, PartialEq)]
@@ -235,6 +239,7 @@ mod tests {
             ignore_case: false,
             use_regex: false,
             include_hidden: false,
+            binary_names: false,
         };
 
         // Valid args should pass
@@ -297,6 +302,7 @@ mod tests {
             ignore_case: false,
             use_regex: false,
             include_hidden: false,
+            binary_names: false,
         };
 
         // Test default mode
@@ -348,6 +354,7 @@ mod tests {
             ignore_case: false,
             use_regex: false,
             include_hidden: false,
+            binary_names: false,
         };
 
         // Default should process everything

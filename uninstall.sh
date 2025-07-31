@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Nomion Tools Uninstallation Script
-# This script removes all nomion tools (refac, ldiff, scrap, unscrap, st8)
+# Workspace Tools Uninstallation Script
+# This script removes all workspace tools (refac, ldiff, scrap, unscrap, st8)
 
 set -e  # Exit on any error
 
@@ -23,7 +23,7 @@ VERBOSE=false
 usage() {
     echo "Usage: $0 [OPTIONS]"
     echo ""
-    echo "Uninstall Nomion Tools (refac, ldiff, scrap, unscrap, st8)"
+    echo "Uninstall Workspace Tools (refac, ldiff, scrap, unscrap, st8)"
     echo ""
     echo "OPTIONS:"
     echo "  -d, --dir DIR        Installation directory to remove from (default: $DEFAULT_INSTALL_DIR)"
@@ -130,13 +130,13 @@ confirm_removal() {
     fi
     
     echo ""
-    warn "This will remove the following nomion tools from $INSTALL_DIR:"
+    warn "This will remove the following workspace tools from $INSTALL_DIR:"
     echo ""
     
     local binaries_to_remove=($(find_installed_binaries))
     
     if [ ${#binaries_to_remove[@]} -eq 0 ]; then
-        log "No nomion tools found in $INSTALL_DIR"
+        log "No workspace tools found in $INSTALL_DIR"
         exit 0
     fi
     
@@ -160,11 +160,11 @@ remove_binaries() {
     local removed_count=0
     
     if [ ${#binaries_to_remove[@]} -eq 0 ]; then
-        warn "No nomion tools found in $INSTALL_DIR"
+        warn "No workspace tools found in $INSTALL_DIR"
         return 0
     fi
     
-    log "Removing nomion tools from $INSTALL_DIR..."
+    log "Removing workspace tools from $INSTALL_DIR..."
     
     for binary in "${binaries_to_remove[@]}"; do
         if [ -f "$binary" ]; then
@@ -210,7 +210,7 @@ check_shell_integration() {
 
 # Main uninstallation function
 main() {
-    log "Nomion Tools Uninstallation"
+    log "Workspace Tools Uninstallation"
     log "Checking installation directory: $INSTALL_DIR"
     
     if [ ! -d "$INSTALL_DIR" ]; then
@@ -224,7 +224,7 @@ main() {
     check_shell_integration
     
     echo ""
-    success "🗑️  Nomion Tools uninstallation completed!"
+    success "🗑️  Workspace Tools uninstallation completed!"
     log "If you want to reinstall, run: ./install.sh"
 }
 

@@ -32,7 +32,7 @@ St8 uses a three-part versioning scheme based on your Git repository:
 
 ### 1. Install St8
 
-First, ensure st8 is installed as part of the Nomion tool suite:
+First, ensure st8 is installed as part of the Workspace tool suite:
 
 ```bash
 # Install all tools including st8
@@ -305,14 +305,14 @@ rm version.txt
 
 ## Logging
 
-St8 logs all actions to `.nomion/st8/logs/st8.log` in your repository:
+St8 logs all actions to `.ws/st8/logs/st8.log` in your repository:
 
 ```bash
 # View recent actions
-tail -f .nomion/st8/logs/st8.log
+tail -f .ws/st8/logs/st8.log
 
 # Monitor in real-time
-tail -f .nomion/st8/logs/st8.log
+tail -f .ws/st8/logs/st8.log
 ```
 
 Log format:
@@ -322,7 +322,7 @@ Log format:
 [2024-07-19 14:31:02] Rendered template: src/version.h
 ```
 
-The log file is automatically created when st8 performs operations and is stored in the centralized `.nomion` state directory along with templates and other tool configurations.
+The log file is automatically created when st8 performs operations and is stored in the centralized `.ws` state directory along with templates and other tool configurations.
 
 ## Best Practices
 

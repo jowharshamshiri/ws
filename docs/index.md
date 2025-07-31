@@ -1,10 +1,10 @@
 ---
 layout: default
-title: Nomion - Developer Tool Suite
+title: Workspace - Developer Tool Suite
 toc: false
 ---
 
-# Nomion
+# Workspace
 
 A tool suite for developers and system administrators that provides file operations, line analysis, version management, and development workflow automation.
 
@@ -24,7 +24,7 @@ refac ./src "OldClassName" "NewClassName" --verbose
 # Refactor with backups and specific file types
 refac ./src "OldApi" "NewApi" --backup --include "*.rs" --include "*.toml"
 
-# Include hidden files like .nomion configurations
+# Include hidden files like .ws configurations
 refac . "st8" "new_st8" --include-hidden
 ```
 
@@ -172,8 +172,8 @@ services:
 
 ### Quick Install
 ```bash
-git clone https://github.com/jowharshamshiri/nomion.git
-cd nomion
+git clone https://github.com/jowharshamshiri/workspace.git
+cd workspace
 ./install.sh
 ```
 
@@ -282,10 +282,10 @@ st8 template --help  # Template system commands
 
 ## Support & Community
 
-- **Issues & Bug Reports**: [GitHub Issues](https://github.com/jowharshamshiri/nomion/issues)
-- **Source Code**: [GitHub Repository](https://github.com/jowharshamshiri/nomion)
-- **Documentation**: [Documentation Site](https://jowharshamshiri.github.io/nomion/)
+- **Issues & Bug Reports**: [GitHub Issues](https://github.com/jowharshamshiri/workspace/issues)
+- **Source Code**: [GitHub Repository](https://github.com/jowharshamshiri/workspace)
+- **Documentation**: [Documentation Site](https://jowharshamshiri.github.io/workspace/)
 
 ## License
 
-MIT License - see the [LICENSE](https://github.com/jowharshamshiri/nomion/blob/main/LICENSE) file for details.
+MIT License - see the [LICENSE](https://github.com/jowharshamshiri/workspace/blob/main/LICENSE) file for details.

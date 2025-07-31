@@ -5,11 +5,11 @@ title: Command Reference
 
 # Command Reference
 
-reference for all Nomion command-line options and usage patterns.
+reference for all Workspace command-line options and usage patterns.
 
 ## Tools Overview
 
-The Nomion tool suite includes four command-line utilities:
+The Workspace tool suite includes four command-line utilities:
 
 ### Refac - String Replacement
 ```bash
@@ -550,4 +550,4 @@ For more information:
 - [Getting Started]({{ '/getting-started/' | relative_url }}) - Quick start guide
 - [Usage Guide]({{ '/usage/' | relative_url }}) - usage examples
 - [Tool-Specific Guides]({{ '/scrap-guide/' | relative_url }}) - Individual tool documentation
-- [GitHub Issues](https://github.com/jowharshamshiri/nomion/issues) - Report bugs or request features
+- [GitHub Issues](https://github.com/jowharshamshiri/workspace/issues) - Report bugs or request features

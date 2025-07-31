@@ -6,7 +6,7 @@ use super::binary_detector::BinaryDetector;
 use encoding_rs::{Encoding, UTF_8};
 use chardet::detect;
 
-/// File operations for the refac tool (part of the nomion suite)
+/// File operations for the refac tool (part of the workspace suite)
 pub struct FileOperations {
     binary_detector: BinaryDetector,
     backup_enabled: bool,

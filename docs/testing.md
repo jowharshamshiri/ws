@@ -5,7 +5,7 @@ title: Testing & Quality Assurance
 
 # Testing & Quality Assurance
 
-Nomion maintains reliability and safety through testing and quality assurance practices.
+Workspace maintains reliability and safety through testing and quality assurance practices.
 
 ## Test Suite Overview
 
@@ -301,4 +301,4 @@ All test additions undergo review for:
 - **Performance**: Tests don't slow down the suite unnecessarily
 - **Maintainability**: Tests are clear and well-documented
 
-The comprehensive test suite ensures Nomion remains reliable, safe, and performant for mission-critical operations across all supported platforms and use cases.
+The comprehensive test suite ensures Workspace remains reliable, safe, and performant for mission-critical operations across all supported platforms and use cases.

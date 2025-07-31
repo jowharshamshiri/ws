@@ -5,7 +5,7 @@ title: Installation Guide
 
 # Installation Guide
 
-This guide covers installation methods for the Nomion tool suite (version 0.34.20950) on your system.
+This guide covers installation methods for the Workspace tool suite (version 0.34.20950) on your system.
 
 ## Prerequisites
 
@@ -14,12 +14,12 @@ This guide covers installation methods for the Nomion tool suite (version 0.34.2
 
 ## Quick Install (Recommended)
 
-The fastest way to install all Nomion tools:
+The fastest way to install all Workspace tools:
 
 ```bash
 # Clone the repository
-git clone https://github.com/jowharshamshiri/nomion.git
-cd nomion
+git clone https://github.com/jowharshamshiri/workspace.git
+cd workspace
 
 # Run the installation script
 ./install.sh
@@ -73,8 +73,8 @@ For users who prefer manual control or want to install specific tools:
 
 ```bash
 # Clone and build
-git clone https://github.com/jowharshamshiri/nomion.git
-cd nomion
+git clone https://github.com/jowharshamshiri/workspace.git
+cd workspace
 
 # Build in release mode with optimizations
 cargo build --release
@@ -110,8 +110,8 @@ For development or testing the latest changes:
 
 ```bash
 # Clone the repository
-git clone https://github.com/jowharshamshiri/nomion.git
-cd nomion
+git clone https://github.com/jowharshamshiri/workspace.git
+cd workspace
 
 # Run tools directly without installing
 cargo run --bin refac -- --help
@@ -177,9 +177,9 @@ sudo apt install build-essential git curl
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 source ~/.cargo/env
 
-# Install Nomion
-git clone https://github.com/jowharshamshiri/nomion.git
-cd nomion && ./install.sh
+# Install Workspace
+git clone https://github.com/jowharshamshiri/workspace.git
+cd workspace && ./install.sh
 ```
 
 #### CentOS/RHEL/Fedora
@@ -188,11 +188,11 @@ cd nomion && ./install.sh
 sudo dnf groupinstall "Development Tools"
 sudo dnf install git curl
 
-# Install Rust and Nomion (same as Ubuntu)
+# Install Rust and Workspace (same as Ubuntu)
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 source ~/.cargo/env
-git clone https://github.com/jowharshamshiri/nomion.git
-cd nomion && ./install.sh
+git clone https://github.com/jowharshamshiri/workspace.git
+cd workspace && ./install.sh
 ```
 
 #### Arch Linux
@@ -203,9 +203,9 @@ sudo pacman -S base-devel git rustup
 # Initialize Rust
 rustup default stable
 
-# Install Nomion
-git clone https://github.com/jowharshamshiri/nomion.git
-cd nomion && ./install.sh
+# Install Workspace
+git clone https://github.com/jowharshamshiri/workspace.git
+cd workspace && ./install.sh
 ```
 
 ### macOS
@@ -215,9 +215,9 @@ cd nomion && ./install.sh
 # Install prerequisites
 brew install rust git
 
-# Install Nomion
-git clone https://github.com/jowharshamshiri/nomion.git
-cd nomion && ./install.sh
+# Install Workspace
+git clone https://github.com/jowharshamshiri/workspace.git
+cd workspace && ./install.sh
 ```
 
 #### Using rustup (Recommended)
@@ -229,9 +229,9 @@ source ~/.cargo/env
 # Install Xcode command line tools if needed
 xcode-select --install
 
-# Install Nomion
-git clone https://github.com/jowharshamshiri/nomion.git
-cd nomion && ./install.sh
+# Install Workspace
+git clone https://github.com/jowharshamshiri/workspace.git
+cd workspace && ./install.sh
 ```
 
 ### Windows
@@ -245,9 +245,9 @@ Invoke-WebRequest -Uri "https://win.rustup.rs/" -OutFile "rustup-init.exe"
 # Install Git if not already installed
 winget install Git.Git
 
-# Install Nomion
-git clone https://github.com/jowharshamshiri/nomion.git
-cd nomion
+# Install Workspace
+git clone https://github.com/jowharshamshiri/workspace.git
+cd workspace
 ./install.sh
 ```
 
@@ -256,8 +256,8 @@ cd nomion
 # Use the Linux installation method within WSL
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 source ~/.cargo/env
-git clone https://github.com/jowharshamshiri/nomion.git
-cd nomion && ./install.sh
+git clone https://github.com/jowharshamshiri/workspace.git
+cd workspace && ./install.sh
 ```
 
 ## Quality Assurance & Testing
@@ -356,12 +356,12 @@ refac --completion fish > ~/.config/fish/completions/refac.fish
 # (repeat for other tools)
 ```
 
-## Updating Nomion
+## Updating Workspace
 
 ### Automatic Update (install.sh)
 
 ```bash
-cd /path/to/nomion
+cd /path/to/workspace
 git pull origin main
 ./install.sh                    # Will detect updates and rebuild if needed
 ```
@@ -369,7 +369,7 @@ git pull origin main
 ### Manual Update
 
 ```bash
-cd /path/to/nomion
+cd /path/to/workspace
 git pull origin main
 cargo build --release           # Rebuild with latest changes
 cargo install --path . --force  # Force reinstall
@@ -466,7 +466,7 @@ If you encounter issues:
    - [API Reference]({{ '/api-reference/' | relative_url }}) - Complete command documentation
    - [Examples]({{ '/examples/' | relative_url }}) - Real-world use cases
 
-2. **Search existing issues**: [GitHub Issues](https://github.com/jowharshamshiri/nomion/issues)
+2. **Search existing issues**: [GitHub Issues](https://github.com/jowharshamshiri/workspace/issues)
 
 3. **Create a new issue** with:
    - Operating system and version (`uname -a`)
@@ -482,8 +482,8 @@ Once installed successfully:
 1. **Quick Start**: Try the examples in the [Getting Started Guide]({{ '/getting-started/' | relative_url }})
 2. **Learn the Tools**: Read the [Usage Guide]({{ '/usage/' | relative_url }}) for comprehensive examples
 3. **Set Up Templates**: Check out the [St8 Guide]({{ '/st8-guide/' | relative_url }}) for version management
-4. **Join the Community**: Contribute via [GitHub](https://github.com/jowharshamshiri/nomion)
+4. **Join the Community**: Contribute via [GitHub](https://github.com/jowharshamshiri/workspace)
 
 ## License
 
-Nomion is released under the MIT License. See the [LICENSE](https://github.com/jowharshamshiri/nomion/blob/main/LICENSE) file for details.
+Workspace is released under the MIT License. See the [LICENSE](https://github.com/jowharshamshiri/workspace/blob/main/LICENSE) file for details.

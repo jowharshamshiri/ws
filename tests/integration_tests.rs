@@ -3,7 +3,7 @@ use std::fs::{self, File};
 use std::io::Write;
 use std::path::Path;
 use tempfile::TempDir;
-use nomion::{cli::Args, run_refac};
+use workspace::{cli::Args, run_refac};
 
 /// Test utilities
 mod test_utils {
@@ -108,12 +108,13 @@ fn test_basic_replacement() -> Result<()> {
         max_depth: 0,
         exclude_patterns: vec![],
         include_patterns: vec![],
-        format: nomion::cli::OutputFormat::Plain,
+        format: workspace::cli::OutputFormat::Plain,
         threads: 1,
-        progress: nomion::cli::ProgressMode::Never,
+        progress: workspace::cli::ProgressMode::Never,
         ignore_case: false,
         use_regex: false,
         include_hidden: false,
+        binary_names: false,
     };
 
     // Run refac
@@ -157,12 +158,13 @@ fn test_mandatory_validation() -> Result<()> {
         max_depth: 0,
         exclude_patterns: vec![],
         include_patterns: vec![],
-        format: nomion::cli::OutputFormat::Plain,
+        format: workspace::cli::OutputFormat::Plain,
         threads: 1,
-        progress: nomion::cli::ProgressMode::Never,
+        progress: workspace::cli::ProgressMode::Never,
         ignore_case: false,
         use_regex: false,
         include_hidden: false,
+        binary_names: false,
     };
 
     // Run operation (validation is now mandatory and automatic)
@@ -206,12 +208,13 @@ fn test_case_sensitivity() -> Result<()> {
         max_depth: 0,
         exclude_patterns: vec![],
         include_patterns: vec![],
-        format: nomion::cli::OutputFormat::Plain,
+        format: workspace::cli::OutputFormat::Plain,
         threads: 1,
-        progress: nomion::cli::ProgressMode::Never,
+        progress: workspace::cli::ProgressMode::Never,
         ignore_case: false,
         use_regex: false,
         include_hidden: false,
+        binary_names: false,
     };
 
     run_refac(args)?;
@@ -251,12 +254,13 @@ fn test_complex_nested_structure() -> Result<()> {
         max_depth: 0,
         exclude_patterns: vec![],
         include_patterns: vec![],
-        format: nomion::cli::OutputFormat::Plain,
+        format: workspace::cli::OutputFormat::Plain,
         threads: 1,
-        progress: nomion::cli::ProgressMode::Never,
+        progress: workspace::cli::ProgressMode::Never,
         ignore_case: false,
         use_regex: false,
         include_hidden: false,
+        binary_names: false,
     };
 
     run_refac(args)?;
@@ -302,12 +306,13 @@ fn test_files_only_mode() -> Result<()> {
         max_depth: 0,
         exclude_patterns: vec![],
         include_patterns: vec![],
-        format: nomion::cli::OutputFormat::Plain,
+        format: workspace::cli::OutputFormat::Plain,
         threads: 1,
-        progress: nomion::cli::ProgressMode::Never,
+        progress: workspace::cli::ProgressMode::Never,
         ignore_case: false,
         use_regex: false,
         include_hidden: false,
+        binary_names: false,
     };
 
     run_refac(args)?;
@@ -344,12 +349,13 @@ fn test_dirs_only_mode() -> Result<()> {
         max_depth: 0,
         exclude_patterns: vec![],
         include_patterns: vec![],
-        format: nomion::cli::OutputFormat::Plain,
+        format: workspace::cli::OutputFormat::Plain,
         threads: 1,
-        progress: nomion::cli::ProgressMode::Never,
+        progress: workspace::cli::ProgressMode::Never,
         ignore_case: false,
         use_regex: false,
         include_hidden: false,
+        binary_names: false,
     };
 
     run_refac(args)?;
@@ -389,12 +395,13 @@ fn test_names_only_mode() -> Result<()> {
         max_depth: 0,
         exclude_patterns: vec![],
         include_patterns: vec![],
-        format: nomion::cli::OutputFormat::Plain,
+        format: workspace::cli::OutputFormat::Plain,
         threads: 1,
-        progress: nomion::cli::ProgressMode::Never,
+        progress: workspace::cli::ProgressMode::Never,
         ignore_case: false,
         use_regex: false,
         include_hidden: false,
+        binary_names: false,
     };
 
     run_refac(args)?;
@@ -432,12 +439,13 @@ fn test_content_only_mode() -> Result<()> {
         max_depth: 0,
         exclude_patterns: vec![],
         include_patterns: vec![],
-        format: nomion::cli::OutputFormat::Plain,
+        format: workspace::cli::OutputFormat::Plain,
         threads: 1,
-        progress: nomion::cli::ProgressMode::Never,
+        progress: workspace::cli::ProgressMode::Never,
         ignore_case: false,
         use_regex: false,
         include_hidden: false,
+        binary_names: false,
     };
 
     run_refac(args)?;
@@ -454,7 +462,7 @@ fn test_content_only_mode() -> Result<()> {
 }
 
 #[test]
-fn test_binary_file_handling() -> Result<()> {
+fn test_binary_file_handling_default() -> Result<()> {
     let temp_dir = TempDir::new()?;
     
     // Create binary file with oldname in filename
@@ -480,28 +488,466 @@ fn test_binary_file_handling() -> Result<()> {
         max_depth: 0,
         exclude_patterns: vec![],
         include_patterns: vec![],
-        format: nomion::cli::OutputFormat::Plain,
+        format: workspace::cli::OutputFormat::Plain,
         threads: 1,
-        progress: nomion::cli::ProgressMode::Never,
+        progress: workspace::cli::ProgressMode::Never,
         ignore_case: false,
         use_regex: false,
         include_hidden: false,
+        binary_names: false, // Default: binary files are NOT renamed
     };
 
     run_refac(args)?;
 
-    // Both files should be renamed
-    assert!(temp_dir.path().join("newname_binary.bin").exists());
+    // Binary file should NOT be renamed (default behavior)
+    assert!(!temp_dir.path().join("newname_binary.bin").exists());
+    assert!(temp_dir.path().join("oldname_binary.bin").exists());
+    
+    // Text file should be renamed and content modified
     assert!(temp_dir.path().join("newname_text.txt").exists());
+    assert!(!temp_dir.path().join("oldname_text.txt").exists());
+
+    let text_content = fs::read_to_string(temp_dir.path().join("newname_text.txt"))?;
+    assert!(text_content.contains("newname"));
+    assert!(!text_content.contains("oldname"));
+
+    Ok(())
+}
+
+#[test]
+fn test_binary_file_handling_with_flag() -> Result<()> {
+    let temp_dir = TempDir::new()?;
+    
+    // Create binary file with oldname in filename
+    File::create(temp_dir.path().join("oldname_binary.bin"))?
+        .write_all(&[0x00, 0x01, 0x02, b'o', b'l', b'd', b'n', b'a', b'm', b'e', 0x03, 0x04])?;
+    
+    // Create text file for comparison
+    File::create(temp_dir.path().join("oldname_text.txt"))?
+        .write_all(b"oldname text content")?;
+
+    let args = Args {
+        root_dir: temp_dir.path().to_path_buf(),
+        pattern: "oldname".to_string(),
+        substitute: "newname".to_string(),
+        assume_yes: true,
+        verbose: false,
+        follow_symlinks: false,
+        backup: false,
+        files_only: false,
+        dirs_only: false,
+        names_only: false,
+        content_only: false,
+        max_depth: 0,
+        exclude_patterns: vec![],
+        include_patterns: vec![],
+        format: workspace::cli::OutputFormat::Plain,
+        threads: 1,
+        progress: workspace::cli::ProgressMode::Never,
+        ignore_case: false,
+        use_regex: false,
+        include_hidden: false,
+        binary_names: true, // Enable binary file renaming
+    };
+
+    run_refac(args)?;
+
+    // Both files should be renamed when binary_names flag is set
+    assert!(temp_dir.path().join("newname_binary.bin").exists());
+    assert!(!temp_dir.path().join("oldname_binary.bin").exists());
+    assert!(temp_dir.path().join("newname_text.txt").exists());
+    assert!(!temp_dir.path().join("oldname_text.txt").exists());
 
     // Text file content should be modified
     let text_content = fs::read_to_string(temp_dir.path().join("newname_text.txt"))?;
     assert!(text_content.contains("newname"));
     assert!(!text_content.contains("oldname"));
 
-    // Binary file content should be unchanged (but we can't easily test this without reading binary)
-    // The important thing is that it exists and wasn't corrupted
-    assert!(temp_dir.path().join("newname_binary.bin").metadata()?.len() > 0);
+    // Binary file content should be unchanged
+    let binary_content = fs::read(temp_dir.path().join("newname_binary.bin"))?;
+    assert_eq!(binary_content, vec![0x00, 0x01, 0x02, b'o', b'l', b'd', b'n', b'a', b'm', b'e', 0x03, 0x04]);
+
+    Ok(())
+}
+
+#[test]
+fn test_binary_flag_cli_integration() -> Result<()> {
+    let temp_dir = TempDir::new()?;
+    
+    // Create mixed files with pattern in names
+    File::create(temp_dir.path().join("test_old.txt"))?
+        .write_all(b"old content in text file")?;
+    
+    File::create(temp_dir.path().join("old_image.png"))?
+        .write_all(&[0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, b'o', b'l', b'd'])?; // PNG header + "old"
+    
+    File::create(temp_dir.path().join("old_binary.bin"))?
+        .write_all(&[0x00, 0x01, 0x02, b'o', b'l', b'd', 0x03, 0x04])?;
+
+    // Test default behavior (binary files ignored)
+    let args_default = Args {
+        root_dir: temp_dir.path().to_path_buf(),
+        pattern: "old".to_string(),
+        substitute: "new".to_string(),
+        assume_yes: true,
+        verbose: false,
+        follow_symlinks: false,
+        backup: false,
+        files_only: false,
+        dirs_only: false,
+        names_only: false,
+        content_only: false,
+        max_depth: 0,
+        exclude_patterns: vec![],
+        include_patterns: vec![],
+        format: workspace::cli::OutputFormat::Plain,
+        threads: 1,
+        progress: workspace::cli::ProgressMode::Never,
+        ignore_case: false,
+        use_regex: false,
+        include_hidden: false,
+        binary_names: false,
+    };
+
+    run_refac(args_default)?;
+
+    // Only text file should be renamed and have content changed
+    assert!(temp_dir.path().join("test_new.txt").exists());
+    assert!(!temp_dir.path().join("test_old.txt").exists());
+    
+    // Binary files should remain unchanged
+    assert!(temp_dir.path().join("old_image.png").exists());
+    assert!(temp_dir.path().join("old_binary.bin").exists());
+    assert!(!temp_dir.path().join("new_image.png").exists());
+    assert!(!temp_dir.path().join("new_binary.bin").exists());
+
+    // Verify text content was changed
+    let text_content = fs::read_to_string(temp_dir.path().join("test_new.txt"))?;
+    assert!(text_content.contains("new content in text file"));
+    assert!(!text_content.contains("old content in text file"));
+
+    Ok(())
+}
+
+#[test]
+fn test_binary_names_flag_enables_renaming() -> Result<()> {
+    let temp_dir = TempDir::new()?;
+    
+    // Create binary files with pattern in names
+    File::create(temp_dir.path().join("old_document.pdf"))?
+        .write_all(&[0x25, 0x50, 0x44, 0x46, b'o', b'l', b'd'])?; // PDF header + "old"
+        
+    File::create(temp_dir.path().join("old_executable"))?
+        .write_all(&[0x7f, 0x45, 0x4c, 0x46, b'o', b'l', b'd'])?; // ELF header + "old"
+
+    let args = Args {
+        root_dir: temp_dir.path().to_path_buf(),
+        pattern: "old".to_string(),
+        substitute: "new".to_string(),
+        assume_yes: true,
+        verbose: false,
+        follow_symlinks: false,
+        backup: false,
+        files_only: false,
+        dirs_only: false,
+        names_only: false,
+        content_only: false,
+        max_depth: 0,
+        exclude_patterns: vec![],
+        include_patterns: vec![],
+        format: workspace::cli::OutputFormat::Plain,
+        threads: 1,
+        progress: workspace::cli::ProgressMode::Never,
+        ignore_case: false,
+        use_regex: false,
+        include_hidden: false,
+        binary_names: true, // Enable binary renaming
+    };
+
+    run_refac(args)?;
+
+    // Binary files should be renamed
+    assert!(temp_dir.path().join("new_document.pdf").exists());
+    assert!(temp_dir.path().join("new_executable").exists());
+    assert!(!temp_dir.path().join("old_document.pdf").exists());
+    assert!(!temp_dir.path().join("old_executable").exists());
+
+    // Binary content should be unchanged
+    let pdf_content = fs::read(temp_dir.path().join("new_document.pdf"))?;
+    assert_eq!(pdf_content, vec![0x25, 0x50, 0x44, 0x46, b'o', b'l', b'd']);
+    
+    let elf_content = fs::read(temp_dir.path().join("new_executable"))?;
+    assert_eq!(elf_content, vec![0x7f, 0x45, 0x4c, 0x46, b'o', b'l', b'd']);
+
+    Ok(())
+}
+
+#[test]
+fn test_mixed_binary_text_with_flag() -> Result<()> {
+    let temp_dir = TempDir::new()?;
+    
+    // Create mixed files
+    File::create(temp_dir.path().join("project_old.txt"))?
+        .write_all(b"old project configuration")?;
+        
+    File::create(temp_dir.path().join("project_old.json"))?
+        .write_all(br#"{"name": "old_project", "version": "1.0"}"#)?;
+        
+    File::create(temp_dir.path().join("project_old.zip"))?
+        .write_all(&[0x50, 0x4b, 0x03, 0x04, b'o', b'l', b'd'])?; // ZIP header + "old"
+
+    let args = Args {
+        root_dir: temp_dir.path().to_path_buf(),
+        pattern: "old".to_string(),
+        substitute: "new".to_string(),
+        assume_yes: true,
+        verbose: false,
+        follow_symlinks: false,
+        backup: false,
+        files_only: false,
+        dirs_only: false,
+        names_only: false,
+        content_only: false,
+        max_depth: 0,
+        exclude_patterns: vec![],
+        include_patterns: vec![],
+        format: workspace::cli::OutputFormat::Plain,
+        threads: 1,
+        progress: workspace::cli::ProgressMode::Never,
+        ignore_case: false,
+        use_regex: false,
+        include_hidden: false,
+        binary_names: true,
+    };
+
+    run_refac(args)?;
+
+    // All files should be renamed
+    assert!(temp_dir.path().join("project_new.txt").exists());
+    assert!(temp_dir.path().join("project_new.json").exists());
+    assert!(temp_dir.path().join("project_new.zip").exists());
+
+    // Text files should have content modified
+    let txt_content = fs::read_to_string(temp_dir.path().join("project_new.txt"))?;
+    assert!(txt_content.contains("new project configuration"));
+    
+    let json_content = fs::read_to_string(temp_dir.path().join("project_new.json"))?;
+    assert!(json_content.contains("new_project"));
+
+    // Binary file should have unchanged content
+    let zip_content = fs::read(temp_dir.path().join("project_new.zip"))?;
+    assert_eq!(zip_content, vec![0x50, 0x4b, 0x03, 0x04, b'o', b'l', b'd']); // Still contains "old" bytes
+
+    Ok(())
+}
+
+#[test]
+fn test_binary_flag_with_names_only_mode() -> Result<()> {
+    let temp_dir = TempDir::new()?;
+    
+    // Create files
+    File::create(temp_dir.path().join("test_old.txt"))?
+        .write_all(b"old content that should not change")?;
+        
+    File::create(temp_dir.path().join("old_binary.bin"))?
+        .write_all(&[0x00, b'o', b'l', b'd', 0xff])?;
+
+    let args = Args {
+        root_dir: temp_dir.path().to_path_buf(),
+        pattern: "old".to_string(),
+        substitute: "new".to_string(),
+        assume_yes: true,
+        verbose: false,
+        follow_symlinks: false,
+        backup: false,
+        files_only: false,
+        dirs_only: false,
+        names_only: true, // Only rename, don't change content
+        content_only: false,
+        max_depth: 0,
+        exclude_patterns: vec![],
+        include_patterns: vec![],
+        format: workspace::cli::OutputFormat::Plain,
+        threads: 1,
+        progress: workspace::cli::ProgressMode::Never,
+        ignore_case: false,
+        use_regex: false,
+        include_hidden: false,
+        binary_names: true,
+    };
+
+    run_refac(args)?;
+
+    // Both files should be renamed
+    assert!(temp_dir.path().join("test_new.txt").exists());
+    assert!(temp_dir.path().join("new_binary.bin").exists());
+
+    // Text content should be unchanged (names_only mode)
+    let txt_content = fs::read_to_string(temp_dir.path().join("test_new.txt"))?;
+    assert!(txt_content.contains("old content that should not change"));
+    assert!(!txt_content.contains("new content"));
+
+    // Binary content should be unchanged
+    let bin_content = fs::read(temp_dir.path().join("new_binary.bin"))?;
+    assert_eq!(bin_content, vec![0x00, b'o', b'l', b'd', 0xff]);
+
+    Ok(())
+}
+
+#[test]
+fn test_binary_flag_with_content_only_mode() -> Result<()> {
+    let temp_dir = TempDir::new()?;
+    
+    // Create files - note: binary files won't have content processed anyway
+    File::create(temp_dir.path().join("document_old.txt"))?
+        .write_all(b"This contains old text")?;
+        
+    File::create(temp_dir.path().join("image_old.png"))?
+        .write_all(&[0x89, 0x50, 0x4e, 0x47, b'o', b'l', b'd'])?;
+
+    let args = Args {
+        root_dir: temp_dir.path().to_path_buf(),
+        pattern: "old".to_string(),
+        substitute: "new".to_string(),
+        assume_yes: true,
+        verbose: false,
+        follow_symlinks: false,
+        backup: false,
+        files_only: false,
+        dirs_only: false,
+        names_only: false,
+        content_only: true, // Only change content, don't rename
+        max_depth: 0,
+        exclude_patterns: vec![],
+        include_patterns: vec![],
+        format: workspace::cli::OutputFormat::Plain,
+        threads: 1,
+        progress: workspace::cli::ProgressMode::Never,
+        ignore_case: false,
+        use_regex: false,
+        include_hidden: false,
+        binary_names: true, // This should have no effect in content_only mode
+    };
+
+    run_refac(args)?;
+
+    // No files should be renamed (content_only mode)
+    assert!(temp_dir.path().join("document_old.txt").exists());
+    assert!(temp_dir.path().join("image_old.png").exists());
+    assert!(!temp_dir.path().join("document_new.txt").exists());
+    assert!(!temp_dir.path().join("image_new.png").exists());
+
+    // Text content should be modified
+    let txt_content = fs::read_to_string(temp_dir.path().join("document_old.txt"))?;
+    assert!(txt_content.contains("This contains new text"));
+    assert!(!txt_content.contains("This contains old text"));
+
+    // Binary content should be unchanged
+    let png_content = fs::read(temp_dir.path().join("image_old.png"))?;
+    assert_eq!(png_content, vec![0x89, 0x50, 0x4e, 0x47, b'o', b'l', b'd']);
+
+    Ok(())
+}
+
+#[test]
+fn test_binary_flag_edge_cases() -> Result<()> {
+    let temp_dir = TempDir::new()?;
+    
+    // Create files that might be tricky to detect as binary
+    File::create(temp_dir.path().join("empty_old.bin"))?
+        .write_all(&[])?; // Empty file
+        
+    File::create(temp_dir.path().join("mostly_text_old.data"))?
+        .write_all(b"This looks like text but has binary \x00\x01\x02 bytes")?;
+        
+    File::create(temp_dir.path().join("old_script.sh"))?
+        .write_all(b"#!/bin/bash\necho old script")?; // Text file with executable extension
+
+    // Test default behavior - only text files should be processed
+    let args_default = Args {
+        root_dir: temp_dir.path().to_path_buf(),
+        pattern: "old".to_string(),
+        substitute: "new".to_string(),
+        assume_yes: true,
+        verbose: false,
+        follow_symlinks: false,
+        backup: false,
+        files_only: false,
+        dirs_only: false,
+        names_only: false,
+        content_only: false,
+        max_depth: 0,
+        exclude_patterns: vec![],
+        include_patterns: vec![],
+        format: workspace::cli::OutputFormat::Plain,
+        threads: 1,
+        progress: workspace::cli::ProgressMode::Never,
+        ignore_case: false,
+        use_regex: false,
+        include_hidden: false,
+        binary_names: false,
+    };
+
+    run_refac(args_default)?;
+
+    // Only the shell script (text file) should be renamed and modified
+    assert!(temp_dir.path().join("new_script.sh").exists());
+    assert!(!temp_dir.path().join("old_script.sh").exists());
+    
+    // Binary files should remain unchanged
+    assert!(temp_dir.path().join("empty_old.bin").exists());
+    assert!(temp_dir.path().join("mostly_text_old.data").exists());
+    assert!(!temp_dir.path().join("empty_new.bin").exists());
+    assert!(!temp_dir.path().join("mostly_text_new.data").exists());
+
+    // Verify script content was modified
+    let script_content = fs::read_to_string(temp_dir.path().join("new_script.sh"))?;
+    assert!(script_content.contains("echo new script"));
+    assert!(!script_content.contains("echo old script"));
+    
+    // Now test with binary_names flag - all should be renamed
+    // First reset the files
+    fs::remove_file(temp_dir.path().join("new_script.sh"))?;
+    File::create(temp_dir.path().join("old_script.sh"))?
+        .write_all(b"#!/bin/bash\necho old script")?;
+
+    let args_with_flag = Args {
+        root_dir: temp_dir.path().to_path_buf(),
+        pattern: "old".to_string(),
+        substitute: "new".to_string(),
+        assume_yes: true,
+        verbose: false,
+        follow_symlinks: false,
+        backup: false,
+        files_only: false,
+        dirs_only: false,
+        names_only: false,
+        content_only: false,
+        max_depth: 0,
+        exclude_patterns: vec![],
+        include_patterns: vec![],
+        format: workspace::cli::OutputFormat::Plain,
+        threads: 1,
+        progress: workspace::cli::ProgressMode::Never,
+        ignore_case: false,
+        use_regex: false,
+        include_hidden: false,
+        binary_names: true,
+    };
+
+    run_refac(args_with_flag)?;
+
+    // All files should now be renamed
+    assert!(temp_dir.path().join("empty_new.bin").exists());
+    assert!(temp_dir.path().join("mostly_text_new.data").exists());
+    assert!(temp_dir.path().join("new_script.sh").exists());
+    
+    // Binary content should be unchanged
+    let empty_content = fs::read(temp_dir.path().join("empty_new.bin"))?;
+    assert_eq!(empty_content, Vec::<u8>::new());
+    
+    let data_content = fs::read(temp_dir.path().join("mostly_text_new.data"))?;
+    assert_eq!(data_content, b"This looks like text but has binary \x00\x01\x02 bytes");
 
     Ok(())
 }
@@ -534,12 +980,13 @@ fn test_max_depth() -> Result<()> {
         max_depth: 4,
         exclude_patterns: vec![],
         include_patterns: vec![],
-        format: nomion::cli::OutputFormat::Plain,
+        format: workspace::cli::OutputFormat::Plain,
         threads: 1,
-        progress: nomion::cli::ProgressMode::Never,
+        progress: workspace::cli::ProgressMode::Never,
         ignore_case: false,
         use_regex: false,
         include_hidden: false,
+        binary_names: false,
     };
 
     run_refac(args)?;
@@ -576,12 +1023,13 @@ fn test_backup_functionality() -> Result<()> {
         max_depth: 0,
         exclude_patterns: vec![],
         include_patterns: vec![],
-        format: nomion::cli::OutputFormat::Plain,
+        format: workspace::cli::OutputFormat::Plain,
         threads: 1,
-        progress: nomion::cli::ProgressMode::Never,
+        progress: workspace::cli::ProgressMode::Never,
         ignore_case: false,
         use_regex: false,
         include_hidden: false,
+        binary_names: false,
     };
 
     run_refac(args)?;
@@ -642,12 +1090,13 @@ fn test_multiple_occurrences() -> Result<()> {
         max_depth: 0,
         exclude_patterns: vec![],
         include_patterns: vec![],
-        format: nomion::cli::OutputFormat::Plain,
+        format: workspace::cli::OutputFormat::Plain,
         threads: 1,
-        progress: nomion::cli::ProgressMode::Never,
+        progress: workspace::cli::ProgressMode::Never,
         ignore_case: false,
         use_regex: false,
         include_hidden: false,
+        binary_names: false,
     };
 
     run_refac(args)?;
@@ -686,12 +1135,13 @@ fn test_hidden_files() -> Result<()> {
         max_depth: 0,
         exclude_patterns: vec![],
         include_patterns: vec![".*".to_string()], // Include hidden files
-        format: nomion::cli::OutputFormat::Plain,
+        format: workspace::cli::OutputFormat::Plain,
         threads: 1,
-        progress: nomion::cli::ProgressMode::Never,
+        progress: workspace::cli::ProgressMode::Never,
         ignore_case: false,
         use_regex: false,
         include_hidden: false,
+        binary_names: false,
     };
 
     run_refac(args)?;
@@ -731,12 +1181,13 @@ fn test_exclude_patterns() -> Result<()> {
         max_depth: 0,
         exclude_patterns: vec!["*.log".to_string()],
         include_patterns: vec![],
-        format: nomion::cli::OutputFormat::Plain,
+        format: workspace::cli::OutputFormat::Plain,
         threads: 1,
-        progress: nomion::cli::ProgressMode::Never,
+        progress: workspace::cli::ProgressMode::Never,
         ignore_case: false,
         use_regex: false,
         include_hidden: false,
+        binary_names: false,
     };
 
     run_refac(args)?;
@@ -773,12 +1224,13 @@ fn test_parallel_processing() -> Result<()> {
         max_depth: 0,
         exclude_patterns: vec![],
         include_patterns: vec![],
-        format: nomion::cli::OutputFormat::Plain,
+        format: workspace::cli::OutputFormat::Plain,
         threads: 4, // Use multiple threads
-        progress: nomion::cli::ProgressMode::Never,
+        progress: workspace::cli::ProgressMode::Never,
         ignore_case: false,
         use_regex: false,
         include_hidden: false,
+        binary_names: false,
     };
 
     run_refac(args)?;
@@ -826,12 +1278,13 @@ fn test_include_hidden_flag() -> Result<()> {
         max_depth: 0,
         exclude_patterns: vec![],
         include_patterns: vec![],
-        format: nomion::cli::OutputFormat::Plain,
+        format: workspace::cli::OutputFormat::Plain,
         threads: 1,
-        progress: nomion::cli::ProgressMode::Never,
+        progress: workspace::cli::ProgressMode::Never,
         ignore_case: false,
         use_regex: false,
         include_hidden: true, // Enable hidden file processing
+        binary_names: false,
     };
 
     run_refac(args)?;
@@ -884,12 +1337,13 @@ fn test_include_hidden_flag_disabled() -> Result<()> {
         max_depth: 0,
         exclude_patterns: vec![],
         include_patterns: vec![],
-        format: nomion::cli::OutputFormat::Plain,
+        format: workspace::cli::OutputFormat::Plain,
         threads: 1,
-        progress: nomion::cli::ProgressMode::Never,
+        progress: workspace::cli::ProgressMode::Never,
         ignore_case: false,
         use_regex: false,
         include_hidden: false, // Disable hidden file processing
+        binary_names: false,
     };
 
     run_refac(args)?;
@@ -932,12 +1386,13 @@ fn test_include_hidden_with_patterns() -> Result<()> {
         max_depth: 0,
         exclude_patterns: vec!["*.log".to_string()], // Exclude .log files
         include_patterns: vec![],
-        format: nomion::cli::OutputFormat::Plain,
+        format: workspace::cli::OutputFormat::Plain,
         threads: 1,
-        progress: nomion::cli::ProgressMode::Never,
+        progress: workspace::cli::ProgressMode::Never,
         ignore_case: false,
         use_regex: false,
         include_hidden: true, // Enable hidden file processing
+        binary_names: false,
     };
 
     run_refac(args)?;
@@ -978,12 +1433,13 @@ fn test_content_only_allows_path_separators() -> Result<()> {
         max_depth: 0,
         exclude_patterns: vec![],
         include_patterns: vec![],
-        format: nomion::cli::OutputFormat::Plain,
+        format: workspace::cli::OutputFormat::Plain,
         threads: 1,
-        progress: nomion::cli::ProgressMode::Never,
+        progress: workspace::cli::ProgressMode::Never,
         ignore_case: false,
         use_regex: false,
         include_hidden: false,
+        binary_names: false,
     };
     
     run_refac(args)?;
@@ -996,6 +1452,50 @@ fn test_content_only_allows_path_separators() -> Result<()> {
     
     // Verify file name wasn't changed
     assert!(test_file.exists());
+    
+    Ok(())
+}
+
+#[test]
+fn test_typescript_file_processing() -> Result<()> {
+    let temp_dir = TempDir::new()?;
+    
+    // Create TypeScript file
+    let ts_file = temp_dir.path().join("app.ts");
+    File::create(&ts_file)?
+        .write_all(b"const message: string = 'Hello World';\nexport function oldFunction() { return message; }")?;
+    
+    let args = Args {
+        root_dir: temp_dir.path().to_path_buf(),
+        pattern: "old".to_string(),
+        substitute: "new".to_string(),
+        assume_yes: true,
+        verbose: false,
+        follow_symlinks: false,
+        backup: false,
+        files_only: false,
+        dirs_only: false,
+        names_only: false,
+        content_only: false,
+        max_depth: 0,
+        exclude_patterns: vec![],
+        include_patterns: vec![],
+        format: workspace::cli::OutputFormat::Plain,
+        threads: 1,
+        progress: workspace::cli::ProgressMode::Never,
+        ignore_case: false,
+        use_regex: false,
+        include_hidden: false,
+        binary_names: false,
+    };
+    
+    run_refac(args)?;
+    
+    // Check that TypeScript content was processed
+    let content = fs::read_to_string(&ts_file)?;
+    assert!(content.contains("newFunction"));
+    assert!(!content.contains("oldFunction"));
+    assert!(content.contains("const message: string = 'Hello World';"));
     
     Ok(())
 }
@@ -1025,12 +1525,13 @@ fn test_mutual_exclusion_validation() -> Result<()> {
         max_depth: 0,
         exclude_patterns: vec![],
         include_patterns: vec![],
-        format: nomion::cli::OutputFormat::Plain,
+        format: workspace::cli::OutputFormat::Plain,
         threads: 1,
-        progress: nomion::cli::ProgressMode::Never,
+        progress: workspace::cli::ProgressMode::Never,
         ignore_case: false,
         use_regex: false,
         include_hidden: false,
+        binary_names: false,
     };
     
     // Should fail during validation

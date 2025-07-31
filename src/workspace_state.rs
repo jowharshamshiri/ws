@@ -4,16 +4,16 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-/// Global nomion configuration and state management
+/// Global workspace configuration and state management
 #[derive(Debug, Serialize, Deserialize)]
-pub struct NomionState {
+pub struct WorkspaceState {
     pub version: u32,
     pub project_root: PathBuf,
     pub project_name: Option<String>,
     pub tools: HashMap<String, serde_json::Value>,
 }
 
-impl Default for NomionState {
+impl Default for WorkspaceState {
     fn default() -> Self {
         Self {
             version: 1,
@@ -24,17 +24,17 @@ impl Default for NomionState {
     }
 }
 
-impl NomionState {
-    /// Initialize nomion state in a project directory
+impl WorkspaceState {
+    /// Initialize workspace state in a project directory
     pub fn initialize(project_root: &Path) -> Result<Self> {
-        let nomion_dir = project_root.join(".nomion");
-        fs::create_dir_all(&nomion_dir)
-            .context("Failed to create .nomion directory")?;
+        let workspace_dir = project_root.join(".ws");
+        fs::create_dir_all(&workspace_dir)
+            .context("Failed to create .ws directory")?;
         
         // Create subdirectories
-        fs::create_dir_all(nomion_dir.join("st8").join("templates"))
+        fs::create_dir_all(workspace_dir.join("st8").join("templates"))
             .context("Failed to create st8 templates directory")?;
-        fs::create_dir_all(nomion_dir.join("st8").join("logs"))
+        fs::create_dir_all(workspace_dir.join("st8").join("logs"))
             .context("Failed to create st8 logs directory")?;
         
         let mut state = Self::default();
@@ -45,19 +45,19 @@ impl NomionState {
         Ok(state)
     }
     
-    /// Load nomion state from project directory
+    /// Load workspace state from project directory
     pub fn load(project_root: &Path) -> Result<Self> {
-        let state_file = project_root.join(".nomion").join("state.json");
+        let state_file = project_root.join(".ws").join("state.json");
         
         if !state_file.exists() {
             return Self::initialize(project_root);
         }
         
         let content = fs::read_to_string(&state_file)
-            .context("Failed to read nomion state file")?;
+            .context("Failed to read workspace state file")?;
         
         let mut state: Self = serde_json::from_str(&content)
-            .context("Failed to parse nomion state file")?;
+            .context("Failed to parse workspace state file")?;
         
         // Update project root in case it moved
         state.project_root = project_root.to_path_buf();
@@ -65,30 +65,30 @@ impl NomionState {
         Ok(state)
     }
     
-    /// Save nomion state to project directory
+    /// Save workspace state to project directory
     pub fn save(&self, project_root: &Path) -> Result<()> {
-        let nomion_dir = project_root.join(".nomion");
-        fs::create_dir_all(&nomion_dir)
-            .context("Failed to create .nomion directory")?;
+        let workspace_dir = project_root.join(".ws");
+        fs::create_dir_all(&workspace_dir)
+            .context("Failed to create .ws directory")?;
         
-        let state_file = nomion_dir.join("state.json");
+        let state_file = workspace_dir.join("state.json");
         let content = serde_json::to_string_pretty(self)
-            .context("Failed to serialize nomion state")?;
+            .context("Failed to serialize workspace state")?;
         
         fs::write(&state_file, content)
-            .context("Failed to write nomion state file")?;
+            .context("Failed to write workspace state file")?;
         
         Ok(())
     }
     
-    /// Get nomion directory path
-    pub fn nomion_dir(&self) -> PathBuf {
-        self.project_root.join(".nomion")
+    /// Get workspace directory path
+    pub fn workspace_dir(&self) -> PathBuf {
+        self.project_root.join(".ws")
     }
     
     /// Get tool-specific directory
     pub fn tool_dir(&self, tool_name: &str) -> PathBuf {
-        self.nomion_dir().join(tool_name)
+        self.ws_dir().join(tool_name)
     }
     
     /// Get or create tool-specific configuration
@@ -167,21 +167,21 @@ mod tests {
     use tempfile::TempDir;
     
     #[test]
-    fn test_nomion_state_initialize() {
+    fn test_workspace_state_initialize() {
         let temp_dir = TempDir::new().unwrap();
-        let state = NomionState::initialize(temp_dir.path()).unwrap();
+        let state = WorkspaceState::initialize(temp_dir.path()).unwrap();
         
         assert_eq!(state.version, 1);
         assert_eq!(state.project_root, temp_dir.path());
-        assert!(temp_dir.path().join(".nomion").exists());
-        assert!(temp_dir.path().join(".nomion").join("st8").join("templates").exists());
-        assert!(temp_dir.path().join(".nomion").join("state.json").exists());
+        assert!(temp_dir.path().join(".ws").exists());
+        assert!(temp_dir.path().join(".ws").join("st8").join("templates").exists());
+        assert!(temp_dir.path().join(".ws").join("state.json").exists());
     }
     
     #[test]
-    fn test_nomion_state_save_load() {
+    fn test_workspace_state_save_load() {
         let temp_dir = TempDir::new().unwrap();
-        let mut state = NomionState::initialize(temp_dir.path()).unwrap();
+        let mut state = WorkspaceState::initialize(temp_dir.path()).unwrap();
         
         // Set some tool config
         #[derive(Serialize, Deserialize, PartialEq, Debug)]
@@ -199,7 +199,7 @@ mod tests {
         state.save(temp_dir.path()).unwrap();
         
         // Load and verify
-        let loaded_state = NomionState::load(temp_dir.path()).unwrap();
+        let loaded_state = WorkspaceState::load(temp_dir.path()).unwrap();
         let loaded_config: TestConfig = loaded_state.get_tool_config("test_tool").unwrap();
         
         assert_eq!(loaded_config, test_config);
@@ -245,9 +245,9 @@ version = "0.1.0"
     #[test]
     fn test_tool_directory_paths() {
         let temp_dir = TempDir::new().unwrap();
-        let state = NomionState::initialize(temp_dir.path()).unwrap();
+        let state = WorkspaceState::initialize(temp_dir.path()).unwrap();
         
-        assert_eq!(state.nomion_dir(), temp_dir.path().join(".nomion"));
-        assert_eq!(state.tool_dir("st8"), temp_dir.path().join(".nomion").join("st8"));
+        assert_eq!(state.ws_dir(), temp_dir.path().join(".ws"));
+        assert_eq!(state.tool_dir("st8"), temp_dir.path().join(".ws").join("st8"));
     }
 }

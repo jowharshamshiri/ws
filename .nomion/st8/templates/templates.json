@@ -1,9 +1,0 @@
-{
-  "test_template": {
-    "name": "test_template",
-    "description": "Test release template",
-    "source_path": "test_template.tera",
-    "output_path": "RELEASE.md",
-    "enabled": true
-  }
-}

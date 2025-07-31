@@ -68,6 +68,7 @@ pub struct RenameEngine {
     ignore_case: bool,
     use_regex: bool,
     include_hidden: bool,
+    binary_names: bool,
 }
 
 impl RenameEngine {
@@ -109,6 +110,7 @@ impl RenameEngine {
             ignore_case: args.ignore_case,
             use_regex: args.use_regex,
             include_hidden: args.include_hidden,
+            binary_names: args.binary_names,
         })
     }
 
@@ -357,6 +359,27 @@ impl RenameEngine {
 
         if !contains_pattern {
             return Ok(None);
+        }
+
+        // Check binary file handling for files
+        if path.is_file() {
+            match self.file_ops.is_text_file(path) {
+                Ok(false) => {
+                    // Binary file - only process if binary_names flag is set
+                    if !self.binary_names {
+                        return Ok(None);
+                    }
+                }
+                Err(_) => {
+                    // Can't determine file type - treat as binary for safety
+                    if !self.binary_names {
+                        return Ok(None);
+                    }
+                }
+                Ok(true) => {
+                    // Text file - always process
+                }
+            }
         }
 
         // Apply type restrictions
@@ -1167,7 +1190,7 @@ impl RenameEngine {
             return Ok(());
         }
 
-        self.print_success("=== NOMION REFAC TOOL ===")?;
+        self.print_success("=== WORKSPACE REFAC TOOL ===")?;
         self.print_info(&format!("Root directory: {}", self.config.root_dir.display()))?;
         self.print_info(&format!("Pattern: '{}'", self.config.pattern))?;
         self.print_info(&format!("Substitute: '{}'", self.config.substitute))?;

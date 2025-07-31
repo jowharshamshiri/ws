@@ -6,7 +6,7 @@ use std::path::Path;
 use std::thread;
 use std::time::Duration;
 use tempfile::TempDir;
-use nomion::{cli::Args, run_refac};
+use workspace::{cli::Args, run_refac};
 
 /// Tests for concurrent operation safety and thread-related edge cases in refac tool
 /// These tests ensure the tool handles multi-threading and concurrent file system operations safely
@@ -462,11 +462,12 @@ fn create_test_args(root_dir: &Path, pattern: &str, substitute: &str) -> Args {
         max_depth: 0,
         exclude_patterns: vec![],
         include_patterns: vec![],
-        format: nomion::cli::OutputFormat::Plain,
+        format: workspace::cli::OutputFormat::Plain,
         threads: 1, // Will be overridden in individual tests
-        progress: nomion::cli::ProgressMode::Never,
+        progress: workspace::cli::ProgressMode::Never,
         ignore_case: false,
         use_regex: false,
         include_hidden: false,
+        binary_names: false,
     }
 }

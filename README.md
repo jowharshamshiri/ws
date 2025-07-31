@@ -1,4 +1,4 @@
-# Nomion
+# Workspace
 
 A tool suite for developers and system administrators that provides file operations, line analysis, version management, and development workflow automation.
 
@@ -205,8 +205,8 @@ unscrap --list                              # Show restorable items
 - **Git Integration**: Automatic version bumping on commits
 - **Template Engine**: Tera template support with variables
 - **Multi-format Support**: Cargo.toml, package.json, version.txt, etc.
-- **State Management**: Centralized configuration in .nomion folder
-- **Activity Logging**: All operations logged to .nomion/st8/logs/st8.log
+- **State Management**: Centralized configuration in .ws folder
+- **Activity Logging**: All operations logged to .ws/st8/logs/st8.log
 
 **Template System Variables:**
 - `{{ project.version }}` - Full version (e.g., "1.2.3")
@@ -360,8 +360,8 @@ st8 update --major  # 1.3.0 -> 2.0.0
 
 ### Quick Install
 ```bash
-git clone https://github.com/jowharshamshiri/nomion.git
-cd nomion
+git clone https://github.com/jowharshamshiri/workspace.git
+cd workspace
 ./install.sh
 ```
 
@@ -551,21 +551,21 @@ unscrap experiment-v1/critical_file.rs --to ./src/
 
 ## Documentation
 
-**Documentation Site**: [https://jowharshamshiri.github.io/nomion/](https://jowharshamshiri.github.io/nomion/)
+**Documentation Site**: [https://jowharshamshiri.github.io/workspace/](https://jowharshamshiri.github.io/workspace/)
 
 **Links:**
-- [Installation Guide](https://jowharshamshiri.github.io/nomion/installation/) - Setup instructions
-- [Getting Started](https://jowharshamshiri.github.io/nomion/getting-started/) - Step-by-step tutorial
-- [Usage Guide](https://jowharshamshiri.github.io/nomion/usage/) - Usage examples
-- [API Reference](https://jowharshamshiri.github.io/nomion/api-reference/) - Command documentation
-- [Examples](https://jowharshamshiri.github.io/nomion/examples/) - Use cases
+- [Installation Guide](https://jowharshamshiri.github.io/workspace/installation/) - Setup instructions
+- [Getting Started](https://jowharshamshiri.github.io/workspace/getting-started/) - Step-by-step tutorial
+- [Usage Guide](https://jowharshamshiri.github.io/workspace/usage/) - Usage examples
+- [API Reference](https://jowharshamshiri.github.io/workspace/api-reference/) - Command documentation
+- [Examples](https://jowharshamshiri.github.io/workspace/examples/) - Use cases
 
 ## Support & Contributing
 
-- **Issues**: [GitHub Issues](https://github.com/jowharshamshiri/nomion/issues)
-- **Documentation**: [nomion.dev](https://nomion.dev)
-- **Source Code**: [GitHub Repository](https://github.com/jowharshamshiri/nomion)
+- **Issues**: [GitHub Issues](https://github.com/jowharshamshiri/workspace/issues)
+- **Documentation**: [workspace.dev](https://workspace.dev)
+- **Source Code**: [GitHub Repository](https://github.com/jowharshamshiri/workspace)
 
 ## License
 
-MIT License - see the [LICENSE](https://github.com/jowharshamshiri/nomion/blob/main/LICENSE) file for details.
+MIT License - see the [LICENSE](https://github.com/jowharshamshiri/workspace/blob/main/LICENSE) file for details.
