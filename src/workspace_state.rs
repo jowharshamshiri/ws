@@ -88,7 +88,7 @@ impl WorkspaceState {
     
     /// Get tool-specific directory
     pub fn tool_dir(&self, tool_name: &str) -> PathBuf {
-        self.ws_dir().join(tool_name)
+        self.workspace_dir().join(tool_name)
     }
     
     /// Get or create tool-specific configuration
@@ -247,7 +247,7 @@ version = "0.1.0"
         let temp_dir = TempDir::new().unwrap();
         let state = WorkspaceState::initialize(temp_dir.path()).unwrap();
         
-        assert_eq!(state.ws_dir(), temp_dir.path().join(".ws"));
+        assert_eq!(state.workspace_dir(), temp_dir.path().join(".ws"));
         assert_eq!(state.tool_dir("st8"), temp_dir.path().join(".ws").join("st8"));
     }
 }

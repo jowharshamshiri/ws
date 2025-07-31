@@ -24,7 +24,7 @@ VERBOSE=false
 usage() {
     echo "Usage: $0 [OPTIONS]"
     echo ""
-    echo "Install Workspace Tools (refac, ldiff, scrap, unscrap, st8)"
+    echo "Install Workspace Tools (unified ws binary with all tools as subcommands)"
     echo ""
     echo "OPTIONS:"
     echo "  -d, --dir DIR        Installation directory (default: $DEFAULT_INSTALL_DIR)"
@@ -96,7 +96,7 @@ check_project_directory() {
         exit 1
     fi
     
-    if ! grep -q "name = \"refac\"" Cargo.toml; then
+    if ! grep -q "name = \"workspace\"" Cargo.toml; then
         error "This doesn't appear to be the workspace project directory."
         exit 1
     fi
@@ -135,32 +135,12 @@ check_install_directory() {
     verbose_log "Installation directory verified: $INSTALL_DIR"
 }
 
-# Get current installed versions
-get_installed_versions() {
-    REFAC_VERSION=""
-    LDIFF_VERSION=""
-    SCRAP_VERSION=""
-    UNSCRAP_VERSION=""
-    ST8_VERSION=""
+# Get current installed version
+get_installed_version() {
+    WS_VERSION=""
     
-    if command -v refac &> /dev/null; then
-        REFAC_VERSION=$(refac --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "unknown")
-    fi
-    
-    if command -v ldiff &> /dev/null; then
-        LDIFF_VERSION=$(ldiff --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "unknown")
-    fi
-    
-    if command -v scrap &> /dev/null; then
-        SCRAP_VERSION=$(scrap --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "unknown")
-    fi
-    
-    if command -v unscrap &> /dev/null; then
-        UNSCRAP_VERSION=$(unscrap --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "unknown")
-    fi
-    
-    if command -v st8 &> /dev/null; then
-        ST8_VERSION=$(st8 --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "unknown")
+    if command -v ws &> /dev/null; then
+        WS_VERSION=$(ws --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "unknown")
     fi
 }
 
@@ -172,7 +152,7 @@ get_project_version() {
 
 # Check if installation is needed
 check_installation_needed() {
-    get_installed_versions
+    get_installed_version
     get_project_version
     
     local needs_install=false
@@ -180,19 +160,15 @@ check_installation_needed() {
     if [ "$FORCE_INSTALL" = true ]; then
         log "Force installation requested"
         needs_install=true
-    elif [ -z "$REFAC_VERSION" ] || [ -z "$LDIFF_VERSION" ] || [ -z "$SCRAP_VERSION" ] || [ -z "$UNSCRAP_VERSION" ] || [ -z "$ST8_VERSION" ]; then
-        log "Some tools are not installed"
+    elif [ -z "$WS_VERSION" ]; then
+        log "Workspace tools are not installed"
         needs_install=true
-    elif [ "$REFAC_VERSION" != "$PROJECT_VERSION" ] || [ "$LDIFF_VERSION" != "$PROJECT_VERSION" ] || [ "$SCRAP_VERSION" != "$PROJECT_VERSION" ] || [ "$UNSCRAP_VERSION" != "$PROJECT_VERSION" ] || [ "$ST8_VERSION" != "$PROJECT_VERSION" ]; then
-        log "Installed versions differ from project version"
-        log "  refac: $REFAC_VERSION -> $PROJECT_VERSION"
-        log "  ldiff: $LDIFF_VERSION -> $PROJECT_VERSION"
-        log "  scrap: $SCRAP_VERSION -> $PROJECT_VERSION"
-        log "  unscrap: $UNSCRAP_VERSION -> $PROJECT_VERSION"
-        log "  st8: $ST8_VERSION -> $PROJECT_VERSION"
+    elif [ "$WS_VERSION" != "$PROJECT_VERSION" ]; then
+        log "Installed version differs from project version"
+        log "  ws: $WS_VERSION -> $PROJECT_VERSION"
         needs_install=true
     else
-        success "All tools are already up to date (version $PROJECT_VERSION)"
+        success "Workspace tools are already up to date (version $PROJECT_VERSION)"
         return 1
     fi
     
@@ -209,28 +185,22 @@ build_project() {
         cargo build --release --quiet
     fi
     
-    # Verify all binaries were built
-    local binaries=("refac" "ldiff" "scrap" "unscrap" "st8")
-    for binary in "${binaries[@]}"; do
-        if [ ! -f "target/release/$binary" ]; then
-            error "Failed to build $binary"
-            exit 1
-        fi
-    done
+    # Verify ws binary was built
+    if [ ! -f "target/release/ws" ]; then
+        error "Failed to build ws binary"
+        exit 1
+    fi
     
     success "Build completed successfully"
 }
 
-# Install the binaries
-install_binaries() {
-    log "Installing binaries to $INSTALL_DIR"
+# Install the binary
+install_binary() {
+    log "Installing ws binary to $INSTALL_DIR"
     
-    local binaries=("refac" "ldiff" "scrap" "unscrap" "st8")
-    for binary in "${binaries[@]}"; do
-        verbose_log "Installing $binary..."
-        cp "target/release/$binary" "$INSTALL_DIR/"
-        chmod +x "$INSTALL_DIR/$binary"
-    done
+    verbose_log "Installing ws..."
+    cp "target/release/ws" "$INSTALL_DIR/"
+    chmod +x "$INSTALL_DIR/ws"
     
     success "Installation completed successfully"
 }
@@ -239,20 +209,12 @@ install_binaries() {
 verify_installation() {
     log "Verifying installation..."
     
-    local binaries=("refac" "ldiff" "scrap" "unscrap" "st8")
-    local all_good=true
-    
-    for binary in "${binaries[@]}"; do
-        if [ -x "$INSTALL_DIR/$binary" ]; then
-            local version=$("$INSTALL_DIR/$binary" --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "unknown")
-            success "$binary installed successfully (version $version)"
-        else
-            error "$binary installation failed"
-            all_good=false
-        fi
-    done
-    
-    if [ "$all_good" = false ]; then
+    if [ -x "$INSTALL_DIR/ws" ]; then
+        local version=$("$INSTALL_DIR/ws" --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "unknown")
+        success "ws installed successfully (version $version)"
+        success "All tools available as subcommands: ws refactor, ws st8, ws scrap, ws unscrap, ws ldiff"
+    else
+        error "ws installation failed"
         exit 1
     fi
 }
@@ -284,32 +246,33 @@ main() {
     
     if check_installation_needed; then
         build_project
-        install_binaries
+        install_binary
         verify_installation
         check_path
         
         echo ""
         success "🎉 Workspace Tools installation completed!"
-        success "Tools installed: refac, ldiff, scrap, unscrap, st8"
+        success "Unified binary installed: ws (includes all tools as subcommands)"
         success "Version: $PROJECT_VERSION"
         success "Location: $INSTALL_DIR"
         
         echo ""
         log "Quick start:"
-        log "  refac . \"oldname\" \"newname\" --assume-yes  # Replace strings (auto-confirm)"
-        log "  cat /var/log/system.log | ldiff            # Analyze log patterns"
-        log "  scrap temp_file.txt                        # Move file to .scrap folder"
-        log "  scrap                                       # List .scrap contents"
-        log "  unscrap                                     # Restore last scrapped item"
-        log "  st8 install                             # Install git hook for version bumping"
+        log "  ws refactor . \"oldname\" \"newname\" --assume-yes  # Replace strings (auto-confirm)"
+        log "  cat /var/log/system.log | ws ldiff                # Analyze log patterns"
+        log "  ws scrap temp_file.txt                            # Move file to .scrap folder"
+        log "  ws scrap list                                     # List .scrap contents"
+        log "  ws unscrap                                        # Restore last scrapped item"
+        log "  ws st8 install                                    # Install git hook for version bumping"
         
         echo ""
         log "For more information:"
-        log "  refac --help"
-        log "  ldiff --help"
-        log "  scrap --help"
-        log "  unscrap --help"
-        log "  st8 --help"
+        log "  ws --help"
+        log "  ws refactor --help"
+        log "  ws ldiff --help"
+        log "  ws scrap --help"
+        log "  ws unscrap --help"
+        log "  ws st8 --help"
     fi
 }
 

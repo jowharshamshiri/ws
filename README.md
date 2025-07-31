@@ -1,74 +1,76 @@
 # Workspace
 
-A tool suite for developers and system administrators that provides file operations, line analysis, version management, and development workflow automation.
+A unified tool suite for developers and system administrators that provides file operations, line analysis, version management, and development workflow automation. All tools are accessible through a single `ws` binary with intuitive subcommands.
 
-**Current Version**: 0.34.20950  
+**Current Version**: 0.38.31859  
 **Build Status**: Clean compilation with zero warnings  
-**Test Status**: 249 tests passing across 8 test suites  
+**Test Status**: All tests passing across comprehensive test suites  
 
 ## Tools Overview
 
-| Tool | Purpose | Primary Use Cases |
-|------|---------|-------------------|
-| **refac** | Recursive string replacement with encoding detection | Code refactoring, API migrations, bulk renames |
-| **ldiff** | Line difference visualization for pattern recognition | Log analysis, debug pattern detection, monitoring |
-| **scrap** | Local trash can with metadata tracking | Safe file disposal, experimental cleanup |
-| **unscrap** | File restoration from scrap folder | Accident recovery, experiment rollback |
-| **st8** | Automated version management with templates | Release automation, version consistency, file generation |
+All tools are accessed via `ws <subcommand>` - no separate binaries to manage.
+
+| Subcommand | Purpose | Primary Use Cases |
+|------------|---------|-------------------|
+| **ws refactor** | Recursive string replacement with encoding detection | Code refactoring, API migrations, bulk renames |
+| **ws ldiff** | Line difference visualization for pattern recognition | Log analysis, debug pattern detection, monitoring |
+| **ws scrap** | Local trash can with metadata tracking | Safe file disposal, experimental cleanup |
+| **ws unscrap** | File restoration from scrap folder | Accident recovery, experiment rollback |
+| **ws st8** | Automated version management with templates | Release automation, version consistency, file generation |
 
 ## Quick Start Examples
 
-### Code Refactoring with Refac
+### Code Refactoring with ws refactor
 ```bash
-# Refac always previews changes and asks for confirmation
-refac ./src "OldClassName" "NewClassName" --verbose
+# Refactor always previews changes and asks for confirmation
+ws refactor ./src "OldClassName" "NewClassName" --verbose
 
 # Apply refactoring with backups
-refac ./src "OldClassName" "NewClassName" --backup
+ws refactor ./src "OldClassName" "NewClassName" --backup
 
 # Process specific file types
-refac ./config "old.api.url" "new.api.url" --content-only --include "*.toml"
+ws refactor ./config "old.api.url" "new.api.url" --content-only --include "*.toml"
 
 # Include hidden files
-refac . "st8" "new_st8" --include-hidden
+ws refactor . "st8" "new_st8" --include-hidden
 ```
 
-### Log Pattern Analysis with Ldiff
+### Log Pattern Analysis with ws ldiff
 ```bash
 # Real-time log monitoring
-tail -f /var/log/system.log | ldiff
+tail -f /var/log/system.log | ws ldiff
 
 # Compare deployment logs
-cat deploy-v1.log | ldiff > patterns-v1.txt
-cat deploy-v2.log | ldiff > patterns-v2.txt
+cat deploy-v1.log | ws ldiff > patterns-v1.txt
+cat deploy-v2.log | ws ldiff > patterns-v2.txt
 
 # Custom substitute character
-journalctl -f | ldiff "■"
+journalctl -f | ws ldiff "■"
 ```
 
 ### File Management with Scrap/Unscrap
 ```bash
 # Move files to local storage instead of deleting
-scrap experimental_feature/ temp_logs/ *.bak
+ws scrap experimental_feature/ temp_logs/ *.bak
 
 # Review stored files
-scrap list --sort date
+ws scrap list --sort date
 
 # Find specific files in storage
-scrap find "*.rs" --content "TODO"
+ws scrap find "*.rs" --content
 
 # Restore when needed
-unscrap experimental_feature/
-unscrap important.txt --to ~/backup/
+ws unscrap experimental_feature/
+ws unscrap important.txt --to ~/backup/
 ```
 
 ### Version Management with St8 Templates
 ```bash
 # Set up automatic versioning
-st8 install
+ws st8 install
 
 # Add a template for generating version headers
-st8 template add version-header.h --content \
+ws st8 template add version-header.h --content \
 "#ifndef VERSION_H
 #define VERSION_H
 #define VERSION \"{{ project.version }}\"
@@ -79,10 +81,10 @@ st8 template add version-header.h --content \
 #endif"
 
 # Add template for deployment config
-st8 template add deploy.yml --file-path ./deploy.template.yml
+ws st8 template add deploy.yml --file-path ./deploy.template.yml
 
 # List templates
-st8 template list
+ws st8 template list
 
 # Templates render automatically when version updates
 git add . && git commit -m "Add new feature"  # Auto-increments version and renders templates
@@ -102,24 +104,24 @@ git add . && git commit -m "Add new feature"  # Auto-increments version and rend
 **Usage Examples:**
 ```bash
 # Multi-mode operations
-refac . "oldname" "newname" --names-only     # Rename files/dirs only
-refac . "oldname" "newname" --content-only   # Replace content only
-refac . "oldname" "newname" --files-only     # Process files only
-refac . "oldname" "newname" --dirs-only      # Process directories only
+ws refactor . "oldname" "newname" --names-only     # Rename files/dirs only
+ws refactor . "oldname" "newname" --content-only   # Replace content only
+ws refactor . "oldname" "newname" --files-only     # Process files only
+ws refactor . "oldname" "newname" --dirs-only      # Process directories only
 
 # Pattern filtering
-refac . "oldname" "newname" \
+ws refactor . "oldname" "newname" \
   --include "*.rs" --include "*.toml" \
   --exclude "target/*" --exclude "*.log"
 
 # Performance tuning
-refac ./large-project "old" "new" \
+ws refactor ./large-project "old" "new" \
   --threads 8 \
   --max-depth 5 \
   --verbose
 
 # Backup operations
-refac . "oldname" "newname" --force --backup --assume-yes
+ws refactor . "oldname" "newname" --force --backup --assume-yes
 ```
 
 ### Ldiff - Pattern Recognition
@@ -133,18 +135,18 @@ refac . "oldname" "newname" --force --backup --assume-yes
 **Usage Patterns:**
 ```bash
 # System administration
-systemctl status | ldiff
-ps aux | ldiff "*"
-df -h | ldiff "░"
+systemctl status | ws ldiff
+ps aux | ws ldiff "*"
+df -h | ws ldiff "░"
 
 # Development workflows
-npm test | ldiff
-cargo test --verbose | ldiff "█"
-git log --oneline | ldiff
+npm test | ws ldiff
+cargo test --verbose | ws ldiff "█"
+git log --oneline | ws ldiff
 
 # Security monitoring
-tail -f /var/log/auth.log | ldiff "⚠"
-journalctl -f -u ssh | ldiff "●"
+tail -f /var/log/auth.log | ws ldiff "⚠"
+journalctl -f -u ssh | ws ldiff "●"
 ```
 
 ### Scrap - Local Trash System
@@ -159,23 +161,22 @@ journalctl -f -u ssh | ldiff "●"
 **Operations:**
 ```bash
 # Basic operations
-scrap file.txt directory/                    # Move to scrap
-scrap                                       # List contents (default)
-scrap list --sort name                      # Sort by name
-scrap list --sort date                      # Sort by date
-scrap list --sort size                      # Sort by size
+ws scrap file.txt directory/                    # Move to scrap
+ws scrap                                        # List contents (default)
+ws scrap list --sort name                       # Sort by name
+ws scrap list --sort date                       # Sort by date
+ws scrap list --sort size                       # Sort by size
 
 # Search operations
-scrap find "test.*"                         # Find by filename pattern
-scrap find "TODO" --content                 # Search file contents
-scrap find "*.log" --days 7                # Find files from last 7 days
+ws scrap find "test.*"                          # Find by filename pattern
+ws scrap find "TODO" --content                  # Search file contents
 
 # Maintenance operations
-scrap clean                                 # Remove items older than 30 days
-scrap clean --days 7                        # Remove items older than 7 days
-scrap archive --output backup-$(date +%Y%m%d).tar.gz
-scrap archive --remove                     # Archive and remove originals
-scrap purge --force                        # Remove all items
+ws scrap clean                                  # Remove items older than 30 days
+ws scrap clean --days 7                         # Remove items older than 7 days
+ws scrap archive --output backup-$(date +%Y%m%d).tar.gz
+ws scrap archive --remove                      # Archive and remove originals
+ws scrap purge --force                         # Remove all items
 ```
 
 ### Unscrap - File Recovery System
@@ -189,14 +190,13 @@ scrap purge --force                        # Remove all items
 **Recovery Operations:**
 ```bash
 # Quick recovery
-unscrap                                     # Restore last scrapped item
-unscrap filename.txt                        # Restore specific file
-unscrap project_backup/                     # Restore directory
+ws unscrap                                     # Restore last scrapped item
+ws unscrap filename.txt                        # Restore specific file
+ws unscrap project_backup/                     # Restore directory
 
 # Custom recovery
-unscrap important.txt --to ~/Documents/     # Custom destination
-unscrap config.toml --force                 # Overwrite existing
-unscrap --list                              # Show restorable items
+ws unscrap important.txt --to ~/Documents/     # Custom destination
+ws unscrap config.toml --force                 # Overwrite existing
 ```
 
 ### St8 - Version Management with Templates
@@ -218,7 +218,7 @@ unscrap --list                              # Show restorable items
 
 #### C/C++ Version Header
 ```bash
-st8 template add include/version.h --content \
+ws st8 template add include/version.h --content \
 "#ifndef VERSION_H
 #define VERSION_H
 
@@ -252,7 +252,7 @@ export default VERSION;"
 
 #### Docker Compose with Version
 ```bash
-st8 template add docker-compose.prod.yml --content \
+ws st8 template add docker-compose.prod.yml --content \
 "version: '3.8'
 services:
   app:
@@ -268,7 +268,7 @@ services:
 
 #### Kubernetes Deployment Manifest
 ```bash
-st8 template add k8s/deployment.yml --content \
+ws st8 template add k8s/deployment.yml --content \
 "apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -299,7 +299,7 @@ spec:
 
 #### Python Version Module
 ```bash
-st8 template add __version__.py --content \
+ws st8 template add __version__.py --content \
 "\"\"\"
 Auto-generated version information.
 This file is automatically updated by st8 on version changes.
@@ -327,24 +327,24 @@ VERSION_INFO = {
 **Template Management Workflow:**
 ```bash
 # Set up st8 in your project
-st8 install
+ws st8 install
 
 # Add templates for your project
-st8 template add src/version.h --file-path ./templates/version.h.template
-st8 template add package.json --content "{ \"version\": \"{{ project.version }}\" }"
+ws st8 template add src/version.h --file-path ./templates/version.h.template
+ws st8 template add package.json --content "{ \"version\": \"{{ project.version }}\" }"
 
 # List templates
-st8 template list
+ws st8 template list
 
 # Show template details
-st8 template show src/version.h
+ws st8 template show src/version.h
 
 # Test template rendering
-st8 template render
+ws st8 template render
 
 # Enable/disable templates
-st8 template enable src/version.h
-st8 template enable --all
+ws st8 template enable src/version.h
+ws st8 template enable --all
 
 # Version updates render templates automatically
 git add . && git commit -m "New feature"
@@ -352,8 +352,8 @@ git add . && git commit -m "New feature"
 # -> Templates re-render with new version
 
 # Manual version update
-st8 update --minor  # 1.2.4 -> 1.3.0
-st8 update --major  # 1.3.0 -> 2.0.0
+ws st8 update --minor  # 1.2.4 -> 1.3.0
+ws st8 update --major  # 1.3.0 -> 2.0.0
 ```
 
 ## Installation
@@ -375,30 +375,27 @@ cd workspace
 
 ### Manual Installation
 ```bash
-# Build and install tools
+# Build and install ws binary
 cargo install --path .
 
-# Install specific tools
-cargo install --path . --bin refac
-cargo install --path . --bin ldiff
-cargo install --path . --bin scrap
-cargo install --path . --bin unscrap
-cargo install --path . --bin st8
+# The ws binary includes all tools as subcommands
 ```
 
 ### Verification
 ```bash
 # Check installation
-refac --version    # Should show: refac 0.34.20950
-ldiff --version    # Should show: ldiff 0.34.20950
-scrap --version    # Should show: scrap 0.34.20950
-unscrap --version  # Should show: unscrap 0.34.20950
-st8 --version      # Should show: st8 0.34.20950
+ws --version       # Should show: ws 0.38.31859
+
+# Test subcommands
+ws refactor --help
+ws ldiff --help
+ws scrap --help
+ws unscrap --help
+ws st8 --help
 
 # Test basic functionality
-echo "test" | ldiff
-st8 status
-refac --help
+echo "test" | ws ldiff
+ws st8 status
 ```
 
 ## Quality Assurance & Testing

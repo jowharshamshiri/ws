@@ -6,9 +6,9 @@ toc: false
 
 # Workspace
 
-A tool suite for developers and system administrators that provides file operations, line analysis, version management, and development workflow automation.
+A unified tool suite for developers and system administrators that provides file operations, line analysis, version management, and development workflow automation. All tools accessible through a single `ws` binary with intuitive subcommands.
 
-**Current Version**: 0.34.20950  
+**Current Version**: 0.38.31859  
 **Build Status**: Clean compilation with zero warnings  
 **Test Status**: 249 tests passing across 8 test suites
 
@@ -18,14 +18,14 @@ A tool suite for developers and system administrators that provides file operati
 Recursive string replacement with automatic encoding detection and safety features.
 
 ```bash
-# Refac always previews changes and asks for confirmation
-refac ./src "OldClassName" "NewClassName" --verbose
+# Refactor always previews changes and asks for confirmation
+ws refactor ./src "OldClassName" "NewClassName" --verbose
 
 # Refactor with backups and specific file types
-refac ./src "OldApi" "NewApi" --backup --include "*.rs" --include "*.toml"
+ws refactor ./src "OldApi" "NewApi" --backup --include "*.rs" --include "*.toml"
 
 # Include hidden files like .ws configurations
-refac . "st8" "new_st8" --include-hidden
+ws refactor . "st8" "new_st8" --include-hidden
 ```
 
 **Key Features**: Encoding detection (UTF-8, UTF-16, Windows-1252), pre-validation, collision detection, multi-threaded processing  
@@ -37,12 +37,12 @@ Real-time pattern recognition for logs and command output with ANSI color preser
 
 ```bash
 # Monitor logs in real-time
-tail -f /var/log/system.log | ldiff
+tail -f /var/log/system.log | ws ldiff
 
 # Analyze different log sources with distinct markers
-journalctl -f | ldiff "■"
-systemctl status | ldiff "●"
-cargo test --verbose | ldiff "█"
+journalctl -f | ws ldiff "■"
+systemctl status | ws ldiff "●"
+cargo test --verbose | ws ldiff "█"
 ```
 
 **Key Features**: Real-time streaming, ANSI preservation, customizable visualization, pattern recognition  
@@ -54,15 +54,15 @@ Safe file disposal with metadata tracking, search capabilities, and git integrat
 
 ```bash
 # Move files to local trash instead of deleting
-scrap experimental_feature/ temp_logs/ *.bak old_tests/
+ws scrap experimental_feature/ temp_logs/ *.bak old_tests/
 
 # Search and browse stored files
-scrap find "*.rs" --content "TODO"
-scrap list --sort date
+ws scrap find "*.rs" --content
+ws scrap list --sort date
 
 # Archive and clean up old items
-scrap archive --output backup-$(date +%Y%m%d).tar.gz --remove
-scrap clean --days 14
+ws scrap archive --output backup-$(date +%Y%m%d).tar.gz --remove
+ws scrap clean --days 14
 ```
 
 **Key Features**: Metadata tracking, conflict resolution, content search, git integration, archive support  
@@ -74,9 +74,9 @@ Restore files from scrap with automatic path reconstruction and conflict resolut
 
 ```bash
 # Quick restore operations
-unscrap                                    # Restore last scrapped item
-unscrap experimental_feature/              # Restore specific directory
-unscrap important.rs --to ~/backup/       # Custom destination with conflict handling
+ws unscrap                                    # Restore last scrapped item
+ws unscrap experimental_feature/              # Restore specific directory
+ws unscrap important.rs --to ~/backup/       # Custom destination with conflict handling
 ```
 
 **Key Features**: Automatic recovery, custom destinations, conflict handling, batch restoration  
@@ -88,10 +88,10 @@ Git-integrated versioning with template engine for automated file generation.
 
 ```bash
 # Set up automatic versioning
-st8 install
+ws st8 install
 
 # Add templates that auto-update with version changes
-st8 template add src/version.h --content \
+ws st8 template add src/version.h --content \
 "#define VERSION \"{{ project.version }}\"
 #define BUILD_DATE \"{{ datetime.date }}\""
 
@@ -113,7 +113,7 @@ The st8 template system supports Tera templating with these variables:
 
 ### C/C++ Version Header Template
 ```bash
-st8 template add include/version.h --content \
+ws st8 template add include/version.h --content \
 "#ifndef VERSION_H
 #define VERSION_H
 #define PROJECT_VERSION \"{{ project.version }}\"
@@ -123,7 +123,7 @@ st8 template add include/version.h --content \
 
 ### JavaScript Version Module Template
 ```bash
-st8 template add src/version.js --content \
+ws st8 template add src/version.js --content \
 "export const VERSION = {
   full: '{{ project.version }}',
   major: {{ project.major_version }},
@@ -133,7 +133,7 @@ st8 template add src/version.js --content \
 
 ### Docker Compose Template
 ```bash
-st8 template add docker-compose.prod.yml --content \
+ws st8 template add docker-compose.prod.yml --content \
 "version: '3.8'
 services:
   app:

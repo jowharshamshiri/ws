@@ -5,7 +5,7 @@ title: Installation Guide
 
 # Installation Guide
 
-This guide covers installation methods for the Workspace tool suite (version 0.34.20950) on your system.
+This guide covers installation methods for the Workspace tool suite (version 0.38.31859) on your system.
 
 ## Prerequisites
 
@@ -26,10 +26,10 @@ cd workspace
 ```
 
 The installation script will:
-- Build all tools (`refac`, `ldiff`, `scrap`, `unscrap`, `st8`) in release mode
+- Build the unified `ws` binary in release mode (includes all tools as subcommands)
 - Install to `~/.local/bin` by default (or customize with `-d` option)
 - Check for updates and handle dependencies automatically
-- Ensure all 249 tests pass before installation
+- Ensure all tests pass before installation
 
 ### Installation Options
 
@@ -44,17 +44,21 @@ The installation script will:
 ### Quick Verification
 
 ```bash
-# Check installation and versions
-refac --version    # Should show: refac 0.34.20950
-ldiff --version    # Should show: ldiff 0.34.20950
-scrap --version    # Should show: scrap 0.34.20950
-unscrap --version  # Should show: unscrap 0.34.20950
-st8 --version      # Should show: st8 0.34.20950
+# Check installation and version
+ws --version       # Should show: ws 0.38.31859
+
+# Test subcommands
+ws --help          # Show all available subcommands
+ws refactor --help # Test refactor subcommand
+ws ldiff --help    # Test ldiff subcommand
+ws scrap --help    # Test scrap subcommand
+ws unscrap --help  # Test unscrap subcommand
+ws st8 --help      # Test st8 subcommand
 
 # Test basic functionality
-echo "hello world" | ldiff               # Test pattern recognition
-refac . "test" "test" --verbose          # Test string replacement preview
-st8 status                               # Test version management status
+echo "hello world" | ws ldiff               # Test pattern recognition
+ws refactor . "test" "test" --verbose       # Test string replacement preview
+ws st8 status                               # Test version management status
 ```
 
 ### Uninstall
@@ -79,19 +83,15 @@ cd workspace
 # Build in release mode with optimizations
 cargo build --release
 
-# Install all tools to Cargo's bin directory
+# Install ws binary to Cargo's bin directory
 cargo install --path .
 ```
 
-### Install Individual Tools
+### Alternative: Direct Cargo Install
 
 ```bash
-# Install only specific tools
-cargo install --path . --bin refac      # String replacement engine
-cargo install --path . --bin ldiff      # Log analysis tool
-cargo install --path . --bin scrap      # Local trash system
-cargo install --path . --bin unscrap    # File recovery system
-cargo install --path . --bin st8        # Version management with templates
+# The ws binary includes all tools as subcommands
+cargo install --path . --bin ws         # Unified binary with all tools
 ```
 
 ### Custom Installation Location

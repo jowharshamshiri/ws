@@ -5,16 +5,17 @@ title: Getting Started
 
 # Getting Started with Workspace
 
-This guide will help you get up and running with the Workspace tool suite quickly. Learn the core concepts and basic usage patterns for all four tools.
+This guide will help you get up and running with the Workspace tool suite quickly. Learn the core concepts and basic usage patterns for all tools via the unified `ws` binary.
 
 ## What is Workspace?
 
 Workspace is a suite of command-line utilities for developers and system administrators:
 
-- **refac**: Recursive string replacement in file names and contents
-- **scrap**: Local trash can for files you want to delete
-- **unscrap**: File restoration and undo operations  
-- **st8**: Automatic version management via git hooks
+- **ws refactor**: Recursive string replacement in file names and contents
+- **ws scrap**: Local trash can for files you want to delete
+- **ws unscrap**: File restoration and undo operations  
+- **ws st8**: Automatic version management via git hooks
+- **ws ldiff**: Line difference visualization for pattern recognition
 
 ## Installation
 
@@ -27,22 +28,21 @@ cd workspace
 ./install.sh
 ```
 
-This installs all four tools (`refac`, `scrap`, `unscrap`, `st8`) to `~/.local/bin`.
+This installs the unified `ws` binary (containing all tools as subcommands) to `~/.local/bin`.
 
 ### Verify Installation
 
 ```bash
-# Check all tools are installed
-refac --version
-scrap --version  
-unscrap --version
-st8 --version
+# Check ws binary is installed
+ws --version
 
-# Quick help
-refac --help
-scrap --help
-unscrap --help
-st8 --help
+# Quick help for all subcommands
+ws --help
+ws refactor --help
+ws scrap --help
+ws unscrap --help
+ws st8 --help
+ws ldiff --help
 ```
 
 ## Tool Overview
@@ -53,10 +53,10 @@ Performs recursive string replacement in file names and contents:
 
 ```bash
 # Basic usage
-refac <DIRECTORY> <OLD_STRING> <NEW_STRING> [OPTIONS]
+ws refactor <DIRECTORY> <OLD_STRING> <NEW_STRING> [OPTIONS]
 
 # Always preview first
-refac . "oldFunction" "newFunction" --verbose
+ws refactor . "oldFunction" "newFunction" --verbose
 ```
 
 ### 🗑️ Scrap - Local Trash
@@ -65,14 +65,14 @@ Local trash can for files you want to delete:
 
 ```bash
 # Move unwanted files to local trash can instead of deleting
-scrap temp_file.txt old_directory/
+ws scrap temp_file.txt old_directory/
 
 # List what's in trash
-scrap
+ws scrap list
 
 # Find and clean up
-scrap find "*.log"
-scrap clean
+ws scrap find "*.log"
+ws scrap clean
 ```
 
 ### ↩️ Unscrap - File Restoration
@@ -81,13 +81,13 @@ Restore files from `.scrap` folder:
 
 ```bash
 # Restore last scrapped item
-unscrap
+ws unscrap
 
 # Restore specific file
-unscrap filename.txt
+ws unscrap filename.txt
 
 # Restore to custom location
-unscrap filename.txt --to /new/path/
+ws unscrap filename.txt --to /new/path/
 ```
 
 ### 🏷️ St8 - Version Management
@@ -96,10 +96,10 @@ Automatic versioning via git hooks:
 
 ```bash
 # Install git hook
-st8 install
+ws st8 install
 
 # Show version info
-st8 show
+ws st8 show
 
 # Check status
 st8 status
