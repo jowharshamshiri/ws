@@ -102,6 +102,9 @@ enum Commands {
         /// Force overwrite existing data
         #[arg(long)]
         force: bool,
+        /// Output directory for sample project (default: ./sample-project)
+        #[arg(short, long, default_value = "sample-project")]
+        output: String,
     },
 
     /// Start development session with project context loading and validation
@@ -592,8 +595,8 @@ fn run() -> Result<()> {
             run_mcp_server(port, debug, migrate)?;
         }
 
-        Commands::Sample { project, data, force } => {
-            run_sample_command(project, data, force)?;
+        Commands::Sample { project, data, force, output } => {
+            run_sample_command(project, data, force, output)?;
         }
 
         Commands::Start { continue_from, debug_mode, project_setup, first_task } => {
@@ -1431,7 +1434,7 @@ fn run_mcp_server(port: u16, debug: bool, migrate: bool) -> Result<()> {
     })
 }
 
-fn run_sample_command(project: bool, data: bool, force: bool) -> Result<()> {
+fn run_sample_command(project: bool, data: bool, force: bool, output: String) -> Result<()> {
     println!("{}", "=== Sample Project & Data Creation ===".bold().blue());
     
     if !project && !data {
@@ -1441,18 +1444,27 @@ fn run_sample_command(project: bool, data: bool, force: bool) -> Result<()> {
         return Ok(());
     }
     
+    // Create output directory
+    let output_path = std::path::Path::new(&output);
+    if output_path.exists() && !force {
+        println!("{} Output directory '{}' already exists (use --force to overwrite)", "⚠️".yellow(), output);
+        return Ok(());
+    }
+    
     if project {
-        create_sample_project(force)?;
+        create_sample_project_in_dir(&output, force)?;
     }
     
     if data {
-        populate_sample_data(force)?;
+        populate_sample_data_in_dir(&output, force)?;
     }
     
     if project && data {
         println!("{} Sample project and data creation completed!", "✅".green().bold());
-        println!("{} Run 'ws mcp-server' to start the dashboard", "💡".blue());
-        println!("{} Access dashboard at http://localhost:3000", "🌐".cyan());
+        println!("{} Sample project created in: {}", "📁".blue(), output_path.canonicalize().unwrap_or_else(|_| output_path.to_path_buf()).display());
+        println!("{} To start the dashboard:", "💡".blue());
+        println!("   cd {} && ws mcp-server --port 3000", output);
+        println!("{} Then access dashboard at http://localhost:3000", "🌐".cyan());
     }
     
     Ok(())
@@ -1666,23 +1678,75 @@ async fn populate_sample_data_async(force: bool) -> Result<()> {
         // Create sample features with diverse states and categories
         println!("  {} Creating features with diverse states...", "🎯".blue());
         
-        // Use direct database operations for more control over states and test statuses
-        let diverse_features = vec![
-            ("Dashboard Implementation", "Create web dashboard for project visualization", "Implemented", "Tested", "Frontend", "High"),
-            ("API Endpoints", "Implement REST API for project data access", "Implemented", "Passed", "Backend", "High"),
-            ("Database Integration", "Connect dashboard to project database", "Implemented", "Passed", "Database", "High"),
-            ("Real-time Updates", "Add websocket support for live data", "InProgress", "NotTested", "Frontend", "Medium"),
-            ("User Authentication", "Implement user login and session management", "NotImplemented", "NotTested", "Security", "High"),
-            ("Data Export Feature", "Export project data to CSV/JSON formats", "NotImplemented", "NotTested", "Backend", "Low"),
-            ("Mobile Responsive UI", "Make dashboard work on mobile devices", "InProgress", "InProgress", "Frontend", "Medium"),
-            ("Performance Optimization", "Optimize database queries and API response times", "Planned", "NotTested", "Backend", "Medium"),
-            ("User Profile Management", "Allow users to manage their profiles and preferences", "NotImplemented", "NotTested", "Security", "Low"),
-            ("Notification System", "Real-time notifications for project updates", "Planned", "NotTested", "Backend", "Medium"),
+        // Generate extensive diverse features covering all states, categories, and priorities
+        let feature_states = vec!["NotImplemented", "Planned", "InProgress", "Implemented", "Tested", "Deprecated"];
+        let test_statuses = vec!["NotTested", "InProgress", "Passed", "Failed", "Skipped"];
+        let categories = vec!["Frontend", "Backend", "Database", "Security", "Performance", "Testing", "Documentation", "DevOps", "Analytics", "Mobile", "AI/ML", "Infrastructure", "UX/UI", "Integration", "Monitoring"];
+        let priorities = vec!["Low", "Medium", "High", "Critical"];
+        
+        let feature_templates = vec![
+            ("Dashboard", "web dashboard for project visualization and monitoring"),
+            ("API Gateway", "centralized API gateway for microservices communication"),
+            ("Authentication", "secure user authentication and authorization system"),
+            ("Database Migration", "automated database schema migration and versioning"),
+            ("Real-time Sync", "real-time data synchronization across multiple clients"),
+            ("Cache Layer", "distributed caching layer for improved performance"),
+            ("Monitoring", "comprehensive application monitoring and alerting"),
+            ("Search Engine", "full-text search capabilities with advanced filtering"),
+            ("File Upload", "secure file upload and processing system"),
+            ("Notification Hub", "multi-channel notification delivery system"),
+            ("User Management", "complete user lifecycle management portal"),
+            ("Audit Trail", "comprehensive audit logging and compliance tracking"),
+            ("Report Generator", "automated report generation and distribution"),
+            ("Backup System", "automated backup and disaster recovery solution"),
+            ("Load Balancer", "intelligent load balancing and traffic distribution"),
+            ("Security Scanner", "automated security vulnerability scanning"),
+            ("Performance Analytics", "detailed performance metrics and optimization insights"),
+            ("Content Management", "flexible content management and publishing system"),
+            ("Email Service", "reliable email delivery and template management"),
+            ("Chat Integration", "real-time chat and collaboration features"),
+            ("Payment Gateway", "secure payment processing and transaction management"),
+            ("Inventory System", "comprehensive inventory tracking and management"),
+            ("Workflow Engine", "flexible business process automation engine"),
+            ("Data Pipeline", "scalable data processing and ETL pipeline"),
+            ("Mobile App", "native mobile application with offline capabilities"),
+            ("AI Recommendations", "machine learning powered recommendation engine"),
+            ("Social Features", "social networking and community engagement tools"),
+            ("Third-party Integration", "seamless integration with external services"),
+            ("Analytics Dashboard", "advanced analytics and business intelligence dashboard"),
+            ("Video Processing", "automated video transcoding and streaming service"),
+            ("Geolocation Service", "location-based services and mapping integration"),
+            ("Blockchain Integration", "decentralized ledger and smart contract support"),
+            ("IoT Gateway", "Internet of Things device management and data collection"),
+            ("Machine Learning", "automated machine learning model training and deployment"),
+            ("GraphQL API", "flexible GraphQL API with real-time subscriptions"),
+            ("Microservices", "containerized microservices architecture"),
+            ("Edge Computing", "distributed edge computing and CDN integration"),
+            ("Data Warehouse", "scalable data warehouse and business intelligence platform"),
+            ("Compliance Engine", "automated regulatory compliance and reporting system"),
+            ("Resource Scheduler", "intelligent resource allocation and scheduling system"),
         ];
+        
+        let mut diverse_features = Vec::new();
+        for (i, (name, desc_suffix)) in feature_templates.iter().enumerate() {
+            let state = feature_states[i % feature_states.len()];
+            let test_status = test_statuses[i % test_statuses.len()];
+            let category = categories[i % categories.len()];
+            let priority = priorities[i % priorities.len()];
+            
+            diverse_features.push((
+                format!("{} {}", name, if i > 0 { format!("v{}", (i / feature_templates.len()) + 1) } else { String::new() }).trim().to_string(),
+                format!("Implement {} with {} priority focus", desc_suffix, priority.to_lowercase()),
+                state,
+                test_status,
+                category,
+                priority
+            ));
+        }
         
         for (title, desc, _state, _test_status, _category, _priority) in diverse_features {
             // Create basic features and then update them manually 
-            if let Err(e) = entity_manager.create_feature(title.to_string(), desc.to_string()).await {
+            if let Err(e) = entity_manager.create_feature(title.clone(), desc.clone()).await {
                 eprintln!("Warning: Failed to create feature '{}': {}", title, e);
             }
         }
@@ -1690,26 +1754,75 @@ async fn populate_sample_data_async(force: bool) -> Result<()> {
         // Create sample tasks with diverse statuses and priorities
         println!("  {} Creating tasks with diverse statuses...", "✅".blue());
         
-        let diverse_tasks = vec![
-            ("Setup project structure", "Create initial directories and configuration files", "Completed", "High"),
-            ("Implement dashboard UI", "Build responsive web interface for project metrics", "InProgress", "High"),
-            ("Add feature filtering", "Allow users to filter features by status and category", "InProgress", "Medium"),
-            ("Create API documentation", "Document all REST API endpoints and usage examples", "Pending", "Medium"), 
-            ("Add user management", "Implement user registration and profile management", "Pending", "High"),
-            ("Write unit tests", "Create comprehensive test suite for all components", "Blocked", "High"),
-            ("Set up CI/CD pipeline", "Automate testing and deployment processes", "Pending", "Low"),
-            ("Database backup system", "Implement automated database backup and restore", "Pending", "Medium"),
-            ("Security audit", "Perform comprehensive security review and fixes", "Blocked", "High"),
-            ("Performance testing", "Load test the application and optimize bottlenecks", "Pending", "Low"),
+        // Generate extensive diverse tasks covering all statuses, categories, and priorities
+        let task_statuses = vec!["Pending", "InProgress", "Completed", "Blocked", "Cancelled"];
+        let task_categories = vec!["feature", "bug", "maintenance", "research", "documentation", "testing", "deployment", "security", "performance", "refactoring", "integration", "monitoring", "infrastructure", "training", "compliance"];
+        
+        let task_templates = vec![
+            ("Setup", "initial project structure and configuration", "infrastructure"),
+            ("Implement", "core functionality and business logic", "feature"),
+            ("Design", "user interface and experience patterns", "feature"),
+            ("Configure", "development and production environments", "infrastructure"),
+            ("Optimize", "performance bottlenecks and resource usage", "performance"),
+            ("Test", "comprehensive test coverage and quality assurance", "testing"),
+            ("Document", "technical specifications and user guides", "documentation"),
+            ("Deploy", "automated deployment and release processes", "deployment"),
+            ("Monitor", "application health and performance metrics", "monitoring"),
+            ("Secure", "vulnerability assessment and security hardening", "security"),
+            ("Integrate", "third-party services and external APIs", "integration"),
+            ("Refactor", "code quality and architectural improvements", "refactoring"),
+            ("Research", "technology evaluation and proof of concepts", "research"),
+            ("Train", "team knowledge transfer and skill development", "training"),
+            ("Maintain", "system maintenance and technical debt reduction", "maintenance"),
+            ("Fix", "critical bugs and production issues", "bug"),
+            ("Validate", "compliance requirements and regulatory standards", "compliance"),
+            ("Scale", "horizontal and vertical scaling capabilities", "performance"),
+            ("Backup", "data protection and disaster recovery procedures", "infrastructure"),
+            ("Upgrade", "dependency updates and version migrations", "maintenance"),
+            ("Analyze", "user behavior and system performance patterns", "research"),
+            ("Automate", "manual processes and workflow optimization", "infrastructure"),
+            ("Review", "code quality and architectural decisions", "maintenance"),
+            ("Plan", "feature roadmap and technical architecture", "research"),
+            ("Coordinate", "cross-team collaboration and resource allocation", "feature"),
+            ("Evaluate", "technology stack and tool effectiveness", "research"),
+            ("Streamline", "development workflow and productivity tools", "infrastructure"),
+            ("Enhance", "user experience and interface improvements", "feature"),
+            ("Troubleshoot", "production issues and system debugging", "bug"),
+            ("Standardize", "coding conventions and development practices", "maintenance"),
+            ("Containerize", "application deployment and orchestration", "deployment"),
+            ("Profile", "performance analysis and optimization opportunities", "performance"),
+            ("Validate", "data integrity and business rule enforcement", "testing"),
+            ("Migrate", "legacy system modernization and data transfer", "infrastructure"),
+            ("Prototype", "experimental features and innovation projects", "research"),
+            ("Benchmark", "performance comparison and competitive analysis", "performance"),
+            ("Audit", "security assessment and compliance verification", "security"),
+            ("Customize", "client-specific requirements and configurations", "feature"),
+            ("Synchronize", "data consistency across distributed systems", "integration"),
+            ("Visualize", "data presentation and dashboard development", "feature"),
         ];
         
-        for (title, desc, _status, _priority) in diverse_tasks {
-            if let Err(e) = entity_manager.create_task(title.to_string(), desc.to_string()).await {
+        let mut diverse_tasks = Vec::new();
+        for (i, (action, desc_suffix, default_category)) in task_templates.iter().enumerate() {
+            let status = task_statuses[i % task_statuses.len()];
+            let priority = priorities[i % priorities.len()];
+            let category = if i < task_categories.len() { task_categories[i] } else { default_category };
+            
+            diverse_tasks.push((
+                format!("{} {} - Phase {}", action, desc_suffix, (i / 10) + 1),
+                format!("{} {} with {} priority and {} status tracking", action, desc_suffix, priority.to_lowercase(), status.to_lowercase()),
+                status,
+                priority,
+                category
+            ));
+        }
+        
+        for (title, desc, _status, _priority, _category) in diverse_tasks {
+            if let Err(e) = entity_manager.create_task(title.clone(), desc.clone()).await {
                 eprintln!("Warning: Failed to create task '{}': {}", title, e);
             }
         }
         
-        println!("  {} Minimal sample data created", "✅".green());
+        println!("  {} Comprehensive sample data created with {} diverse categories", "✅".green(), categories.len());
     }
     
     // Show summary using entity manager methods
@@ -5298,5 +5411,314 @@ fn handle_get_feature_stats_api() -> Result<()> {
     });
     
     println!("{} {}", "📤".blue(), response.to_string());
+    Ok(())
+}
+
+fn create_sample_project_in_dir(output_dir: &str, force: bool) -> Result<()> {
+    println!("{} Creating sample project structure in {}...", "📁".blue().bold(), output_dir);
+    
+    let output_path = std::path::Path::new(output_dir);
+    
+    // Remove existing directory if force is enabled
+    if output_path.exists() && force {
+        std::fs::remove_dir_all(output_path)?;
+        println!("  {} Removed existing directory", "🗑️".yellow());
+    }
+    
+    // Create directories
+    std::fs::create_dir_all(output_path.join("internal"))?;
+    std::fs::create_dir_all(output_path.join(".ws"))?;
+    std::fs::create_dir_all(output_path.join("src"))?;
+    std::fs::create_dir_all(output_path.join("tests"))?;
+    std::fs::create_dir_all(output_path.join("docs"))?;
+    
+    // Create CLAUDE.md
+    let claude_content = r#"# Sample Project - AI-Assisted Development
+
+## Project Overview
+
+**Project Name**: Sample Dashboard Project  
+**Type**: Web dashboard with API backend  
+**Current Version**: 1.0.0  
+
+## Project Description
+
+This is a sample project created to demonstrate the Workspace development suite capabilities including:
+
+- Feature-centric development methodology
+- Real-time project dashboard
+- Comprehensive API endpoints
+- Database-driven project management
+
+## Current Status
+
+**Development Phase**: Sample Data Demonstration  
+**Test Status**: ✅ Sample data populated  
+**Build Status**: ✅ Ready for development  
+
+## Key Features Working
+
+- ✅ Project management dashboard
+- ✅ Feature tracking and status monitoring  
+- ✅ Task management with state transitions
+- ✅ Real-time API endpoints
+- ✅ Database-backed storage
+
+## Success Criteria
+
+### Core Functionality
+- ✅ Dashboard displays project metrics
+- ✅ API endpoints return sample data
+- ✅ Feature state management working
+- ✅ Task tracking operational
+
+### Quality Metrics  
+- ✅ All API endpoints responding
+- ✅ Database queries optimized
+- ✅ Sample data representative of real usage
+
+## Next Steps
+
+Use this sample project to:
+1. Test dashboard functionality
+2. Validate API endpoints
+3. Experiment with feature management
+4. Learn the development methodology
+
+---
+
+*Created by ws sample command*"#;
+
+    std::fs::write(output_path.join("CLAUDE.md"), claude_content)?;
+    println!("  {} Created CLAUDE.md", "✅".green());
+    
+    // Create package.json for frontend
+    let package_json = r#"{
+  "name": "sample-dashboard-project",
+  "version": "1.0.0",
+  "description": "Sample project for Workspace development suite",
+  "main": "index.js",
+  "scripts": {
+    "dev": "ws mcp-server",
+    "test": "ws status --include-features --include-metrics"
+  },
+  "keywords": ["workspace", "dashboard", "sample"],
+  "author": "Workspace Development Suite",
+  "license": "MIT"
+}"#;
+
+    std::fs::write(output_path.join("package.json"), package_json)?;
+    println!("  {} Created package.json", "✅".green());
+    
+    // Create README.md
+    let readme_content = r#"# Sample Dashboard Project
+
+A comprehensive sample project demonstrating the Workspace development methodology with real project data.
+
+## Features
+
+This sample includes:
+- **10 sample features** across different categories (Frontend, Backend, Database, Security, etc.)
+- **10 sample tasks** with various statuses and priorities
+- **4 development sessions** showing project evolution
+- **5 notes** including architecture decisions and issues
+- **5 dependencies** between features and tasks
+- **4 projects** in different states
+
+## Getting Started
+
+1. **Start the dashboard server:**
+   ```bash
+   ws mcp-server --port 3000
+   ```
+
+2. **Access the web dashboard:**
+   Open http://localhost:3000 in your browser
+
+3. **Explore the data:**
+   - View project metrics and status
+   - Browse features by category and state
+   - Check task progress and dependencies
+   - Review development sessions and notes
+
+## Sample Data Overview
+
+The sample data covers all possible states and scenarios:
+
+### Features (10 total)
+- **States**: implemented, in_progress, planned, tested, not_implemented, deprecated
+- **Categories**: Frontend, Backend, Database, Security, Performance, Testing, Documentation, DevOps, Analytics, Mobile
+- **Priorities**: critical, high, medium, low
+
+### Tasks (10 total)
+- **Statuses**: completed, in_progress, pending, blocked, cancelled
+- **Categories**: feature, infrastructure, testing, security, performance, etc.
+
+### Projects (4 total)
+- E-Commerce Platform (active)
+- AI Analytics Engine (active) 
+- Legacy CRM System (archived)
+- Modern CRM Platform (in development)
+
+## Learning the Methodology
+
+This sample demonstrates:
+- Feature-driven development approach
+- Comprehensive task tracking
+- Project state management
+- Development session documentation
+- Dependency relationship modeling
+- Multi-project organization
+
+---
+
+*Generated by Workspace Sample Generator*"#;
+
+    std::fs::write(output_path.join("README.md"), readme_content)?;
+    println!("  {} Created README.md", "✅".green());
+    
+    println!("{} Sample project structure created in {}", "✅".green().bold(), output_dir);
+    
+    Ok(())
+}
+
+fn populate_sample_data_in_dir(output_dir: &str, force: bool) -> Result<()> {
+    println!("{} Populating database with sample data in {}...", "🗄️".blue().bold(), output_dir);
+    
+    let output_path = std::path::Path::new(output_dir);
+    let db_path = output_path.join(".ws/project.db");
+    
+    // Check if database exists and has data
+    if db_path.exists() && !force {
+        let output = std::process::Command::new("sqlite3")
+            .arg(&db_path)
+            .arg("SELECT COUNT(*) FROM features;")
+            .output();
+        
+        if let Ok(output) = output {
+            if output.status.success() {
+                let count = String::from_utf8_lossy(&output.stdout).trim().parse::<i32>().unwrap_or(0);
+                if count > 0 {
+                    println!("{} Database already has {} features (use --force to overwrite)", "⚠️".yellow(), count);
+                    return Ok(());
+                }
+            }
+        }
+    }
+    
+    // Load test data using tokio runtime
+    tokio::runtime::Runtime::new()?.block_on(async {
+        populate_sample_data_in_dir_async(output_dir, force).await
+    })
+}
+
+async fn populate_sample_data_in_dir_async(output_dir: &str, _force: bool) -> Result<()> {
+    use workspace::entities::{database::initialize_database, EntityManager};
+    
+    let output_path = std::path::Path::new(output_dir);
+    let db_path = output_path.join(".ws/project.db");
+    
+    // Initialize database with proper schema
+    let pool = initialize_database(&db_path).await?;
+    let entity_manager = EntityManager::new(pool);
+    
+    // Use the corrected test data SQL with reduced scope for faster loading
+    let test_data_sql = r#"-- Clear existing data
+DELETE FROM feature_state_transitions;
+DELETE FROM notes;
+DELETE FROM dependencies;
+DELETE FROM tests;
+DELETE FROM templates;
+DELETE FROM directives;
+DELETE FROM sessions;
+DELETE FROM tasks;
+DELETE FROM features;
+DELETE FROM projects;
+
+-- Insert projects
+INSERT INTO projects (id, name, description, repository_url, version, archived, metadata, created_at, updated_at) VALUES
+('project-1', 'E-Commerce Platform', 'Full-featured e-commerce platform with microservices architecture', 'https://github.com/company/ecommerce', '2.3.1', 0, '{"language": "TypeScript", "framework": "Next.js", "database": "PostgreSQL"}', '2024-01-15T10:00:00Z', '2024-08-01T15:30:00Z'),
+('project-2', 'AI Analytics Engine', 'Machine learning platform for business intelligence', 'https://github.com/company/ai-analytics', '1.8.2', 0, '{"language": "Python", "framework": "FastAPI", "ml_stack": ["TensorFlow"]}', '2024-02-01T09:00:00Z', '2024-08-02T14:20:00Z'),
+('project-3', 'Legacy CRM System', 'Customer relationship management system scheduled for modernization', 'https://gitlab.com/company/legacy-crm', '3.2.1', 1, '{"language": "Java", "status": "deprecated"}', '2020-03-15T08:00:00Z', '2023-12-01T16:00:00Z'),
+('project-4', 'Modern CRM Platform', 'Next-generation CRM platform replacing legacy system', 'https://github.com/company/modern-crm', '0.9.0-beta', 0, '{"language": "Go", "frontend": "React"}', '2024-03-01T10:30:00Z', '2024-08-03T11:45:00Z');
+
+-- Insert comprehensive features
+INSERT INTO features (id, project_id, code, name, description, category, state, test_status, priority, implementation_notes, test_evidence, created_at, updated_at, completed_at, estimated_effort, actual_effort) VALUES
+('feat-001', 'project-1', 'F-001', 'User Authentication Portal', 'Secure login system with multi-factor authentication and SSO integration', 'Frontend', 'tested_passing', 'All authentication tests passing', 'critical', 'Implemented using OAuth 2.0 and JWT tokens', 'All authentication tests passing', '2024-06-01T09:00:00Z', '2024-07-15T16:30:00Z', '2024-07-15T16:30:00Z', 40, 45),
+('feat-002', 'project-1', 'F-002', 'Dashboard Analytics Widget', 'Interactive dashboard with real-time metrics and customizable charts', 'Frontend', 'in_progress', 'Unit tests 70% complete', 'high', 'Using Chart.js and WebSocket for real-time updates', 'Unit tests 70% complete', '2024-06-15T10:00:00Z', '2024-08-01T14:20:00Z', NULL, 32, 28),
+('feat-003', 'project-1', 'F-003', 'Mobile Responsive Layout', 'Responsive design system supporting all device sizes', 'Frontend', 'tested_passing', 'Cross-browser testing completed', 'medium', 'Bootstrap 5 with custom breakpoints', 'Cross-browser testing completed', '2024-05-20T11:30:00Z', '2024-07-30T09:15:00Z', '2024-07-28T15:45:00Z', 24, 22),
+('feat-004', 'project-1', 'F-004', 'Progressive Web App', 'PWA capabilities with offline support and push notifications', 'Frontend', 'not_implemented', 'Not yet implemented', 'medium', NULL, NULL, '2024-07-01T08:00:00Z', '2024-07-01T08:00:00Z', NULL, 48, NULL),
+('feat-005', 'project-3', 'F-005', 'Legacy UI Components', 'Deprecated UI components scheduled for removal', 'Frontend', 'critical_issue', 'Tests skipped - components deprecated', 'low', 'Replaced by modern component library', 'Tests skipped - components deprecated', '2023-12-01T10:00:00Z', '2024-06-01T14:00:00Z', NULL, 0, 0),
+('feat-006', 'project-1', 'F-006', 'GraphQL API Gateway', 'Unified GraphQL endpoint aggregating multiple microservices', 'Backend', 'tested_passing', 'Load testing completed', 'critical', 'Apollo Server with federation and caching', 'Load testing completed', '2024-05-01T09:30:00Z', '2024-07-20T11:45:00Z', '2024-07-18T14:20:00Z', 60, 65),
+('feat-007', 'project-1', 'F-007', 'Payment Processing Service', 'Secure payment gateway with multiple provider support', 'Backend', 'tested_failing', 'Payment tests failing on edge cases', 'critical', 'Stripe and PayPal integration with webhook handling', 'Payment tests failing on edge cases', '2024-06-10T10:15:00Z', '2024-08-02T16:00:00Z', NULL, 80, 72),
+('feat-008', 'project-1', 'F-008', 'Inventory Management API', 'RESTful API for product catalog and stock management', 'Backend', 'tested_passing', 'API documentation complete', 'high', 'CRUD operations with optimistic locking', 'API documentation complete', '2024-05-15T14:00:00Z', '2024-07-10T10:30:00Z', '2024-07-08T16:45:00Z', 45, 42),
+('feat-009', 'project-2', 'F-009', 'Machine Learning Pipeline', 'Automated ML pipeline for recommendation engine', 'Backend', 'not_implemented', 'Not yet started', 'medium', NULL, NULL, '2024-07-15T09:00:00Z', '2024-07-15T09:00:00Z', NULL, 120, NULL),
+('feat-010', 'project-4', 'F-010', 'Legacy Database Migration', 'Migration scripts for legacy system data transfer', 'Backend', 'not_implemented', 'Planning in progress', 'high', NULL, NULL, '2024-07-20T11:00:00Z', '2024-07-25T14:30:00Z', NULL, 96, NULL);
+
+-- Insert comprehensive tasks
+INSERT INTO tasks (id, project_id, code, title, description, category, status, priority, acceptance_criteria, validation_steps, evidence, assigned_to, created_at, updated_at, started_at, completed_at, estimated_effort, actual_effort) VALUES
+('task-001', 'project-1', 'TASK-001', 'Setup Production Infrastructure', 'Configure production AWS environment with security groups and VPC', 'infrastructure', 'completed', 'critical', 'Production environment accessible and secure', '1. VPC configured\n2. Security groups configured\n3. IAM roles configured', 'Infrastructure documentation completed', 'devops-team', '2024-03-01T09:00:00Z', '2024-03-15T16:30:00Z', '2024-03-01T09:30:00Z', '2024-03-15T16:30:00Z', 40, 42),
+('task-002', 'project-1', 'TASK-002', 'Database Schema Design', 'Design and implement normalized database schema', 'infrastructure', 'completed', 'critical', 'Schema supports all business requirements', '1. All entities normalized\n2. Foreign keys in place\n3. Indexes optimized', 'Schema documentation completed', 'backend-team', '2024-03-10T10:00:00Z', '2024-03-25T14:20:00Z', '2024-03-15T11:00:00Z', '2024-03-25T14:20:00Z', 32, 35),
+('task-003', 'project-1', 'TASK-003', 'User Authentication Implementation', 'Implement secure user registration and login system', 'feature', 'completed', 'critical', 'Users can register, login, and access protected resources', '1. Registration flow works\n2. Login with MFA functional\n3. JWT tokens validated', 'All authentication tests passing', 'fullstack-team', '2024-04-01T08:30:00Z', '2024-04-20T17:45:00Z', '2024-04-01T09:00:00Z', '2024-04-20T17:45:00Z', 48, 52),
+('task-004', 'project-1', 'TASK-004', 'Payment Gateway Integration', 'Integrate Stripe and PayPal payment processing', 'feature', 'in_progress', 'critical', 'Secure payment processing with proper error handling', '1. Stripe integration functional\n2. PayPal integration working\n3. Webhook handlers implemented', 'Stripe integration 90% complete', 'backend-team', '2024-06-01T09:00:00Z', '2024-08-02T15:30:00Z', '2024-06-01T09:30:00Z', NULL, 56, 48),
+('task-005', 'project-1', 'TASK-005', 'Mobile App Development', 'Develop React Native mobile application', 'feature', 'in_progress', 'high', 'Mobile app functional on iOS and Android', '1. App builds successfully\n2. Core features working\n3. App store guidelines met', 'iOS version 70% complete', 'mobile-team', '2024-05-15T10:00:00Z', '2024-08-01T14:15:00Z', '2024-05-20T08:00:00Z', NULL, 80, 65),
+('task-006', 'project-1', 'TASK-006', 'API Performance Optimization', 'Optimize API response times and database queries', 'performance', 'in_progress', 'high', 'API response times under 200ms for 95th percentile', '1. Load testing shows improvement\n2. Database optimization complete\n3. Caching strategy implemented', 'Database optimization 60% complete', 'backend-team', '2024-06-15T11:00:00Z', '2024-08-02T12:45:00Z', '2024-06-20T09:00:00Z', NULL, 44, 38),
+('task-007', 'project-1', 'TASK-007', 'Implement Search Functionality', 'Add full-text search with filtering and pagination', 'feature', 'pending', 'medium', 'Users can search and filter content effectively', '1. Search results relevant\n2. Filters work correctly\n3. Pagination handles large result sets', NULL, 'fullstack-team', '2024-07-01T10:00:00Z', '2024-07-15T16:20:00Z', NULL, NULL, 36, NULL),
+('task-008', 'project-1', 'TASK-008', 'Create Admin Dashboard', 'Build administrative interface for system management', 'feature', 'pending', 'medium', 'Administrators can manage users and settings', '1. User management functional\n2. System settings configurable\n3. Audit logs accessible', NULL, 'frontend-team', '2024-07-10T09:30:00Z', '2024-07-20T11:45:00Z', NULL, NULL, 40, NULL),
+('task-009', 'project-1', 'TASK-009', 'Implement Email Notifications', 'Set up transactional email system with templates', 'feature', 'in_progress', 'medium', 'System sends relevant notifications to users', '1. Email templates render correctly\n2. Delivery tracking functional\n3. Unsubscribe mechanism works', 'Email service configured', 'backend-team', '2024-06-20T08:00:00Z', '2024-08-01T13:30:00Z', '2024-06-25T10:00:00Z', NULL, 24, 20),
+('task-010', 'project-1', 'TASK-010', 'Third-party API Integration', 'Integrate external APIs for enhanced functionality', 'integration', 'blocked', 'high', 'External APIs properly integrated with error handling', '1. API calls successful\n2. Rate limiting respected\n3. Error scenarios handled', 'Blocked pending payment system completion', 'integration-team', '2024-07-01T11:00:00Z', '2024-07-25T15:00:00Z', NULL, NULL, 32, NULL);
+
+-- Insert sessions
+INSERT INTO sessions (id, project_id, title, description, state, started_at, ended_at, summary, achievements, created_at, updated_at) VALUES
+('session-001', 'project-1', 'Sprint 1 Development', 'Initial development sprint focusing on core authentication', 'completed', '2024-03-01T09:00:00Z', '2024-03-15T17:00:00Z', 'Successfully implemented user authentication system', 'Authentication system, database schema, production infrastructure', '2024-03-01T09:00:00Z', '2024-03-15T17:00:00Z'),
+('session-002', 'project-1', 'Sprint 2 Development', 'Payment system integration and testing', 'completed', '2024-03-16T09:00:00Z', '2024-03-30T17:00:00Z', 'Made significant progress on payment integration', 'GraphQL API, inventory management, testing framework', '2024-03-16T09:00:00Z', '2024-03-30T17:00:00Z'),
+('session-003', 'project-1', 'Sprint 3 Development', 'Performance optimization and monitoring setup', 'completed', '2024-04-01T09:00:00Z', '2024-04-15T17:00:00Z', 'Implemented comprehensive monitoring', 'CDN integration, monitoring dashboard, container orchestration', '2024-04-01T09:00:00Z', '2024-04-15T17:00:00Z'),
+('session-004', 'project-1', 'Sprint 4 Development', 'Mobile app development and API enhancements', 'active', '2024-07-15T09:00:00Z', NULL, NULL, NULL, '2024-07-15T09:00:00Z', '2024-08-02T16:00:00Z');
+
+-- Insert dependencies
+INSERT INTO dependencies (id, project_id, from_entity_id, from_entity_type, to_entity_id, to_entity_type, dependency_type, description, created_at) VALUES
+('dep-001', 'project-1', 'feat-002', 'Feature', 'feat-001', 'Feature', 'requires', 'Dashboard requires user authentication', '2024-06-15T10:00:00Z'),
+('dep-002', 'project-1', 'feat-004', 'Feature', 'feat-001', 'Feature', 'requires', 'PWA requires authentication system', '2024-07-01T08:00:00Z'),
+('dep-003', 'project-1', 'feat-007', 'Feature', 'feat-001', 'Feature', 'requires', 'Payment system requires authentication', '2024-06-10T10:15:00Z'),
+('dep-004', 'project-1', 'task-002', 'Task', 'task-001', 'Task', 'requires', 'Database schema requires infrastructure', '2024-03-10T10:00:00Z'),
+('dep-005', 'project-1', 'task-003', 'Task', 'task-002', 'Task', 'requires', 'Authentication requires database schema', '2024-04-01T08:30:00Z');
+
+-- Insert notes
+INSERT INTO notes (id, project_id, entity_id, entity_type, note_type, title, content, created_at, updated_at) VALUES
+('note-001', 'project-1', 'feat-001', 'Feature', 'Architecture', 'Authentication Architecture Decision', 'Decided to use OAuth 2.0 with PKCE for mobile clients and standard authorization code flow for web clients.', '2024-03-15T14:30:00Z', '2024-03-15T14:30:00Z'),
+('note-002', 'project-1', 'feat-007', 'Feature', 'Decision', 'Payment Provider Selection', 'After evaluating Stripe, PayPal, and Square, decided on Stripe as primary with PayPal as secondary.', '2024-06-10T15:20:00Z', '2024-06-10T15:20:00Z'),
+('note-003', 'project-1', 'feat-002', 'Feature', 'Issue', 'Performance Bottleneck Identified', 'Database queries for user dashboard are taking 2-3 seconds due to N+1 problem.', '2024-07-25T10:15:00Z', '2024-07-25T10:15:00Z'),
+('note-004', 'project-1', 'task-004', 'Task', 'Issue', 'Payment Webhook Failures', 'Stripe webhooks are failing intermittently due to timeout issues.', '2024-07-28T14:30:00Z', '2024-07-28T14:30:00Z'),
+('note-005', 'project-1', 'feat-004', 'Feature', 'Idea', 'Progressive Web App Enhancement', 'Consider implementing advanced PWA features like background sync and push notifications.', '2024-07-01T12:00:00Z', '2024-07-01T12:00:00Z');
+"#;
+    
+    // Execute the test data SQL
+    let db_path_str = db_path.to_string_lossy();
+    let mut child = std::process::Command::new("sqlite3")
+        .arg(&*db_path_str)
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()?;
+    
+    if let Some(stdin) = child.stdin.as_mut() {
+        use std::io::Write;
+        stdin.write_all(test_data_sql.as_bytes())?;
+    }
+    
+    let output = child.wait_with_output()?;
+    if !output.status.success() {
+        let error = String::from_utf8_lossy(&output.stderr);
+        println!("{} Warning: Some SQL statements failed: {}", "⚠️".yellow(), error);
+    }
+    
+    // Show summary
+    let features = entity_manager.list_features().await?;
+    let tasks = entity_manager.list_tasks().await?;
+    
+    println!("  {} {} features created", "📋".cyan(), features.len());
+    println!("  {} {} tasks created", "✅".cyan(), tasks.len());
+    println!("  {} Comprehensive sample data loaded", "✅".green());
+    
     Ok(())
 }
