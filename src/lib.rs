@@ -3,6 +3,10 @@ pub mod scrap;
 pub mod st8;
 pub mod ldiff;
 pub mod workspace_state;
+// Entity system
+pub mod entities;
+// MCP server
+pub mod mcp_server;
 
 use anyhow::{Context, Result};
 use std::path::Path;

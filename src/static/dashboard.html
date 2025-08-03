@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Workspace Project Dashboard</title>
+    <link rel="stylesheet" href="/dashboard/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Workspace Project Dashboard</h1>
+            <div class="status-indicators">
+                <div class="status-item">
+                    <span class="status-label">Server</span>
+                    <span class="status-value online">Online</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Last Updated</span>
+                    <span class="status-value" id="last-updated">--</span>
+                </div>
+            </div>
+        </header>
+
+        <main>
+            <div class="dashboard-grid">
+                <!-- Project Overview -->
+                <section class="card overview">
+                    <h2>Project Overview</h2>
+                    <div class="project-info">
+                        <div class="project-name" id="project-name">Loading...</div>
+                        <div class="project-description" id="project-description">--</div>
+                    </div>
+                </section>
+
+                <!-- Feature Metrics -->
+                <section class="card metrics">
+                    <h2>Feature Progress</h2>
+                    <div class="metrics-grid">
+                        <div class="metric">
+                            <div class="metric-value" id="total-features">--</div>
+                            <div class="metric-label">Total Features</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value" id="implemented-features">--</div>
+                            <div class="metric-label">Implemented</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value" id="tested-features">--</div>
+                            <div class="metric-label">Tested</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value" id="implementation-percentage">--%</div>
+                            <div class="metric-label">Implementation</div>
+                        </div>
+                    </div>
+                    <div class="progress-bars">
+                        <div class="progress-bar">
+                            <label>Implementation Progress</label>
+                            <div class="bar">
+                                <div class="fill implementation" id="implementation-bar"></div>
+                            </div>
+                        </div>
+                        <div class="progress-bar">
+                            <label>Test Coverage</label>
+                            <div class="bar">
+                                <div class="fill testing" id="testing-bar"></div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Task Summary -->
+                <section class="card tasks">
+                    <h2>Task Summary</h2>
+                    <div class="task-stats">
+                        <div class="task-stat pending">
+                            <div class="count" id="pending-tasks">--</div>
+                            <div class="label">Pending</div>
+                        </div>
+                        <div class="task-stat progress">
+                            <div class="count" id="progress-tasks">--</div>
+                            <div class="label">In Progress</div>
+                        </div>
+                        <div class="task-stat completed">
+                            <div class="count" id="completed-tasks">--</div>
+                            <div class="label">Completed</div>
+                        </div>
+                        <div class="task-stat blocked">
+                            <div class="count" id="blocked-tasks">--</div>
+                            <div class="label">Blocked</div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Feature List -->
+                <section class="card feature-list">
+                    <h2>Recent Features</h2>
+                    <div class="feature-controls">
+                        <button class="filter-btn active" data-filter="all">All</button>
+                        <button class="filter-btn" data-filter="pending">Pending</button>
+                        <button class="filter-btn" data-filter="implemented">Implemented</button>
+                        <button class="filter-btn" data-filter="tested">Tested</button>
+                    </div>
+                    <div class="feature-items" id="feature-list">
+                        <div class="loading">Loading features...</div>
+                    </div>
+                </section>
+
+                <!-- Task List -->
+                <section class="card task-list">
+                    <h2>Active Tasks</h2>
+                    <div class="task-controls">
+                        <button class="filter-btn active" data-filter="all">All</button>
+                        <button class="filter-btn" data-filter="pending">Pending</button>
+                        <button class="filter-btn" data-filter="in_progress">In Progress</button>
+                        <button class="filter-btn" data-filter="blocked">Blocked</button>
+                    </div>
+                    <div class="task-items" id="task-list">
+                        <div class="loading">Loading tasks...</div>
+                    </div>
+                </section>
+
+                <!-- Recent Activity -->
+                <section class="card activity">
+                    <h2>Recent Activity</h2>
+                    <div class="activity-list" id="activity-list">
+                        <div class="loading">Loading activity...</div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <script src="/dashboard/app.js"></script>
+</body>
+</html>
