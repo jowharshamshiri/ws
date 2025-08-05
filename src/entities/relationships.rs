@@ -4,7 +4,7 @@ use anyhow::Result;
 use chrono::Utc;
 use sqlx::SqlitePool;
 use std::collections::HashMap;
-use uuid::Uuid;
+// UUID only used for ID generation, not for storage
 
 use super::models::Dependency;
 use super::EntityType;
@@ -12,23 +12,23 @@ use super::EntityType;
 /// Create a dependency relationship between entities
 pub async fn create_dependency(
     pool: &SqlitePool,
-    project_id: Uuid,
-    from_entity_id: Uuid,
+    project_id: &str,
+    from_entity_id: &str,
     from_entity_type: EntityType,
-    to_entity_id: Uuid,
+    to_entity_id: &str,
     to_entity_type: EntityType,
     dependency_type: String,
     description: Option<String>,
 ) -> Result<Dependency> {
-    let id = Uuid::new_v4();
+    let id = format!("dep-{}", uuid::Uuid::new_v4().to_string()[..8].to_lowercase());
     let now = Utc::now();
     
     let dependency = Dependency {
-        id: id.into(),
-        project_id: project_id.into(),
-        from_entity_id: from_entity_id.into(),
+        id: id.clone(),
+        project_id: project_id.to_string(),
+        from_entity_id: from_entity_id.to_string(),
         from_entity_type: from_entity_type.clone(),
-        to_entity_id: to_entity_id.into(),
+        to_entity_id: to_entity_id.to_string(),
         to_entity_type: to_entity_type.clone(),
         dependency_type: dependency_type.clone(),
         description: description.clone(),
@@ -42,11 +42,11 @@ pub async fn create_dependency(
             dependency_type, description, created_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     "#)
-    .bind(id.to_string())
-    .bind(project_id.to_string())
-    .bind(from_entity_id.to_string())
+    .bind(&id)
+    .bind(project_id)
+    .bind(from_entity_id)
     .bind(format!("{:?}", from_entity_type).to_lowercase())
-    .bind(to_entity_id.to_string())
+    .bind(to_entity_id)
     .bind(format!("{:?}", to_entity_type).to_lowercase())
     .bind(&dependency_type)
     .bind(&description)
@@ -60,9 +60,9 @@ pub async fn create_dependency(
 /// Get all relationships for a specific entity
 pub async fn get_relationships(
     pool: &SqlitePool,
-    entity_id: Uuid,
-) -> Result<HashMap<EntityType, Vec<Uuid>>> {
-    let mut relationships: HashMap<EntityType, Vec<Uuid>> = HashMap::new();
+    entity_id: &str,
+) -> Result<HashMap<EntityType, Vec<String>>> {
+    let mut relationships: HashMap<EntityType, Vec<String>> = HashMap::new();
     
     // Get entities this one depends on (outgoing dependencies)
     let outgoing = sqlx::query_as::<_, Dependency>(r#"
@@ -71,7 +71,7 @@ pub async fn get_relationships(
         FROM dependencies
         WHERE from_entity_id = ? AND resolved_at IS NULL
     "#)
-    .bind(entity_id.to_string())
+    .bind(entity_id)
     .fetch_all(pool)
     .await?;
     
@@ -79,7 +79,7 @@ pub async fn get_relationships(
         relationships
             .entry(dep.to_entity_type)
             .or_insert_with(Vec::new)
-            .push(dep.to_entity_id.into());
+            .push(dep.to_entity_id);
     }
     
     // Get entities that depend on this one (incoming dependencies)
@@ -89,7 +89,7 @@ pub async fn get_relationships(
         FROM dependencies
         WHERE to_entity_id = ? AND resolved_at IS NULL
     "#)
-    .bind(entity_id.to_string())
+    .bind(entity_id)
     .fetch_all(pool)
     .await?;
     
@@ -97,7 +97,7 @@ pub async fn get_relationships(
         relationships
             .entry(dep.from_entity_type)
             .or_insert_with(Vec::new)
-            .push(dep.from_entity_id.into());
+            .push(dep.from_entity_id);
     }
     
     Ok(relationships)
@@ -106,7 +106,7 @@ pub async fn get_relationships(
 /// Get all dependencies for a project
 pub async fn get_project_dependencies(
     pool: &SqlitePool,
-    project_id: Uuid,
+    project_id: &str,
 ) -> Result<Vec<Dependency>> {
     let dependencies = sqlx::query_as::<_, Dependency>(r#"
         SELECT id, project_id, from_entity_id, from_entity_type, to_entity_id, to_entity_type,
@@ -115,7 +115,7 @@ pub async fn get_project_dependencies(
         WHERE project_id = ?
         ORDER BY created_at DESC
     "#)
-    .bind(project_id.to_string())
+    .bind(project_id)
     .fetch_all(pool)
     .await?;
 
@@ -125,7 +125,7 @@ pub async fn get_project_dependencies(
 /// Get blocking dependencies for an entity
 pub async fn get_blocking_dependencies(
     pool: &SqlitePool,
-    entity_id: Uuid,
+    entity_id: &str,
 ) -> Result<Vec<Dependency>> {
     let dependencies = sqlx::query_as::<_, Dependency>(r#"
         SELECT id, project_id, from_entity_id, from_entity_type, to_entity_id, to_entity_type,
@@ -133,7 +133,7 @@ pub async fn get_blocking_dependencies(
         FROM dependencies
         WHERE from_entity_id = ? AND dependency_type = 'blocking' AND resolved_at IS NULL
     "#)
-    .bind(entity_id.to_string())
+    .bind(entity_id)
     .fetch_all(pool)
     .await?;
 
@@ -141,12 +141,12 @@ pub async fn get_blocking_dependencies(
 }
 
 /// Resolve a dependency (mark as completed)
-pub async fn resolve_dependency(pool: &SqlitePool, dependency_id: Uuid) -> Result<()> {
+pub async fn resolve_dependency(pool: &SqlitePool, dependency_id: &str) -> Result<()> {
     let now = Utc::now();
     
     sqlx::query("UPDATE dependencies SET resolved_at = ? WHERE id = ?")
         .bind(now.to_rfc3339())
-        .bind(dependency_id.to_string())
+        .bind(dependency_id)
         .execute(pool)
         .await?;
 
@@ -154,12 +154,12 @@ pub async fn resolve_dependency(pool: &SqlitePool, dependency_id: Uuid) -> Resul
 }
 
 /// Check if entity has unresolved blocking dependencies
-pub async fn has_blocking_dependencies(pool: &SqlitePool, entity_id: Uuid) -> Result<bool> {
+pub async fn has_blocking_dependencies(pool: &SqlitePool, entity_id: &str) -> Result<bool> {
     let count: i64 = sqlx::query_scalar(r#"
         SELECT COUNT(*) FROM dependencies 
         WHERE from_entity_id = ? AND dependency_type = 'blocking' AND resolved_at IS NULL
     "#)
-    .bind(entity_id.to_string())
+    .bind(entity_id)
     .fetch_one(pool)
     .await?;
 
@@ -169,7 +169,7 @@ pub async fn has_blocking_dependencies(pool: &SqlitePool, entity_id: Uuid) -> Re
 /// Get dependency chain for an entity (recursive dependencies)
 pub async fn get_dependency_chain(
     pool: &SqlitePool,
-    entity_id: Uuid,
+    entity_id: &str,
     max_depth: usize,
 ) -> Result<Vec<DependencyChain>> {
     let mut chains = Vec::new();
@@ -190,18 +190,18 @@ pub async fn get_dependency_chain(
 /// Recursive helper for dependency chain traversal
 fn get_dependency_chain_recursive<'a>(
     pool: &'a SqlitePool,
-    entity_id: Uuid,
+    entity_id: &'a str,
     chains: &'a mut Vec<DependencyChain>,
-    visited: &'a mut std::collections::HashSet<Uuid>,
+    visited: &'a mut std::collections::HashSet<String>,
     current_depth: usize,
     max_depth: usize,
 ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<()>> + Send + 'a>> {
     Box::pin(async move {
-    if current_depth >= max_depth || visited.contains(&entity_id) {
+    if current_depth >= max_depth || visited.contains(entity_id) {
         return Ok(());
     }
     
-    visited.insert(entity_id);
+    visited.insert(entity_id.to_string());
     
     // Get direct dependencies
     let dependencies = sqlx::query_as::<_, Dependency>(r#"
@@ -210,14 +210,14 @@ fn get_dependency_chain_recursive<'a>(
         FROM dependencies
         WHERE from_entity_id = ? AND resolved_at IS NULL
     "#)
-    .bind(entity_id.to_string())
+    .bind(entity_id)
     .fetch_all(pool)
     .await?;
     
     for dep in dependencies {
         chains.push(DependencyChain {
-            from_entity: entity_id,
-            to_entity: dep.to_entity_id.into(),
+            from_entity: entity_id.to_string(),
+            to_entity: dep.to_entity_id.clone(),
             dependency_type: dep.dependency_type.clone(),
             depth: current_depth,
             description: dep.description.clone(),
@@ -226,7 +226,7 @@ fn get_dependency_chain_recursive<'a>(
         // Recurse into dependencies
         get_dependency_chain_recursive(
             pool,
-            dep.to_entity_id.into(),
+            &dep.to_entity_id,
             chains,
             visited,
             current_depth + 1,
@@ -241,9 +241,9 @@ fn get_dependency_chain_recursive<'a>(
 /// Create automatic dependencies based on feature relationships
 pub async fn create_feature_task_dependencies(
     pool: &SqlitePool,
-    project_id: Uuid,
-    feature_id: Uuid,
-    task_id: Uuid,
+    project_id: &str,
+    feature_id: &str,
+    task_id: &str,
 ) -> Result<()> {
     // Task depends on feature (task implements feature)
     create_dependency(
@@ -263,9 +263,9 @@ pub async fn create_feature_task_dependencies(
 /// Create session-task relationships
 pub async fn create_session_task_relationship(
     pool: &SqlitePool,
-    project_id: Uuid,
-    session_id: Uuid,
-    task_id: Uuid,
+    project_id: &str,
+    session_id: &str,
+    task_id: &str,
 ) -> Result<()> {
     // Task worked on in session
     create_dependency(
@@ -283,11 +283,11 @@ pub async fn create_session_task_relationship(
 }
 
 /// Get relationship statistics for dashboard
-pub async fn get_relationship_stats(pool: &SqlitePool, project_id: Uuid) -> Result<RelationshipStats> {
+pub async fn get_relationship_stats(pool: &SqlitePool, project_id: &str) -> Result<RelationshipStats> {
     let total_dependencies: i64 = sqlx::query_scalar(r#"
         SELECT COUNT(*) FROM dependencies WHERE project_id = ?
     "#)
-    .bind(project_id.to_string())
+    .bind(project_id)
     .fetch_one(pool)
     .await?;
     
@@ -295,7 +295,7 @@ pub async fn get_relationship_stats(pool: &SqlitePool, project_id: Uuid) -> Resu
         SELECT COUNT(*) FROM dependencies 
         WHERE project_id = ? AND resolved_at IS NULL
     "#)
-    .bind(project_id.to_string())
+    .bind(project_id)
     .fetch_one(pool)
     .await?;
     
@@ -303,7 +303,7 @@ pub async fn get_relationship_stats(pool: &SqlitePool, project_id: Uuid) -> Resu
         SELECT COUNT(*) FROM dependencies 
         WHERE project_id = ? AND dependency_type = 'blocking' AND resolved_at IS NULL
     "#)
-    .bind(project_id.to_string())
+    .bind(project_id)
     .fetch_one(pool)
     .await?;
     
@@ -312,7 +312,7 @@ pub async fn get_relationship_stats(pool: &SqlitePool, project_id: Uuid) -> Resu
         SELECT COUNT(*) FROM dependencies 
         WHERE project_id = ? AND from_entity_type = 'task' AND to_entity_type = 'feature'
     "#)
-    .bind(project_id.to_string())
+    .bind(project_id)
     .fetch_one(pool)
     .await?;
     
@@ -327,18 +327,18 @@ pub async fn get_relationship_stats(pool: &SqlitePool, project_id: Uuid) -> Resu
 /// Find circular dependencies in the project
 pub async fn find_circular_dependencies(
     pool: &SqlitePool,
-    project_id: Uuid,
-) -> Result<Vec<Vec<Uuid>>> {
+    project_id: &str,
+) -> Result<Vec<Vec<String>>> {
     let dependencies = get_project_dependencies(pool, project_id).await?;
-    let mut graph: HashMap<Uuid, Vec<Uuid>> = HashMap::new();
+    let mut graph: HashMap<String, Vec<String>> = HashMap::new();
     
     // Build dependency graph
     for dep in dependencies {
         if dep.resolved_at.is_none() {
             graph
-                .entry(dep.from_entity_id.into())
+                .entry(dep.from_entity_id)
                 .or_insert_with(Vec::new)
-                .push(dep.to_entity_id.into());
+                .push(dep.to_entity_id);
         }
     }
     
@@ -347,8 +347,8 @@ pub async fn find_circular_dependencies(
     let mut visited = std::collections::HashSet::new();
     let mut rec_stack = std::collections::HashSet::new();
     
-    for &node in graph.keys() {
-        if !visited.contains(&node) {
+    for node in graph.keys() {
+        if !visited.contains(node) {
             find_cycles_dfs(
                 &graph,
                 node,
@@ -365,24 +365,24 @@ pub async fn find_circular_dependencies(
 
 /// DFS helper for cycle detection
 fn find_cycles_dfs(
-    graph: &HashMap<Uuid, Vec<Uuid>>,
-    node: Uuid,
-    visited: &mut std::collections::HashSet<Uuid>,
-    rec_stack: &mut std::collections::HashSet<Uuid>,
-    path: &mut Vec<Uuid>,
-    cycles: &mut Vec<Vec<Uuid>>,
+    graph: &HashMap<String, Vec<String>>,
+    node: &str,
+    visited: &mut std::collections::HashSet<String>,
+    rec_stack: &mut std::collections::HashSet<String>,
+    path: &mut Vec<String>,
+    cycles: &mut Vec<Vec<String>>,
 ) {
-    visited.insert(node);
-    rec_stack.insert(node);
-    path.push(node);
+    visited.insert(node.to_string());
+    rec_stack.insert(node.to_string());
+    path.push(node.to_string());
     
-    if let Some(neighbors) = graph.get(&node) {
-        for &neighbor in neighbors {
-            if !visited.contains(&neighbor) {
+    if let Some(neighbors) = graph.get(node) {
+        for neighbor in neighbors {
+            if !visited.contains(neighbor) {
                 find_cycles_dfs(graph, neighbor, visited, rec_stack, path, cycles);
-            } else if rec_stack.contains(&neighbor) {
+            } else if rec_stack.contains(neighbor) {
                 // Found a cycle
-                if let Some(cycle_start) = path.iter().position(|&x| x == neighbor) {
+                if let Some(cycle_start) = path.iter().position(|x| x == neighbor) {
                     cycles.push(path[cycle_start..].to_vec());
                 }
             }
@@ -390,14 +390,14 @@ fn find_cycles_dfs(
     }
     
     path.pop();
-    rec_stack.remove(&node);
+    rec_stack.remove(node);
 }
 
 /// Dependency chain representation
 #[derive(Debug, Clone)]
 pub struct DependencyChain {
-    pub from_entity: Uuid,
-    pub to_entity: Uuid,
+    pub from_entity: String,
+    pub to_entity: String,
     pub dependency_type: String,
     pub depth: usize,
     pub description: Option<String>,

@@ -6,6 +6,17 @@ class Dashboard {
         this.updateInterval = 5000; // 5 seconds
         this.currentFeatureFilter = 'all';
         this.currentTaskFilter = 'all';
+        this.currentDirectiveFilter = 'all';
+        this.currentRelationshipFilter = 'all';
+        
+        // Git integration state
+        this.currentView = 'timeline';
+        this.selectedCommit = 'HEAD';
+        this.selectedFile = null;
+        this.monacoEditor = null;
+        this.diffEditor = null;
+        this.commits = [];
+        this.files = [];
         
         this.init();
     }
@@ -24,7 +35,11 @@ class Dashboard {
                 this.loadProjectStatus(),
                 this.loadFeatures(),
                 this.loadTasks(),
-                this.loadActivity()
+                this.loadDirectives(),
+                this.loadRelationships(),
+                this.loadMilestones(),
+                this.loadActivity(),
+                this.initializeGitIntegration()
             ]);
             
             this.updateLastUpdated();
@@ -69,6 +84,30 @@ class Dashboard {
             this.renderTasks(tasks);
         } catch (error) {
             console.error('Error loading tasks:', error);
+        }
+    }
+    
+    async loadDirectives() {
+        try {
+            const response = await fetch(`${this.apiBase}/directives`);
+            if (!response.ok) throw new Error('Failed to fetch directives');
+            
+            const directives = await response.json();
+            this.renderDirectives(directives);
+        } catch (error) {
+            console.error('Error loading directives:', error);
+        }
+    }
+    
+    async loadRelationships() {
+        try {
+            const response = await fetch(`${this.apiBase}/relationships`);
+            if (!response.ok) throw new Error('Failed to fetch relationships');
+            
+            const relationships = await response.json();
+            this.renderRelationships(relationships);
+        } catch (error) {
+            console.error('Error loading relationships:', error);
         }
     }
     
@@ -128,7 +167,7 @@ class Dashboard {
         const filteredFeatures = this.filterFeatures(features);
         
         container.innerHTML = filteredFeatures.map(feature => `
-            <div class="feature-item" data-status="${feature.state}">
+            <div class="feature-item clickable" data-status="${feature.state}" data-entity-type="feature" data-entity-id="${feature.code}">
                 <div class="title">${feature.name}</div>
                 <div class="description">${feature.description}</div>
                 <div class="meta">
@@ -144,6 +183,24 @@ class Dashboard {
                 </div>
             </div>
         `).join('');
+        
+        // Add click listeners for feature items
+        container.querySelectorAll('.feature-item').forEach(item => {
+            item.addEventListener('click', async () => {
+                const entityId = item.dataset.entityId;
+                try {
+                    const response = await fetch(`${this.apiBase}/features/${entityId}`);
+                    if (response.ok) {
+                        const feature = await response.json();
+                        this.showEntityDialog('feature', feature);
+                    } else {
+                        console.error('Failed to fetch feature details');
+                    }
+                } catch (error) {
+                    console.error('Error fetching feature details:', error);
+                }
+            });
+        });
     }
     
     renderTasks(tasks) {
@@ -157,7 +214,7 @@ class Dashboard {
         const filteredTasks = this.filterTasks(tasks);
         
         container.innerHTML = filteredTasks.map(task => `
-            <div class="task-item" data-status="${task.status}">
+            <div class="task-item clickable" data-status="${task.status}" data-entity-type="task" data-entity-id="${task.id}">
                 <div class="title">${task.title}</div>
                 <div class="description">${task.description}</div>
                 <div class="meta">
@@ -168,6 +225,232 @@ class Dashboard {
                 </div>
             </div>
         `).join('');
+        
+        // Add click listeners for task items
+        container.querySelectorAll('.task-item').forEach(item => {
+            item.addEventListener('click', async () => {
+                const entityId = item.dataset.entityId;
+                try {
+                    const response = await fetch(`${this.apiBase}/tasks/${entityId}`);
+                    if (response.ok) {
+                        const task = await response.json();
+                        this.showEntityDialog('task', task);
+                    } else {
+                        console.error('Failed to fetch task details');
+                    }
+                } catch (error) {
+                    console.error('Error fetching task details:', error);
+                }
+            });
+        });
+    }
+    
+    renderDirectives(directives) {
+        const container = document.getElementById('directive-list');
+        
+        if (directives.length === 0) {
+            container.innerHTML = '<div class="loading">No directives found</div>';
+            return;
+        }
+        
+        const filteredDirectives = this.filterDirectives(directives);
+        
+        container.innerHTML = filteredDirectives.map(directive => `
+            <div class="directive-item clickable" data-category="${directive.category}" data-entity-type="directive" data-entity-id="${directive.id}">
+                <div class="title">${directive.title}</div>
+                <div class="description">${directive.rule}</div>
+                <div class="meta">
+                    <span class="directive-id">${directive.code}</span>
+                    <div class="badges">
+                        <span class="status-badge ${directive.category.toLowerCase()}">
+                            ${directive.category}
+                        </span>
+                        <span class="priority-badge ${directive.priority.toLowerCase()}">
+                            ${this.formatStatus(directive.priority)}
+                        </span>
+                        <span class="status-badge ${directive.active ? 'active' : 'inactive'}">
+                            ${directive.active ? 'Active' : 'Inactive'}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+        
+        // Add click listeners for directive items
+        container.querySelectorAll('.directive-item').forEach(item => {
+            item.addEventListener('click', async () => {
+                const entityId = item.dataset.entityId;
+                try {
+                    const response = await fetch(`${this.apiBase}/directives/${entityId}`);
+                    if (response.ok) {
+                        const directive = await response.json();
+                        this.showEntityDialog('directive', directive);
+                    } else {
+                        console.error('Failed to fetch directive details');
+                    }
+                } catch (error) {
+                    console.error('Error fetching directive details:', error);
+                }
+            });
+        });
+    }
+    
+    renderRelationships(relationships) {
+        const container = document.getElementById('relationship-list');
+        
+        if (relationships.length === 0) {
+            container.innerHTML = '<div class="loading">No relationships found</div>';
+            return;
+        }
+        
+        const filteredRelationships = this.filterRelationships(relationships);
+        
+        container.innerHTML = filteredRelationships.map(relationship => `
+            <div class="relationship-item clickable" data-type="${relationship.dependency_type}" data-entity-type="relationship" data-entity-id="${relationship.id}">
+                <div class="relationship-header">
+                    <div class="relationship-source">
+                        <span class="entity-type">${relationship.from_entity_type}</span>
+                        <span class="entity-id">${relationship.from_entity_id}</span>
+                    </div>
+                    <div class="relationship-arrow">→</div>
+                    <div class="relationship-target">
+                        <span class="entity-type">${relationship.to_entity_type}</span>
+                        <span class="entity-id">${relationship.to_entity_id}</span>
+                    </div>
+                </div>
+                <div class="relationship-meta">
+                    <span class="relationship-type ${relationship.dependency_type.toLowerCase()}">
+                        ${relationship.dependency_type}
+                    </span>
+                    ${relationship.resolved_at ? '<span class="status-badge resolved">Resolved</span>' : '<span class="status-badge active">Active</span>'}
+                    ${relationship.description ? `<div class="description">${relationship.description}</div>` : ''}
+                </div>
+            </div>
+        `).join('');
+        
+        // Add click listeners for relationship items
+        container.querySelectorAll('.relationship-item').forEach(item => {
+            item.addEventListener('click', async () => {
+                const entityId = item.dataset.entityId;
+                try {
+                    const response = await fetch(`${this.apiBase}/relationships`);
+                    if (response.ok) {
+                        const relationships = await response.json();
+                        const relationship = relationships.find(r => r.id === entityId);
+                        if (relationship) {
+                            this.showEntityDialog('relationship', relationship);
+                        }
+                    } else {
+                        console.error('Failed to fetch relationship details');
+                    }
+                } catch (error) {
+                    console.error('Error fetching relationship details:', error);
+                }
+            });
+        });
+    }
+    
+    async loadMilestones() {
+        try {
+            const response = await fetch(`${this.apiBase}/milestones`);
+            if (!response.ok) throw new Error('Failed to fetch milestones');
+            
+            const milestones = await response.json();
+            this.renderMilestones(milestones);
+        } catch (error) {
+            console.error('Error loading milestones:', error);
+            const container = document.getElementById('milestone-list');
+            if (container) {
+                container.innerHTML = '<div class="loading">Failed to load milestones</div>';
+            }
+        }
+    }
+    
+    renderMilestones(milestones) {
+        const container = document.getElementById('milestone-list');
+        if (!container) return;
+        
+        if (milestones.length === 0) {
+            container.innerHTML = '<div class="loading">No milestones found</div>';
+            return;
+        }
+        
+        const filteredMilestones = this.filterMilestones(milestones);
+        
+        container.innerHTML = filteredMilestones.map(milestone => `
+            <div class="milestone-item clickable" data-status="${milestone.status}" data-entity-type="milestone" data-entity-id="${milestone.id}">
+                <div class="milestone-header">
+                    <div class="milestone-title">${milestone.title}</div>
+                    <div class="milestone-status">
+                        <span class="status-badge ${milestone.status.toLowerCase()}">
+                            ${this.formatMilestoneStatus(milestone.status)}
+                        </span>
+                    </div>
+                </div>
+                <div class="milestone-description">${milestone.description}</div>
+                <div class="milestone-meta">
+                    <div class="completion-bar">
+                        <div class="completion-fill" style="width: ${milestone.completion_percentage}%"></div>
+                        <span class="completion-text">${Math.round(milestone.completion_percentage)}%</span>
+                    </div>
+                    ${milestone.target_date ? `<div class="target-date">Target: ${this.formatDate(milestone.target_date)}</div>` : ''}
+                    ${milestone.achieved_date ? `<div class="achieved-date">Achieved: ${this.formatDate(milestone.achieved_date)}</div>` : ''}
+                </div>
+            </div>
+        `).join('');
+        
+        // Add click listeners for milestone items
+        container.querySelectorAll('.milestone-item').forEach(item => {
+            item.addEventListener('click', async () => {
+                const entityId = item.dataset.entityId;
+                try {
+                    const response = await fetch(`${this.apiBase}/milestones/${entityId}`);
+                    if (response.ok) {
+                        const milestone = await response.json();
+                        this.showEntityDialog('milestone', milestone);
+                    } else {
+                        console.error('Failed to fetch milestone details');
+                    }
+                } catch (error) {
+                    console.error('Error fetching milestone details:', error);
+                }
+            });
+        });
+
+        // Setup milestone filters
+        this.setupMilestoneFilters();
+    }
+    
+    filterMilestones(milestones) {
+        if (this.currentMilestoneFilter === 'all') return milestones;
+        return milestones.filter(milestone => milestone.status === this.currentMilestoneFilter);
+    }
+    
+    formatMilestoneStatus(status) {
+        const statusMap = {
+            'planned': 'Planned',
+            'in_progress': 'In Progress', 
+            'achieved': 'Achieved',
+            'missed': 'Missed'
+        };
+        return statusMap[status] || status;
+    }
+    
+    setupMilestoneFilters() {
+        const filterBtns = document.querySelectorAll('.milestones .filter-btn');
+        
+        filterBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                filterBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                this.currentMilestoneFilter = btn.dataset.filter;
+                this.loadMilestones();
+            });
+        });
+        
+        // Initialize filter
+        this.currentMilestoneFilter = 'all';
     }
     
     renderActivity(activity) {
@@ -220,6 +503,22 @@ class Dashboard {
                 default:
                     return true;
             }
+        });
+    }
+    
+    filterDirectives(directives) {
+        if (this.currentDirectiveFilter === 'all') return directives;
+        
+        return directives.filter(directive => {
+            return directive.category.toLowerCase() === this.currentDirectiveFilter.toLowerCase();
+        });
+    }
+    
+    filterRelationships(relationships) {
+        if (this.currentRelationshipFilter === 'all') return relationships;
+        
+        return relationships.filter(relationship => {
+            return relationship.dependency_type.toLowerCase() === this.currentRelationshipFilter.toLowerCase();
         });
     }
     
@@ -278,6 +577,30 @@ class Dashboard {
             });
         });
         
+        // Directive filter buttons
+        document.querySelectorAll('.directive-controls .filter-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.directive-controls .filter-btn').forEach(b => 
+                    b.classList.remove('active'));
+                e.target.classList.add('active');
+                
+                this.currentDirectiveFilter = e.target.dataset.filter;
+                this.loadDirectives();
+            });
+        });
+        
+        // Relationship filter buttons
+        document.querySelectorAll('.relationship-controls .filter-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.relationship-controls .filter-btn').forEach(b => 
+                    b.classList.remove('active'));
+                e.target.classList.add('active');
+                
+                this.currentRelationshipFilter = e.target.dataset.filter;
+                this.loadRelationships();
+            });
+        });
+        
         // Refresh on window focus
         window.addEventListener('focus', () => {
             this.loadInitialData();
@@ -299,6 +622,835 @@ class Dashboard {
     showError(message) {
         console.error('Dashboard error:', message);
         // Could implement toast notifications or error banners here
+    }
+    
+    showEntityDialog(entityType, entityData) {
+        // Check if modal already exists and remove it
+        const existingModal = document.querySelector('.modal-backdrop');
+        if (existingModal) {
+            document.body.removeChild(existingModal);
+        }
+        
+        // Create modal backdrop
+        const backdrop = document.createElement('div');
+        backdrop.className = 'modal-backdrop';
+        
+        // Create modal dialog
+        const dialog = document.createElement('div');
+        dialog.className = 'modal-dialog';
+        
+        let dialogContent = '';
+        
+        if (entityType === 'feature') {
+            dialogContent = this.generateFeatureDialogContent(entityData);
+        } else if (entityType === 'task') {
+            dialogContent = this.generateTaskDialogContent(entityData);
+        } else if (entityType === 'directive') {
+            dialogContent = this.generateDirectiveDialogContent(entityData);
+        } else if (entityType === 'milestone') {
+            dialogContent = this.generateMilestoneDialogContent(entityData);
+        }
+        
+        dialog.innerHTML = `
+            <div class="modal-header">
+                <h2>${entityType.charAt(0).toUpperCase() + entityType.slice(1)} Details</h2>
+                <button class="modal-close" type="button">&times;</button>
+            </div>
+            <div class="modal-content">
+                ${dialogContent}
+            </div>
+        `;
+        
+        backdrop.appendChild(dialog);
+        document.body.appendChild(backdrop);
+        
+        // Store original overflow value before changing it
+        const originalOverflow = document.body.style.overflow || '';
+        document.body.style.overflow = 'hidden';
+        
+        // Create a single close function that properly restores scroll
+        const closeModal = () => {
+            // Restore original overflow
+            document.body.style.overflow = originalOverflow;
+            
+            // Remove the modal
+            if (document.body.contains(backdrop)) {
+                document.body.removeChild(backdrop);
+            }
+            
+            // Clean up event listener
+            document.removeEventListener('keydown', handleEsc);
+        };
+        
+        // Add event listeners
+        const closeBtn = dialog.querySelector('.modal-close');
+        closeBtn.addEventListener('click', closeModal);
+        
+        backdrop.addEventListener('click', (e) => {
+            if (e.target === backdrop) {
+                closeModal();
+            }
+        });
+        
+        // ESC key to close
+        const handleEsc = (e) => {
+            if (e.key === 'Escape') {
+                closeModal();
+            }
+        };
+        document.addEventListener('keydown', handleEsc);
+    }
+    
+    generateFeatureDialogContent(feature) {
+        return `
+            <div class="entity-detail-section">
+                <h3>Overview</h3>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <label>Feature Code:</label>
+                        <span class="feature-code">${feature.code}</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Name:</label>
+                        <span>${feature.name}</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Category:</label>
+                        <span>${feature.category || 'Uncategorized'}</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Priority:</label>
+                        <span class="priority-badge ${(feature.priority || 'medium').toLowerCase()}">
+                            ${feature.priority || 'Medium'}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="entity-detail-section">
+                <h3>Description</h3>
+                <div class="description-content">
+                    ${feature.description}
+                </div>
+            </div>
+            
+            <div class="entity-detail-section">
+                <h3>Status</h3>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <label>Implementation Status:</label>
+                        <span class="status-badge ${feature.state.toLowerCase()}">
+                            ${this.formatFeatureState(feature.state)}
+                        </span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Test Status:</label>
+                        <span class="status-badge ${feature.test_status.toLowerCase()}">
+                            ${this.formatFeatureState(feature.test_status)}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            
+            ${feature.notes ? `
+            <div class="entity-detail-section">
+                <h3>Notes</h3>
+                <div class="notes-content">
+                    ${feature.notes}
+                </div>
+            </div>
+            ` : ''}
+            
+            <div class="entity-detail-section">
+                <h3>Timestamps</h3>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <label>Created:</label>
+                        <span>${this.formatDateTime(feature.created_at)}</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Updated:</label>
+                        <span>${this.formatDateTime(feature.updated_at)}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    generateTaskDialogContent(task) {
+        return `
+            <div class="entity-detail-section">
+                <h3>Overview</h3>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <label>Task ID:</label>
+                        <span class="task-id">${task.id}</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Title:</label>
+                        <span>${task.title}</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Category:</label>
+                        <span>${task.category || 'General'}</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Priority:</label>
+                        <span class="priority-badge ${(task.priority || 'medium').toLowerCase()}">
+                            ${task.priority || 'Medium'}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="entity-detail-section">
+                <h3>Description</h3>
+                <div class="description-content">
+                    ${task.description}
+                </div>
+            </div>
+            
+            <div class="entity-detail-section">
+                <h3>Status</h3>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <label>Current Status:</label>
+                        <span class="status-badge ${task.status.toLowerCase()}">
+                            ${this.formatStatus(task.status)}
+                        </span>
+                    </div>
+                    ${task.feature_id ? `
+                    <div class="detail-item">
+                        <label>Related Feature:</label>
+                        <span class="feature-link">${task.feature_id}</span>
+                    </div>
+                    ` : ''}
+                </div>
+            </div>
+            
+            ${task.notes ? `
+            <div class="entity-detail-section">
+                <h3>Notes</h3>
+                <div class="notes-content">
+                    ${task.notes}
+                </div>
+            </div>
+            ` : ''}
+            
+            <div class="entity-detail-section">
+                <h3>Timestamps</h3>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <label>Created:</label>
+                        <span>${this.formatDateTime(task.created_at)}</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Updated:</label>
+                        <span>${this.formatDateTime(task.updated_at)}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    generateDirectiveDialogContent(directive) {
+        return `
+            <div class="entity-detail-section">
+                <h3>Overview</h3>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <label>Directive Code:</label>
+                        <span class="directive-code">${directive.code}</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Title:</label>
+                        <span>${directive.title}</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Category:</label>
+                        <span class="category-badge ${directive.category.toLowerCase()}">
+                            ${directive.category}
+                        </span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Priority:</label>
+                        <span class="priority-badge ${directive.priority.toLowerCase()}">
+                            ${directive.priority}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="entity-detail-section">
+                <h3>Rule</h3>
+                <div class="description-content">
+                    ${directive.rule}
+                </div>
+            </div>
+            
+            <div class="entity-detail-section">
+                <h3>Status</h3>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <label>Active:</label>
+                        <span class="status-badge ${directive.active ? 'active' : 'inactive'}">
+                            ${directive.active ? 'Active' : 'Inactive'}
+                        </span>
+                    </div>
+                    ${directive.compliance_checked ? `
+                    <div class="detail-item">
+                        <label>Last Checked:</label>
+                        <span>${this.formatDateTime(directive.compliance_checked)}</span>
+                    </div>
+                    ` : ''}
+                </div>
+            </div>
+            
+            ${directive.context ? `
+            <div class="entity-detail-section">
+                <h3>Context</h3>
+                <div class="description-content">
+                    ${directive.context}
+                </div>
+            </div>
+            ` : ''}
+            
+            ${directive.rationale ? `
+            <div class="entity-detail-section">
+                <h3>Rationale</h3>
+                <div class="description-content">
+                    ${directive.rationale}
+                </div>
+            </div>
+            ` : ''}
+            
+            ${directive.examples ? `
+            <div class="entity-detail-section">
+                <h3>Examples</h3>
+                <div class="description-content">
+                    ${directive.examples}
+                </div>
+            </div>
+            ` : ''}
+            
+            ${directive.violations ? `
+            <div class="entity-detail-section">
+                <h3>Violation Consequences</h3>
+                <div class="description-content">
+                    ${directive.violations}
+                </div>
+            </div>
+            ` : ''}
+            
+            <div class="entity-detail-section">
+                <h3>Timestamps</h3>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <label>Created:</label>
+                        <span>${this.formatDateTime(directive.created_at)}</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Updated:</label>
+                        <span>${this.formatDateTime(directive.updated_at)}</span>
+                    </div>
+                    ${directive.archived_at ? `
+                    <div class="detail-item">
+                        <label>Archived:</label>
+                        <span>${this.formatDateTime(directive.archived_at)}</span>
+                    </div>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+    }
+    
+    generateMilestoneDialogContent(milestone) {
+        return `
+            <div class="entity-detail-section">
+                <h3>Overview</h3>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <label>Milestone ID:</label>
+                        <span class="milestone-id">${milestone.id}</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Title:</label>
+                        <span>${milestone.title}</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Status:</label>
+                        <span class="status-badge ${milestone.status.toLowerCase()}">
+                            ${this.formatMilestoneStatus(milestone.status)}
+                        </span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Completion:</label>
+                        <div class="completion-display">
+                            <div class="completion-bar-large">
+                                <div class="completion-fill" style="width: ${milestone.completion_percentage}%"></div>
+                            </div>
+                            <span class="completion-text">${Math.round(milestone.completion_percentage)}%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="entity-detail-section">
+                <h3>Description</h3>
+                <div class="description-content">
+                    ${milestone.description}
+                </div>
+            </div>
+            
+            ${milestone.target_date || milestone.achieved_date ? `
+            <div class="entity-detail-section">
+                <h3>Dates</h3>
+                <div class="detail-grid">
+                    ${milestone.target_date ? `
+                    <div class="detail-item">
+                        <label>Target Date:</label>
+                        <span>${this.formatDate(milestone.target_date)}</span>
+                    </div>
+                    ` : ''}
+                    ${milestone.achieved_date ? `
+                    <div class="detail-item">
+                        <label>Achieved Date:</label>
+                        <span>${this.formatDate(milestone.achieved_date)}</span>
+                    </div>
+                    ` : ''}
+                </div>
+            </div>
+            ` : ''}
+            
+            ${milestone.feature_ids ? `
+            <div class="entity-detail-section">
+                <h3>Linked Features</h3>
+                <div class="feature-links">
+                    ${JSON.parse(milestone.feature_ids).map(featureId => 
+                        `<span class="feature-link">${featureId}</span>`
+                    ).join('')}
+                </div>
+            </div>
+            ` : ''}
+            
+            ${milestone.success_criteria ? `
+            <div class="entity-detail-section">
+                <h3>Success Criteria</h3>
+                <ul class="criteria-list">
+                    ${JSON.parse(milestone.success_criteria).map(criterion => 
+                        `<li>${criterion}</li>`
+                    ).join('')}
+                </ul>
+            </div>
+            ` : ''}
+            
+            <div class="entity-detail-section">
+                <h3>Timestamps</h3>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <label>Created:</label>
+                        <span>${this.formatDateTime(milestone.created_at)}</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Updated:</label>
+                        <span>${this.formatDateTime(milestone.updated_at)}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    formatFeatureState(state) {
+        const stateMap = {
+            'NotImplemented': '❌ Not Implemented',
+            'InProgress': '🟠 In Progress', 
+            'Implemented': '🟢 Implemented',
+            'Tested': '🟢 Tested',
+            'Failed': '🔴 Failed',
+            'Warning': '⚠️ Warning'
+        };
+        
+        return stateMap[state] || state;
+    }
+    
+    formatDateTime(timestamp) {
+        if (!timestamp) return 'Unknown';
+        
+        const date = new Date(timestamp);
+        return date.toLocaleString();
+    }
+
+    // Git Integration Methods
+    
+    async initializeGitIntegration() {
+        try {
+            // Initialize Monaco Editor
+            await this.initializeMonaco();
+            
+            // Load git data
+            await Promise.all([
+                this.loadTimeline(),
+                this.loadCommits()
+            ]);
+            
+            // Setup git-related event listeners
+            this.setupGitEventListeners();
+            
+        } catch (error) {
+            console.error('Failed to initialize git integration:', error);
+        }
+    }
+    
+    async initializeMonaco() {
+        return new Promise((resolve, reject) => {
+            require.config({ 
+                paths: { 
+                    'vs': 'https://unpkg.com/monaco-editor@0.44.0/min/vs' 
+                } 
+            });
+            
+            require(['vs/editor/editor.main'], () => {
+                try {
+                    // Initialize main file editor
+                    this.monacoEditor = monaco.editor.create(
+                        document.getElementById('monaco-container'), 
+                        {
+                            value: '// Select a file to view its contents',
+                            language: 'plaintext',
+                            theme: 'vs',
+                            readOnly: true,
+                            minimap: { enabled: false },
+                            scrollBeyondLastLine: false,
+                            automaticLayout: true
+                        }
+                    );
+                    
+                    resolve();
+                } catch (error) {
+                    reject(error);
+                }
+            });
+        });
+    }
+    
+    setupGitEventListeners() {
+        // Tab switching
+        document.getElementById('timeline-btn').addEventListener('click', () => {
+            this.switchView('timeline');
+        });
+        
+        document.getElementById('files-btn').addEventListener('click', () => {
+            this.switchView('files');
+        });
+        
+        document.getElementById('commits-btn').addEventListener('click', () => {
+            this.switchView('commits');
+        });
+        
+        // Commit selector
+        document.getElementById('commit-select').addEventListener('change', (e) => {
+            this.selectedCommit = e.target.value;
+            this.loadFilesForCommit(this.selectedCommit);
+        });
+        
+        // Show diff button
+        document.getElementById('show-diff-btn').addEventListener('click', () => {
+            if (this.selectedFile) {
+                this.showFileDiff(this.selectedFile);
+            }
+        });
+        
+        // Modal close
+        const modal = document.getElementById('diff-modal');
+        const closeBtn = modal.querySelector('.modal-close');
+        
+        closeBtn.addEventListener('click', () => {
+            modal.style.display = 'none';
+            if (this.diffEditor) {
+                this.diffEditor.dispose();
+                this.diffEditor = null;
+            }
+        });
+        
+        // Close modal on background click
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.style.display = 'none';
+                if (this.diffEditor) {
+                    this.diffEditor.dispose();
+                    this.diffEditor = null;
+                }
+            }
+        });
+    }
+    
+    switchView(view) {
+        // Update active tab
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.getElementById(`${view}-btn`).classList.add('active');
+        
+        // Show/hide content
+        document.querySelectorAll('.timeline-content, .files-content, .commits-content').forEach(content => {
+            content.style.display = 'none';
+        });
+        document.getElementById(`${view}-view`).style.display = 'block';
+        
+        this.currentView = view;
+        
+        // Load data for current view if needed
+        if (view === 'files' && this.files.length === 0) {
+            this.loadFilesForCommit(this.selectedCommit);
+        }
+    }
+    
+    async loadTimeline() {
+        try {
+            const response = await fetch(`${this.apiBase}/git/timeline`);
+            if (!response.ok) throw new Error('Failed to fetch timeline');
+            
+            const data = await response.json();
+            this.renderTimeline(data.items);
+        } catch (error) {
+            console.error('Error loading timeline:', error);
+            document.getElementById('timeline-list').innerHTML = 
+                '<div class="error">Failed to load timeline</div>';
+        }
+    }
+    
+    async loadCommits() {
+        try {
+            const response = await fetch(`${this.apiBase}/git/commits?limit=50`);
+            if (!response.ok) throw new Error('Failed to fetch commits');
+            
+            this.commits = await response.json();
+            this.renderCommits(this.commits);
+            this.populateCommitSelector(this.commits);
+        } catch (error) {
+            console.error('Error loading commits:', error);
+            document.getElementById('commits-list').innerHTML = 
+                '<div class="error">Failed to load commits</div>';
+        }
+    }
+    
+    async loadFilesForCommit(commitHash) {
+        try {
+            // Get list of files at this commit
+            const response = await fetch(`${this.apiBase}/git/commits/${commitHash}`);
+            if (!response.ok) throw new Error('Failed to fetch commit details');
+            
+            const commit = await response.json();
+            this.files = commit.files_changed || [];
+            this.renderFileTree(this.files);
+        } catch (error) {
+            console.error('Error loading files:', error);
+            document.getElementById('file-tree').innerHTML = 
+                '<div class="error">Failed to load files</div>';
+        }
+    }
+    
+    renderTimeline(items) {
+        const container = document.getElementById('timeline-list');
+        
+        if (!items || items.length === 0) {
+            container.innerHTML = '<div class="no-data">No timeline items found</div>';
+            return;
+        }
+        
+        container.innerHTML = items.map(item => `
+            <div class="timeline-item">
+                <div class="timeline-icon ${item.item_type}">
+                    ${item.item_type === 'session' ? '⚡' : '📝'}
+                </div>
+                <div class="timeline-content-item">
+                    <div class="timeline-title">${item.title}</div>
+                    ${item.description ? `<div class="timeline-description">${item.description}</div>` : ''}
+                    <div class="timeline-meta">
+                        <span class="timeline-time">${this.formatDateTime(item.timestamp)}</span>
+                        ${item.commit_hash ? `<span class="commit-hash">${item.commit_hash.substring(0, 8)}</span>` : ''}
+                        ${item.session_id ? `<span>Session: ${item.session_id}</span>` : ''}
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    renderCommits(commits) {
+        const container = document.getElementById('commits-list');
+        
+        if (!commits || commits.length === 0) {
+            container.innerHTML = '<div class="no-data">No commits found</div>';
+            return;
+        }
+        
+        container.innerHTML = commits.map(commit => `
+            <div class="commit-item" data-hash="${commit.hash}">
+                <div class="commit-header">
+                    <div>
+                        <div class="commit-message">${commit.message}</div>
+                        <div class="commit-author">by ${commit.author}</div>
+                    </div>
+                    <div class="commit-hash-display">${commit.hash.substring(0, 8)}</div>
+                </div>
+                <div class="commit-stats">
+                    <span>📅 ${this.formatDateTime(commit.date)}</span>
+                    <span>➕ ${commit.insertions} insertions</span>
+                    <span>➖ ${commit.deletions} deletions</span>
+                    <span>📄 ${commit.files_changed.length} files</span>
+                </div>
+                ${commit.files_changed.length > 0 ? `
+                <div class="commit-files">
+                    <div class="commit-files-title">Files changed:</div>
+                    <div class="commit-files-list">
+                        ${commit.files_changed.slice(0, 5).map(file => 
+                            `<span class="commit-file">${file}</span>`
+                        ).join('')}
+                        ${commit.files_changed.length > 5 ? 
+                            `<span class="commit-file">+${commit.files_changed.length - 5} more</span>` : ''
+                        }
+                    </div>
+                </div>
+                ` : ''}
+            </div>
+        `).join('');
+    }
+    
+    renderFileTree(files) {
+        const container = document.getElementById('file-tree');
+        
+        if (!files || files.length === 0) {
+            container.innerHTML = '<div class="no-data">No files found</div>';
+            return;
+        }
+        
+        container.innerHTML = files.map(file => `
+            <div class="file-item" data-path="${file}" ${file === this.selectedFile ? 'class="active"' : ''}>
+                <span class="file-icon">📄</span>
+                <span class="file-name">${file}</span>
+            </div>
+        `).join('');
+        
+        // Add click handlers for file items
+        container.querySelectorAll('.file-item').forEach(item => {
+            item.addEventListener('click', () => {
+                this.selectFile(item.dataset.path);
+            });
+        });
+    }
+    
+    populateCommitSelector(commits) {
+        const selector = document.getElementById('commit-select');
+        const currentOptions = Array.from(selector.options).map(opt => opt.value);
+        
+        // Add new commits to selector
+        commits.forEach(commit => {
+            if (!currentOptions.includes(commit.hash)) {
+                const option = document.createElement('option');
+                option.value = commit.hash;
+                option.textContent = `${commit.hash.substring(0, 8)} - ${commit.message.substring(0, 50)}${commit.message.length > 50 ? '...' : ''}`;
+                selector.appendChild(option);
+            }
+        });
+    }
+    
+    async selectFile(filePath) {
+        this.selectedFile = filePath;
+        
+        // Update file tree selection
+        document.querySelectorAll('.file-item').forEach(item => {
+            item.classList.toggle('active', item.dataset.path === filePath);
+        });
+        
+        // Update file header
+        document.getElementById('current-file-path').textContent = filePath;
+        document.getElementById('show-diff-btn').disabled = false;
+        
+        // Load file content
+        try {
+            const response = await fetch(`${this.apiBase}/git/files/${this.selectedCommit}/${encodeURIComponent(filePath)}`);
+            if (!response.ok) throw new Error('Failed to fetch file content');
+            
+            const data = await response.json();
+            const language = this.detectLanguage(filePath);
+            
+            if (this.monacoEditor) {
+                monaco.editor.setModelLanguage(this.monacoEditor.getModel(), language);
+                this.monacoEditor.setValue(data.content);
+            }
+        } catch (error) {
+            console.error('Error loading file content:', error);
+            if (this.monacoEditor) {
+                this.monacoEditor.setValue(`// Error loading file: ${error.message}`);
+            }
+        }
+    }
+    
+    async showFileDiff(filePath) {
+        const modal = document.getElementById('diff-modal');
+        const container = document.getElementById('diff-container');
+        
+        try {
+            // Get current and previous version of the file
+            const currentCommit = this.selectedCommit;
+            const previousCommit = `${currentCommit}~1`;
+            
+            const [currentResponse, previousResponse] = await Promise.all([
+                fetch(`${this.apiBase}/git/files/${currentCommit}/${encodeURIComponent(filePath)}`),
+                fetch(`${this.apiBase}/git/files/${previousCommit}/${encodeURIComponent(filePath)}`)
+            ]);
+            
+            const currentData = currentResponse.ok ? await currentResponse.json() : { content: '' };
+            const previousData = previousResponse.ok ? await previousResponse.json() : { content: '' };
+            
+            // Create diff editor
+            this.diffEditor = monaco.editor.createDiffEditor(container, {
+                theme: 'vs',
+                readOnly: true,
+                minimap: { enabled: false },
+                automaticLayout: true
+            });
+            
+            const language = this.detectLanguage(filePath);
+            
+            const originalModel = monaco.editor.createModel(previousData.content || '', language);
+            const modifiedModel = monaco.editor.createModel(currentData.content || '', language);
+            
+            this.diffEditor.setModel({
+                original: originalModel,
+                modified: modifiedModel
+            });
+            
+            modal.style.display = 'flex';
+            
+        } catch (error) {
+            console.error('Error showing diff:', error);
+            container.innerHTML = `<div class="error">Failed to load diff: ${error.message}</div>`;
+            modal.style.display = 'flex';
+        }
+    }
+    
+    detectLanguage(filePath) {
+        const ext = filePath.split('.').pop().toLowerCase();
+        const langMap = {
+            'rs': 'rust',
+            'js': 'javascript',
+            'ts': 'typescript',
+            'html': 'html',
+            'css': 'css',
+            'json': 'json',
+            'md': 'markdown',
+            'py': 'python',
+            'java': 'java',
+            'cpp': 'cpp',
+            'c': 'c',
+            'sh': 'shell',
+            'yml': 'yaml',
+            'yaml': 'yaml',
+            'toml': 'toml',
+            'xml': 'xml',
+            'sql': 'sql'
+        };
+        
+        return langMap[ext] || 'plaintext';
     }
 }
 

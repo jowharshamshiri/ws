@@ -4,9 +4,8 @@
 use anyhow::Result;
 use serde_json::{self, Value};
 use std::process::Command;
-use workspace::entities::models::{Feature, Task, Project, SqliteUuid, FeatureState, TaskStatus, Priority, TestStatus};
+use workspace::entities::models::{Feature, Task, Project, FeatureState, TaskStatus, Priority};
 use chrono::{DateTime, Utc};
-use uuid::Uuid;
 
 #[tokio::test]
 async fn test_feature_model_serialization() -> Result<()> {
@@ -30,7 +29,7 @@ async fn test_feature_model_serialization() -> Result<()> {
     
     // Verify enum values match expected format
     assert_eq!(json_value["state"], "NotImplemented");
-    assert_eq!(json_value["test_status"], "NotTested");
+    assert_eq!(json_value["test_status"], "not_tested");
     assert_eq!(json_value["priority"], "Medium");
     
     println!("✅ Feature serialization test passed");
@@ -47,7 +46,7 @@ async fn test_feature_model_deserialization() -> Result<()> {
         "description": "Test feature description",
         "category": "Test",
         "state": "NotImplemented",
-        "test_status": "NotTested",
+        "test_status": "not_tested",
         "priority": "Medium",
         "implementation_notes": null,
         "test_evidence": null,
@@ -67,7 +66,7 @@ async fn test_feature_model_deserialization() -> Result<()> {
     assert_eq!(feature.name, "Test Feature");
     assert_eq!(feature.description, "Test feature description");
     assert_eq!(feature.state, FeatureState::NotImplemented);
-    assert_eq!(feature.test_status, TestStatus::NotTested);
+    assert_eq!(feature.test_status, "not_tested");
     assert_eq!(feature.priority, Priority::Medium);
     
     println!("✅ Feature deserialization test passed");
@@ -266,7 +265,7 @@ async fn test_api_response_format_consistency() -> Result<()> {
     assert!(matches!(state_str, "NotImplemented" | "Planned" | "InProgress" | "Implemented" | "Tested" | "Deprecated"));
     
     let test_status_str = json_value["test_status"].as_str().unwrap();
-    assert!(matches!(test_status_str, "NotTested" | "InProgress" | "Passed" | "Failed" | "Skipped"));
+    assert!(matches!(test_status_str, "not_tested" | "in_progress" | "passed" | "failed" | "skipped"));
     
     let priority_str = json_value["priority"].as_str().unwrap();
     assert!(matches!(priority_str, "Low" | "Medium" | "High" | "Critical"));
@@ -301,14 +300,14 @@ async fn test_round_trip_serialization() -> Result<()> {
 // Helper functions to create sample models
 fn create_sample_feature() -> Feature {
     Feature {
-        id: SqliteUuid::from(Uuid::parse_str("123e4567-e89b-12d3-a456-426614174000").unwrap()),
-        project_id: SqliteUuid::from(Uuid::parse_str("223e4567-e89b-12d3-a456-426614174000").unwrap()),
+        id: "123e4567-e89b-12d3-a456-426614174000".to_string(),
+        project_id: "223e4567-e89b-12d3-a456-426614174000".to_string(),
         code: "F0001".to_string(),
         name: "Test Feature".to_string(),
         description: "Test feature description".to_string(),
         category: Some("Test".to_string()),
         state: FeatureState::NotImplemented,
-        test_status: TestStatus::NotTested,
+        test_status: "not_tested".to_string(),
         priority: Priority::Medium,
         implementation_notes: None,
         test_evidence: None,
@@ -318,13 +317,14 @@ fn create_sample_feature() -> Feature {
         completed_at: None,
         estimated_effort: None,
         actual_effort: None,
+        metadata: None,
     }
 }
 
 fn create_sample_task() -> Task {
     Task {
-        id: SqliteUuid::from(Uuid::parse_str("123e4567-e89b-12d3-a456-426614174001").unwrap()),
-        project_id: SqliteUuid::from(Uuid::parse_str("223e4567-e89b-12d3-a456-426614174000").unwrap()),
+        id: "123e4567-e89b-12d3-a456-426614174001".to_string(),
+        project_id: "223e4567-e89b-12d3-a456-426614174000".to_string(),
         code: "TASK-001".to_string(),
         title: "Test Task".to_string(),
         description: "Test task description".to_string(),
@@ -345,12 +345,13 @@ fn create_sample_task() -> Task {
         estimated_effort: None,
         actual_effort: None,
         tags: None,
+        metadata: None,
     }
 }
 
 fn create_sample_project() -> Project {
     Project {
-        id: SqliteUuid::from(Uuid::parse_str("223e4567-e89b-12d3-a456-426614174000").unwrap()),
+        id: "223e4567-e89b-12d3-a456-426614174000".to_string(),
         name: "Test Project".to_string(),
         description: Some("Test project description".to_string()),
         repository_url: Some("https://github.com/test/test".to_string()),

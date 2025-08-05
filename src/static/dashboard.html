@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Workspace Project Dashboard</title>
     <link rel="stylesheet" href="/dashboard/style.css">
+    <!-- Monaco Editor CDN -->
+    <script src="https://unpkg.com/monaco-editor@0.44.0/min/vs/loader.js"></script>
 </head>
 <body>
     <div class="container">
@@ -121,6 +123,49 @@
                     </div>
                 </section>
 
+                <!-- Directive List -->
+                <section class="card directive-list">
+                    <h2>Project Directives</h2>
+                    <div class="directive-controls">
+                        <button class="filter-btn active" data-filter="all">All</button>
+                        <button class="filter-btn" data-filter="development">Development</button>
+                        <button class="filter-btn" data-filter="security">Security</button>
+                        <button class="filter-btn" data-filter="testing">Testing</button>
+                    </div>
+                    <div class="directive-items" id="directive-list">
+                        <div class="loading">Loading directives...</div>
+                    </div>
+                </section>
+
+                <!-- Entity Relationships -->
+                <section class="card relationship-list">
+                    <h2>Entity Relationships</h2>
+                    <div class="relationship-controls">
+                        <button class="filter-btn active" data-filter="all">All</button>
+                        <button class="filter-btn" data-filter="implements">Implements</button>
+                        <button class="filter-btn" data-filter="depends_on">Depends On</button>
+                        <button class="filter-btn" data-filter="blocks">Blocks</button>
+                        <button class="filter-btn" data-filter="worked_in">Worked In</button>
+                    </div>
+                    <div class="relationship-items" id="relationship-list">
+                        <div class="loading">Loading relationships...</div>
+                    </div>
+                </section>
+
+                <!-- Milestones -->
+                <section class="card milestones">
+                    <h2>Project Milestones</h2>
+                    <div class="milestone-filters">
+                        <button class="filter-btn active" data-filter="all">All Milestones</button>
+                        <button class="filter-btn" data-filter="planned">Planned</button>
+                        <button class="filter-btn" data-filter="in_progress">In Progress</button>
+                        <button class="filter-btn" data-filter="achieved">Achieved</button>
+                    </div>
+                    <div class="milestone-items" id="milestone-list">
+                        <div class="loading">Loading milestones...</div>
+                    </div>
+                </section>
+
                 <!-- Recent Activity -->
                 <section class="card activity">
                     <h2>Recent Activity</h2>
@@ -128,8 +173,68 @@
                         <div class="loading">Loading activity...</div>
                     </div>
                 </section>
+
+                <!-- Git Timeline and File Browser -->
+                <section class="card timeline full-width" style="grid-column: 1 / -1;">
+                    <h2>Project Timeline & File Browser</h2>
+                    <div class="timeline-controls">
+                        <button id="timeline-btn" class="tab-btn active">Timeline</button>
+                        <button id="files-btn" class="tab-btn">Files</button>
+                        <button id="commits-btn" class="tab-btn">Commits</button>
+                    </div>
+                    
+                    <div id="timeline-view" class="timeline-content">
+                        <div class="timeline-list" id="timeline-list">
+                            <div class="loading">Loading timeline...</div>
+                        </div>
+                    </div>
+                    
+                    <div id="files-view" class="files-content" style="display: none;">
+                        <div class="files-browser">
+                            <div class="files-sidebar">
+                                <div class="commit-selector">
+                                    <label for="commit-select">Browse at commit:</label>
+                                    <select id="commit-select">
+                                        <option value="HEAD">Latest (HEAD)</option>
+                                    </select>
+                                </div>
+                                <div class="file-tree" id="file-tree">
+                                    <div class="loading">Loading files...</div>
+                                </div>
+                            </div>
+                            <div class="file-viewer">
+                                <div class="file-header">
+                                    <span id="current-file-path">Select a file to view</span>
+                                    <div class="file-actions">
+                                        <button id="show-diff-btn" disabled>Show Diff</button>
+                                    </div>
+                                </div>
+                                <div id="monaco-container" style="height: 600px; border: 1px solid #ccc;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="commits-view" class="commits-content" style="display: none;">
+                        <div class="commits-list" id="commits-list">
+                            <div class="loading">Loading commits...</div>
+                        </div>
+                    </div>
+                </section>
             </div>
         </main>
+    </div>
+
+    <!-- Diff Modal -->
+    <div id="diff-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>File Diff</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="diff-container" style="height: 500px;"></div>
+            </div>
+        </div>
     </div>
 
     <script src="/dashboard/app.js"></script>

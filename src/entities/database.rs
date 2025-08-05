@@ -66,6 +66,7 @@ pub async fn initialize_tables(pool: &SqlitePool) -> Result<()> {
             completed_at TEXT,
             estimated_effort INTEGER,
             actual_effort INTEGER,
+            metadata TEXT,
             FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE,
             UNIQUE (project_id, code)
         )
@@ -98,6 +99,7 @@ pub async fn initialize_tables(pool: &SqlitePool) -> Result<()> {
             estimated_effort INTEGER,
             actual_effort INTEGER,
             tags TEXT,
+            metadata TEXT,
             FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE,
             FOREIGN KEY (session_id) REFERENCES sessions (id) ON DELETE SET NULL,
             UNIQUE (project_id, code)
@@ -125,8 +127,10 @@ pub async fn initialize_tables(pool: &SqlitePool) -> Result<()> {
             reminder TEXT,
             validation_evidence TEXT,
             context_remaining REAL,
+            commit_id TEXT,
             created_at TEXT NOT NULL DEFAULT (datetime('now')),
             updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+            metadata TEXT,
             FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE
         )
     "#)
@@ -153,6 +157,7 @@ pub async fn initialize_tables(pool: &SqlitePool) -> Result<()> {
             created_at TEXT NOT NULL DEFAULT (datetime('now')),
             updated_at TEXT NOT NULL DEFAULT (datetime('now')),
             archived_at TEXT,
+            metadata TEXT,
             FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE,
             UNIQUE (project_id, code)
         )
@@ -175,6 +180,7 @@ pub async fn initialize_tables(pool: &SqlitePool) -> Result<()> {
             render_count INTEGER NOT NULL DEFAULT 0,
             created_at TEXT NOT NULL DEFAULT (datetime('now')),
             updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+            metadata TEXT,
             FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE,
             UNIQUE (project_id, name)
         )
@@ -202,6 +208,7 @@ pub async fn initialize_tables(pool: &SqlitePool) -> Result<()> {
             run_at TEXT NOT NULL DEFAULT (datetime('now')),
             created_at TEXT NOT NULL DEFAULT (datetime('now')),
             updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+            metadata TEXT,
             FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE,
             FOREIGN KEY (feature_id) REFERENCES features (id) ON DELETE SET NULL
         )
@@ -222,6 +229,7 @@ pub async fn initialize_tables(pool: &SqlitePool) -> Result<()> {
             description TEXT,
             created_at TEXT NOT NULL DEFAULT (datetime('now')),
             resolved_at TEXT,
+            metadata TEXT,
             FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE
         )
     "#)
@@ -244,6 +252,29 @@ pub async fn initialize_tables(pool: &SqlitePool) -> Result<()> {
             is_pinned BOOLEAN NOT NULL DEFAULT FALSE,
             created_at TEXT NOT NULL DEFAULT (datetime('now')),
             updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+            metadata TEXT,
+            FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE
+        )
+    "#)
+    .execute(pool)
+    .await?;
+
+    // Milestones table - project milestones with feature linkage
+    sqlx::query(r#"
+        CREATE TABLE IF NOT EXISTS milestones (
+            id TEXT PRIMARY KEY,
+            project_id TEXT NOT NULL,
+            title TEXT NOT NULL,
+            description TEXT NOT NULL,
+            target_date TEXT,
+            achieved_date TEXT,
+            status TEXT NOT NULL DEFAULT 'planned',
+            feature_ids TEXT,
+            success_criteria TEXT,
+            completion_percentage REAL NOT NULL DEFAULT 0.0,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+            metadata TEXT,
             FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE
         )
     "#)
@@ -262,6 +293,59 @@ pub async fn initialize_tables(pool: &SqlitePool) -> Result<()> {
             triggered_by TEXT NOT NULL,
             timestamp TEXT NOT NULL DEFAULT (datetime('now')),
             FOREIGN KEY (feature_id) REFERENCES features (id) ON DELETE CASCADE
+        )
+    "#)
+    .execute(pool)
+    .await?;
+
+    // Session metrics table - comprehensive timeseries tracking
+    sqlx::query(r#"
+        CREATE TABLE IF NOT EXISTS session_metrics (
+            id TEXT PRIMARY KEY,
+            session_id TEXT NOT NULL,
+            session_duration_seconds INTEGER NOT NULL DEFAULT 0,
+            total_messages INTEGER NOT NULL DEFAULT 0,
+            tool_calls INTEGER NOT NULL DEFAULT 0,
+            context_usage_tokens INTEGER NOT NULL DEFAULT 0,
+            average_response_time_ms INTEGER NOT NULL DEFAULT 0,
+            peak_response_time_ms INTEGER NOT NULL DEFAULT 0,
+            total_tool_calls INTEGER NOT NULL DEFAULT 0,
+            total_response_time_ms INTEGER NOT NULL DEFAULT 0,
+            context_used INTEGER NOT NULL DEFAULT 0,
+            session_duration_ms INTEGER NOT NULL DEFAULT 0,
+            features_created INTEGER NOT NULL DEFAULT 0,
+            features_updated INTEGER NOT NULL DEFAULT 0,
+            tasks_created INTEGER NOT NULL DEFAULT 0,
+            tasks_completed INTEGER NOT NULL DEFAULT 0,
+            files_modified INTEGER NOT NULL DEFAULT 0,
+            issues_resolved INTEGER NOT NULL DEFAULT 0,
+            timestamp TEXT NOT NULL DEFAULT (datetime('now')),
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY (session_id) REFERENCES sessions (id) ON DELETE CASCADE
+        )
+    "#)
+    .execute(pool)
+    .await?;
+
+    // Entity audit trails table for F0131 Entity State Tracking
+    sqlx::query(r#"
+        CREATE TABLE IF NOT EXISTS entity_audit_trails (
+            id TEXT PRIMARY KEY,
+            entity_id TEXT NOT NULL,
+            entity_type TEXT NOT NULL,
+            project_id TEXT NOT NULL,
+            operation_type TEXT NOT NULL,
+            field_changed TEXT,
+            old_value TEXT,
+            new_value TEXT,
+            change_reason TEXT,
+            triggered_by TEXT NOT NULL,
+            session_id TEXT,
+            timestamp TEXT NOT NULL DEFAULT (datetime('now')),
+            metadata TEXT,
+            FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE,
+            FOREIGN KEY (session_id) REFERENCES sessions (id) ON DELETE SET NULL
         )
     "#)
     .execute(pool)
@@ -326,9 +410,19 @@ async fn create_indexes(pool: &SqlitePool) -> Result<()> {
         // Note indexes
         "CREATE INDEX IF NOT EXISTS idx_notes_project_id ON notes (project_id)",
         "CREATE INDEX IF NOT EXISTS idx_notes_entity ON notes (entity_id, entity_type)",
+        
+        // Milestone indexes
+        "CREATE INDEX IF NOT EXISTS idx_milestones_project_id ON milestones (project_id)",
+        "CREATE INDEX IF NOT EXISTS idx_milestones_status ON milestones (status)",
+        "CREATE INDEX IF NOT EXISTS idx_milestones_target_date ON milestones (target_date)",
+        "CREATE INDEX IF NOT EXISTS idx_milestones_completion ON milestones (completion_percentage)",
         "CREATE INDEX IF NOT EXISTS idx_notes_note_type ON notes (note_type)",
         "CREATE INDEX IF NOT EXISTS idx_notes_is_project_wide ON notes (is_project_wide)",
         "CREATE INDEX IF NOT EXISTS idx_notes_is_pinned ON notes (is_pinned)",
+        
+        // Session metrics indexes
+        "CREATE INDEX IF NOT EXISTS idx_session_metrics_session_id ON session_metrics (session_id)",
+        "CREATE INDEX IF NOT EXISTS idx_session_metrics_timestamp ON session_metrics (timestamp)",
         
         // State transition indexes
         "CREATE INDEX IF NOT EXISTS idx_state_transitions_feature_id ON feature_state_transitions (feature_id)",
@@ -338,6 +432,14 @@ async fn create_indexes(pool: &SqlitePool) -> Result<()> {
         "CREATE INDEX IF NOT EXISTS idx_features_search ON features (name, description)",
         "CREATE INDEX IF NOT EXISTS idx_tasks_search ON tasks (title, description)",
         "CREATE INDEX IF NOT EXISTS idx_notes_search ON notes (title, content)",
+        
+        // Audit trail indexes for F0131
+        "CREATE INDEX IF NOT EXISTS idx_audit_entity ON entity_audit_trails (entity_id, entity_type)",
+        "CREATE INDEX IF NOT EXISTS idx_audit_project ON entity_audit_trails (project_id)",
+        "CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON entity_audit_trails (timestamp)",
+        "CREATE INDEX IF NOT EXISTS idx_audit_operation ON entity_audit_trails (operation_type)",
+        "CREATE INDEX IF NOT EXISTS idx_audit_triggered_by ON entity_audit_trails (triggered_by)",
+        "CREATE INDEX IF NOT EXISTS idx_audit_session ON entity_audit_trails (session_id)",
     ];
 
     for index_sql in indexes {

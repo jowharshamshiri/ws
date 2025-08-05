@@ -3,7 +3,6 @@
 use anyhow::Result;
 use chrono::Utc;
 use sqlx::SqlitePool;
-use uuid::Uuid;
 
 use super::models::Note;
 use super::{EntityType, NoteType};
@@ -11,7 +10,9 @@ use super::{EntityType, NoteType};
 /// List all notes in the database  
 pub async fn list_all(pool: &SqlitePool) -> Result<Vec<Note>> {
     let notes = sqlx::query_as::<_, Note>(r#"
-        SELECT * FROM notes ORDER BY created_at DESC
+        SELECT id, project_id, entity_id, entity_type, note_type, title, content, tags,
+               author, is_project_wide, is_pinned, created_at, updated_at, metadata
+        FROM notes ORDER BY created_at DESC
     "#)
     .fetch_all(pool)
     .await?;
@@ -27,7 +28,7 @@ pub async fn create_project_note(
     title: String,
     content: String,
 ) -> Result<Note> {
-    let id = format!("note-{}", uuid::Uuid::new_v4().to_string()[..8].to_lowercase());
+    let id = format!("note-{}", chrono::Utc::now().timestamp_millis());
     let now = Utc::now();
     
     let note = Note {
@@ -44,6 +45,7 @@ pub async fn create_project_note(
         is_pinned: false,
         created_at: now,
         updated_at: now,
+        metadata: None,
     };
 
     sqlx::query(r#"
@@ -52,8 +54,8 @@ pub async fn create_project_note(
             created_at, updated_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     "#)
-    .bind(id.to_string())
-    .bind(project_id.to_string())
+    .bind(&id)
+    .bind(project_id)
     .bind(format!("{:?}", note_type).to_lowercase())
     .bind(&title)
     .bind(&content)
@@ -70,7 +72,7 @@ pub async fn create_project_note(
 /// Create a note attached to a specific entity
 pub async fn create_entity_note(
     pool: &SqlitePool,
-    entity_id: Uuid,
+    entity_id: &str,
     entity_type: EntityType,
     note_type: NoteType,
     title: String,
@@ -79,13 +81,13 @@ pub async fn create_entity_note(
     // Get project_id from the entity
     let project_id = get_project_id_for_entity(pool, entity_id, &entity_type).await?;
     
-    let id = Uuid::new_v4();
+    let id = format!("note-{}", chrono::Utc::now().timestamp_millis());
     let now = Utc::now();
     
     let note = Note {
-        id: id.into(),
-        project_id: project_id.into(),
-        entity_id: Some(entity_id),
+        id: id.clone(),
+        project_id: project_id.to_string(),
+        entity_id: Some(entity_id.to_string()),
         entity_type: Some(entity_type.clone()),
         note_type: note_type.clone(),
         title: title.clone(),
@@ -96,6 +98,7 @@ pub async fn create_entity_note(
         is_pinned: false,
         created_at: now,
         updated_at: now,
+        metadata: None,
     };
 
     sqlx::query(r#"
@@ -104,8 +107,8 @@ pub async fn create_entity_note(
             is_project_wide, created_at, updated_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     "#)
-    .bind(id.to_string())
-    .bind(project_id.to_string())
+    .bind(&id)
+    .bind(project_id)
     .bind(entity_id.to_string())
     .bind(format!("{:?}", entity_type).to_lowercase())
     .bind(format!("{:?}", note_type).to_lowercase())
@@ -122,10 +125,10 @@ pub async fn create_entity_note(
 }
 
 /// Get all notes for a specific entity
-pub async fn get_notes_for_entity(pool: &SqlitePool, entity_id: Uuid) -> Result<Vec<Note>> {
+pub async fn get_notes_for_entity(pool: &SqlitePool, entity_id: &str) -> Result<Vec<Note>> {
     let notes = sqlx::query_as::<_, Note>(r#"
         SELECT id, project_id, entity_id, entity_type, note_type, title, content, tags,
-               author, is_project_wide, is_pinned, created_at, updated_at
+               author, is_project_wide, is_pinned, created_at, updated_at, metadata
         FROM notes
         WHERE entity_id = ?
         ORDER BY is_pinned DESC, created_at DESC
@@ -138,15 +141,15 @@ pub async fn get_notes_for_entity(pool: &SqlitePool, entity_id: Uuid) -> Result<
 }
 
 /// Get all project-wide notes
-pub async fn get_project_notes(pool: &SqlitePool, project_id: Uuid) -> Result<Vec<Note>> {
+pub async fn get_project_notes(pool: &SqlitePool, project_id: &str) -> Result<Vec<Note>> {
     let notes = sqlx::query_as::<_, Note>(r#"
         SELECT id, project_id, entity_id, entity_type, note_type, title, content, tags,
-               author, is_project_wide, is_pinned, created_at, updated_at
+               author, is_project_wide, is_pinned, created_at, updated_at, metadata
         FROM notes
         WHERE project_id = ? AND is_project_wide = TRUE
         ORDER BY is_pinned DESC, note_type, created_at DESC
     "#)
-    .bind(project_id.to_string())
+    .bind(project_id)
     .fetch_all(pool)
     .await?;
 
@@ -156,17 +159,17 @@ pub async fn get_project_notes(pool: &SqlitePool, project_id: Uuid) -> Result<Ve
 /// Get all notes by type across project
 pub async fn get_notes_by_type(
     pool: &SqlitePool,
-    project_id: Uuid,
+    project_id: &str,
     note_type: NoteType,
 ) -> Result<Vec<Note>> {
     let notes = sqlx::query_as::<_, Note>(r#"
         SELECT id, project_id, entity_id, entity_type, note_type, title, content, tags,
-               author, is_project_wide, is_pinned, created_at, updated_at
+               author, is_project_wide, is_pinned, created_at, updated_at, metadata
         FROM notes
         WHERE project_id = ? AND note_type = ?
         ORDER BY is_pinned DESC, is_project_wide DESC, created_at DESC
     "#)
-    .bind(project_id.to_string())
+    .bind(project_id)
     .bind(format!("{:?}", note_type).to_lowercase())
     .fetch_all(pool)
     .await?;
@@ -177,19 +180,19 @@ pub async fn get_notes_by_type(
 /// Search notes by content
 pub async fn search_notes(
     pool: &SqlitePool,
-    project_id: Uuid,
+    project_id: &str,
     query: &str,
 ) -> Result<Vec<Note>> {
     let search_pattern = format!("%{}%", query);
     
     let notes = sqlx::query_as::<_, Note>(r#"
         SELECT id, project_id, entity_id, entity_type, note_type, title, content, tags,
-               author, is_project_wide, is_pinned, created_at, updated_at
+               author, is_project_wide, is_pinned, created_at, updated_at, metadata
         FROM notes
         WHERE project_id = ? AND (title LIKE ? OR content LIKE ?)
         ORDER BY is_pinned DESC, is_project_wide DESC, created_at DESC
     "#)
-    .bind(project_id.to_string())
+    .bind(project_id)
     .bind(&search_pattern)
     .bind(&search_pattern)
     .fetch_all(pool)
@@ -201,7 +204,7 @@ pub async fn search_notes(
 /// Update note content
 pub async fn update_note(
     pool: &SqlitePool,
-    note_id: Uuid,
+    note_id: &str,
     title: Option<String>,
     content: Option<String>,
     tags: Option<Vec<String>>,
@@ -236,7 +239,7 @@ pub async fn update_note(
     for value in values {
         query_builder = query_builder.bind(value);
     }
-    query_builder = query_builder.bind(note_id.to_string());
+    query_builder = query_builder.bind(note_id);
     
     query_builder.execute(pool).await?;
     
@@ -244,12 +247,12 @@ pub async fn update_note(
 }
 
 /// Pin/unpin a note for importance
-pub async fn toggle_pin(pool: &SqlitePool, note_id: Uuid) -> Result<bool> {
+pub async fn toggle_pin(pool: &SqlitePool, note_id: &str) -> Result<bool> {
     let now = Utc::now();
     
     // Get current pin status
     let is_pinned: bool = sqlx::query_scalar("SELECT is_pinned FROM notes WHERE id = ?")
-        .bind(note_id.to_string())
+        .bind(note_id)
         .fetch_one(pool)
         .await?;
     
@@ -258,7 +261,7 @@ pub async fn toggle_pin(pool: &SqlitePool, note_id: Uuid) -> Result<bool> {
     sqlx::query("UPDATE notes SET is_pinned = ?, updated_at = ? WHERE id = ?")
         .bind(new_pin_status)
         .bind(now.to_rfc3339())
-        .bind(note_id.to_string())
+        .bind(note_id)
         .execute(pool)
         .await?;
     
@@ -266,9 +269,9 @@ pub async fn toggle_pin(pool: &SqlitePool, note_id: Uuid) -> Result<bool> {
 }
 
 /// Delete a note
-pub async fn delete_note(pool: &SqlitePool, note_id: Uuid) -> Result<()> {
+pub async fn delete_note(pool: &SqlitePool, note_id: &str) -> Result<()> {
     sqlx::query("DELETE FROM notes WHERE id = ?")
-        .bind(note_id.to_string())
+        .bind(note_id)
         .execute(pool)
         .await?;
     
@@ -276,13 +279,13 @@ pub async fn delete_note(pool: &SqlitePool, note_id: Uuid) -> Result<()> {
 }
 
 /// Get comprehensive note summary for dashboard
-pub async fn get_note_summary(pool: &SqlitePool, project_id: Uuid) -> Result<NoteSummary> {
+pub async fn get_note_summary(pool: &SqlitePool, project_id: &str) -> Result<NoteSummary> {
     // Count notes by type
     let architecture_count: i64 = sqlx::query_scalar(r#"
         SELECT COUNT(*) FROM notes 
         WHERE project_id = ? AND note_type = 'architecture'
     "#)
-    .bind(project_id.to_string())
+    .bind(project_id)
     .fetch_one(pool)
     .await?;
     
@@ -290,7 +293,7 @@ pub async fn get_note_summary(pool: &SqlitePool, project_id: Uuid) -> Result<Not
         SELECT COUNT(*) FROM notes 
         WHERE project_id = ? AND note_type = 'decision'
     "#)
-    .bind(project_id.to_string())
+    .bind(project_id)
     .fetch_one(pool)
     .await?;
     
@@ -298,14 +301,14 @@ pub async fn get_note_summary(pool: &SqlitePool, project_id: Uuid) -> Result<Not
         SELECT COUNT(*) FROM notes 
         WHERE project_id = ? AND note_type = 'observation'
     "#)
-    .bind(project_id.to_string())
+    .bind(project_id)
     .fetch_one(pool)
     .await?;
     
     let total_count: i64 = sqlx::query_scalar(r#"
         SELECT COUNT(*) FROM notes WHERE project_id = ?
     "#)
-    .bind(project_id.to_string())
+    .bind(project_id)
     .fetch_one(pool)
     .await?;
     
@@ -313,7 +316,7 @@ pub async fn get_note_summary(pool: &SqlitePool, project_id: Uuid) -> Result<Not
         SELECT COUNT(*) FROM notes 
         WHERE project_id = ? AND is_pinned = TRUE
     "#)
-    .bind(project_id.to_string())
+    .bind(project_id)
     .fetch_one(pool)
     .await?;
     
@@ -321,20 +324,20 @@ pub async fn get_note_summary(pool: &SqlitePool, project_id: Uuid) -> Result<Not
         SELECT COUNT(*) FROM notes 
         WHERE project_id = ? AND is_project_wide = TRUE
     "#)
-    .bind(project_id.to_string())
+    .bind(project_id)
     .fetch_one(pool)
     .await?;
     
     // Get recent notes
     let recent_notes = sqlx::query_as::<_, Note>(r#"
         SELECT id, project_id, entity_id, entity_type, note_type, title, content, tags,
-               author, is_project_wide, is_pinned, created_at, updated_at
+               author, is_project_wide, is_pinned, created_at, updated_at, metadata
         FROM notes
         WHERE project_id = ?
         ORDER BY created_at DESC
         LIMIT 5
     "#)
-    .bind(project_id.to_string())
+    .bind(project_id)
     .fetch_all(pool)
     .await?;
     
@@ -352,11 +355,11 @@ pub async fn get_note_summary(pool: &SqlitePool, project_id: Uuid) -> Result<Not
 /// Get project_id for any entity
 async fn get_project_id_for_entity(
     pool: &SqlitePool,
-    entity_id: Uuid,
+    entity_id: &str,
     entity_type: &EntityType,
-) -> Result<Uuid> {
+) -> Result<String> {
     let table = match entity_type {
-        EntityType::Project => return Ok(entity_id), // project_id is the entity_id
+        EntityType::Project => return Ok(entity_id.to_string()), // project_id is the entity_id
         EntityType::Feature => "features",
         EntityType::Task => "tasks",
         EntityType::Session => "sessions",
@@ -364,7 +367,9 @@ async fn get_project_id_for_entity(
         EntityType::Template => "templates",
         EntityType::Test => "tests",
         EntityType::Dependency => "dependencies",
+        EntityType::Milestone => "milestones",
         EntityType::Note => "notes",
+        EntityType::AuditTrail => "entity_audit_trails",
     };
 
     let project_id_str: String = sqlx::query_scalar(&format!(
@@ -374,7 +379,7 @@ async fn get_project_id_for_entity(
     .fetch_one(pool)
     .await?;
 
-    Ok(Uuid::parse_str(&project_id_str)?)
+    Ok(project_id_str)
 }
 
 /// Note summary for dashboard display
@@ -392,8 +397,8 @@ pub struct NoteSummary {
 /// Note creation with suggested categorization
 pub async fn create_note_with_suggestion(
     pool: &SqlitePool,
-    project_id: Uuid,
-    entity_id: Option<Uuid>,
+    project_id: &str,
+    entity_id: Option<&str>,
     entity_type: Option<EntityType>,
     title: String,
     content: String,
@@ -401,13 +406,13 @@ pub async fn create_note_with_suggestion(
     // Analyze content to suggest note type
     let suggested_type = suggest_note_type(&title, &content);
     
-    let id = Uuid::new_v4();
+    let id = format!("note-{}", chrono::Utc::now().timestamp_millis());
     let now = Utc::now();
     
     let note = Note {
-        id: id.into(),
-        project_id: project_id.into(),
-        entity_id,
+        id: id.clone(),
+        project_id: project_id.to_string(),
+        entity_id: entity_id.map(|id| id.to_string()),
         entity_type: entity_type.clone(),
         note_type: suggested_type.clone(),
         title: title.clone(),
@@ -418,6 +423,7 @@ pub async fn create_note_with_suggestion(
         is_pinned: false,
         created_at: now,
         updated_at: now,
+        metadata: None,
     };
 
     sqlx::query(r#"
@@ -426,8 +432,8 @@ pub async fn create_note_with_suggestion(
             is_project_wide, created_at, updated_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     "#)
-    .bind(id.to_string())
-    .bind(project_id.to_string())
+    .bind(&id)
+    .bind(project_id)
     .bind(entity_id.map(|id| id.to_string()))
     .bind(entity_type.map(|t| format!("{:?}", t).to_lowercase()))
     .bind(format!("{:?}", suggested_type).to_lowercase())

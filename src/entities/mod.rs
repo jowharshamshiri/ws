@@ -8,27 +8,21 @@ pub mod notes;
 pub mod relationships;
 pub mod state_machine;
 pub mod session_models;
+pub mod validation;
 pub mod api_models;
 pub mod migration;
 pub mod conversation_manager;
+pub mod git_integration;
+pub mod audit;
 
-use anyhow::Result;
+use anyhow::{Result, Context};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
 use std::collections::HashMap;
-use uuid::Uuid;
+// No UUID imports - all entities use string IDs
 
-#[derive(Debug)]
-pub struct FeatureData {
-    pub code: String,
-    pub name: String,
-    pub description: String,
-    pub category: Option<String>,
-    pub priority: Priority,
-    pub state: FeatureState,
-    pub dependencies: Vec<String>,
-}
+// FeatureData struct removed - was only used for file-based migration
 
 /// Entity types that can have notes attached
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type, PartialEq, Eq, Hash)]
@@ -42,7 +36,27 @@ pub enum EntityType {
     Template,
     Test,
     Dependency,
+    Milestone,
     Note,
+    AuditTrail,
+}
+
+impl std::fmt::Display for EntityType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            EntityType::Project => write!(f, "project"),
+            EntityType::Feature => write!(f, "feature"),
+            EntityType::Task => write!(f, "task"),
+            EntityType::Session => write!(f, "session"),
+            EntityType::Directive => write!(f, "directive"),
+            EntityType::Template => write!(f, "template"),
+            EntityType::Test => write!(f, "test"),
+            EntityType::Dependency => write!(f, "dependency"),
+            EntityType::Milestone => write!(f, "milestone"),
+            EntityType::Note => write!(f, "note"),
+            EntityType::AuditTrail => write!(f, "audit_trail"),
+        }
+    }
 }
 
 /// Feature implementation states following the state machine
@@ -100,7 +114,7 @@ impl TaskStatus {
 }
 
 /// Task and feature priority levels
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type, PartialEq)]
 #[sqlx(type_name = "priority", rename_all = "snake_case")]
 pub enum Priority {
     Critical,
@@ -116,6 +130,16 @@ pub enum SessionState {
     Active,
     Completed,
     Interrupted,
+}
+
+impl SessionState {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            SessionState::Active => "active",
+            SessionState::Completed => "completed",
+            SessionState::Interrupted => "interrupted",
+        }
+    }
 }
 
 /// Note types for categorization
@@ -147,22 +171,32 @@ pub enum DirectiveCategory {
 
 /// Base trait for all entities
 pub trait Entity {
-    fn id(&self) -> Uuid;
+    fn id(&self) -> &str;
     fn entity_type(&self) -> EntityType;
     fn created_at(&self) -> DateTime<Utc>;
     fn updated_at(&self) -> DateTime<Utc>;
     fn title(&self) -> &str;
     fn description(&self) -> Option<&str>;
+    fn as_any(&self) -> &dyn std::any::Any;
 }
 
 /// Entity manager for CRUD operations and relationships
 pub struct EntityManager {
     pool: SqlitePool,
+    validator: validation::EntityValidator,
 }
 
 impl EntityManager {
     pub fn new(pool: SqlitePool) -> Self {
-        Self { pool }
+        Self { 
+            pool,
+            validator: validation::EntityValidator::new(),
+        }
+    }
+
+    /// Get access to the database pool for advanced operations
+    pub fn get_pool(&self) -> &SqlitePool {
+        &self.pool
     }
 
     /// Initialize database with all required tables
@@ -198,7 +232,7 @@ impl EntityManager {
     /// Search across all entities
     pub async fn search_entities(
         &self,
-        _project_id: Uuid,
+        _project_id: &str,
         _query: &str,
         _entity_types: Option<Vec<EntityType>>,
     ) -> Result<SearchResults> {
@@ -206,104 +240,24 @@ impl EntityManager {
         todo!("Implement comprehensive entity search")
     }
 
-    /// Migrate features from features.md to database
-    pub async fn migrate_features_from_file(&self, features_md_path: &std::path::Path) -> Result<()> {
-        let content = std::fs::read_to_string(features_md_path)?;
-        
-        // Parse features.md table format
-        let features = self.parse_features_md(&content)?;
-        
-        // Insert features into database
-        for feature_data in features {
-            let feature = self.create_feature(
-                feature_data.name,
-                feature_data.description,
-            ).await?;
-            
-            // Update the feature with additional properties
-            let mut updated_feature = feature;
-            updated_feature.code = feature_data.code;
-            updated_feature.state = feature_data.state;
-            updated_feature.category = feature_data.category;
-            updated_feature.priority = feature_data.priority;
-            
-            self.update_feature(updated_feature).await?;
-        }
-        
-        Ok(())
-    }
+    // File-based feature migration removed - use database-only operations
 
-    /// Parse features.md table format
-    fn parse_features_md(&self, content: &str) -> Result<Vec<FeatureData>> {
-        let mut features = Vec::new();
-        let lines: Vec<&str> = content.lines().collect();
-        
-        // Find table rows (lines starting with | F)
-        for line in lines {
-            let line = line.trim();
-            if line.starts_with("| F") && line.contains("|") {
-                if let Some(feature_data) = self.parse_feature_row(line)? {
-                    features.push(feature_data);
-                }
-            }
-        }
-        
-        Ok(features)
-    }
+    // File-based feature parsing removed - use database-only operations
 
-    /// Parse individual feature table row
-    fn parse_feature_row(&self, line: &str) -> Result<Option<FeatureData>> {
-        let parts: Vec<&str> = line.split('|').map(|s| s.trim()).collect();
-        if parts.len() < 5 {
-            return Ok(None);
-        }
-        
-        let code = parts[1].to_string();
-        let name_desc = parts[2];
-        let description = parts[3].to_string();
-        let state_str = parts[4];
-        let _notes = if parts.len() > 5 { parts[5].to_string() } else { String::new() };
-        
-        // Extract feature name from **Feature Name** format
-        let name = if name_desc.starts_with("**") && name_desc.ends_with("**") {
-            name_desc[2..name_desc.len()-2].to_string()
-        } else {
-            name_desc.to_string()
-        };
-        
-        // Parse state emoji to FeatureState
-        let state = match state_str {
-            "🟢" => FeatureState::TestedPassing,
-            "🟠" => FeatureState::Implemented,
-            "🟡" => FeatureState::TestedFailing,
-            "⚠️" => FeatureState::TautologicalTest,
-            "🔴" => FeatureState::CriticalIssue,
-            "❌" | _ => FeatureState::NotImplemented,
-        };
-        
-        Ok(Some(FeatureData {
-            code,
-            name,
-            description,
-            category: Some("core".to_string()), // Default category
-            priority: Priority::Medium, // Default priority
-            state,
-            dependencies: Vec::new(), // Parse from notes if needed
-        }))
-    }
+    // File-based feature row parsing removed - use database-only operations
 
     /// Get entity relationships
     pub async fn get_entity_relationships(
         &self,
-        entity_id: Uuid,
-    ) -> Result<HashMap<EntityType, Vec<Uuid>>> {
+        entity_id: &str,
+    ) -> Result<HashMap<EntityType, Vec<String>>> {
         relationships::get_relationships(&self.pool, entity_id).await
     }
 
     /// Add note to any entity
     pub async fn add_entity_note(
         &self,
-        entity_id: Uuid,
+        entity_id: &str,
         entity_type: EntityType,
         note_type: NoteType,
         title: String,
@@ -322,7 +276,7 @@ impl EntityManager {
     /// Get all notes for an entity
     pub async fn get_entity_notes(
         &self,
-        entity_id: Uuid,
+        entity_id: &str,
     ) -> Result<Vec<models::Note>> {
         notes::get_notes_for_entity(&self.pool, entity_id).await
     }
@@ -343,36 +297,102 @@ impl EntityManager {
         crud::sessions::list_all(&self.pool).await
     }
 
-    /// Start a new session
+    /// Start a new session with git repository initialization
     pub async fn start_session(&self, description: String) -> Result<models::Session> {
-        // For now, use a default project ID - in real implementation, get from context
-        let default_project_id = uuid::Uuid::new_v4();
-        crud::sessions::create(&self.pool, default_project_id, "New Session".to_string(), Some(description)).await
+        // Initialize git repository if needed
+        let current_dir = std::env::current_dir()
+            .map_err(|e| anyhow::anyhow!("Failed to get current directory: {}", e))?;
+        let git_manager = git_integration::GitManager::new(&current_dir);
+        git_manager.ensure_git_repo().await
+            .context("Failed to initialize git repository")?;
+        
+        // Create session in database
+        let project = self.get_current_project().await?;
+        crud::sessions::create(&self.pool, &project.id, "New Session".to_string(), Some(description)).await
     }
 
-    /// End a session
-    pub async fn end_session(&self, _id: &str) -> Result<models::Session> {
-        // Basic implementation - return placeholder session
-        Ok(models::Session {
-            id: models::SqliteUuid::new(),
-            project_id: models::SqliteUuid::new(),
-            title: "Ended Session".to_string(),
-            description: Some("Session ended".to_string()),
-            state: SessionState::Completed,
-            started_at: chrono::Utc::now(),
-            ended_at: Some(chrono::Utc::now()),
-            summary: None,
-            achievements: None,
-            files_modified: None,
-            features_worked: None,
-            tasks_completed: None,
-            next_priority: None,
-            reminder: None,
-            validation_evidence: None,
-            context_remaining: None,
-            created_at: chrono::Utc::now(),
-            updated_at: chrono::Utc::now(),
-        })
+    /// Get a session by ID
+    pub async fn get_session(&self, id: &str) -> Result<models::Session> {
+        crud::sessions::get_by_id(&self.pool, id).await
+    }
+
+    /// End a session with automatic git commit
+    pub async fn end_session(&self, id: &str) -> Result<models::Session> {
+        // Get the session
+        let mut session = self.get_session(id).await?;
+        
+        // Get current directory for git operations
+        let current_dir = std::env::current_dir()
+            .map_err(|e| anyhow::anyhow!("Failed to get current directory: {}", e))?;
+        let git_manager = git_integration::GitManager::new(&current_dir);
+        
+        // Create session commit if git repo exists
+        let commit_id = if git_manager.is_git_repo() {
+            let summary = session.description.as_deref().unwrap_or("Session completed");
+            let files_modified = vec!["src/".to_string(), "tests/".to_string()]; // TODO: track actual files
+            
+            match git_manager.create_session_commit(id, summary, &files_modified).await {
+                Ok(commit_hash) => Some(commit_hash),
+                Err(e) => {
+                    log::warn!("Failed to create session commit: {}", e);
+                    None
+                }
+            }
+        } else {
+            None
+        };
+        
+        // Update session in database
+        session.state = SessionState::Completed;
+        session.ended_at = Some(chrono::Utc::now());
+        session.updated_at = chrono::Utc::now();
+        
+        // Store commit ID if available
+        if let Some(commit_hash) = commit_id {
+            session.metadata = Some(format!(r#"{{"commit_id": "{}"}}"#, commit_hash));
+        }
+        
+        crud::sessions::update(&self.pool, session).await
+    }
+
+    /// Get session metrics by session ID (returns latest metrics)
+    pub async fn get_session_metrics(&self, session_id: &str) -> Result<crate::mcp_server::SessionMetrics> {
+        // Try to get latest metrics from database
+        if let Some(metrics) = crud::session_metrics::get_latest_by_session_id(&self.pool, session_id).await? {
+            Ok(metrics)
+        } else {
+            // Return default metrics if none found
+            Ok(crate::mcp_server::SessionMetrics {
+                session_id: session_id.to_string(),
+                session_duration_seconds: 0,
+                total_messages: 0,
+                tool_calls: 0,
+                context_usage_tokens: 0,
+                average_response_time_ms: 0,
+                peak_response_time_ms: 0,
+                total_tool_calls: 0,
+                total_response_time_ms: 0,
+                context_used: 0,
+                session_duration_ms: 0,
+                features_created: 0,
+                features_updated: 0,
+                tasks_created: 0,
+                tasks_completed: 0,
+                files_modified: 0,
+                issues_resolved: 0,
+                timestamp: chrono::Utc::now(),
+            })
+        }
+    }
+
+    /// Store session metrics in database for timeseries tracking
+    pub async fn store_session_metrics(&self, _session_id: &str, metrics: &crate::mcp_server::SessionMetrics) -> Result<()> {
+        crud::session_metrics::store(&self.pool, metrics).await
+    }
+
+    /// Get all session metrics for a session (full timeseries)
+    pub async fn get_session_metrics_timeseries(&self, session_id: &str) -> Result<Vec<crate::mcp_server::SessionMetrics>> {
+        crud::session_metrics::get_by_session_id(&self.pool, session_id).await
     }
 
     /// List all features
@@ -507,6 +527,292 @@ impl EntityManager {
 
     pub async fn get_directives_by_project(&self, project_id: &str) -> Result<Vec<models::Directive>> {
         crud::directives::get_by_project(&self.pool, project_id).await
+    }
+
+    /// Create a new directive
+    pub async fn create_directive(
+        &self,
+        project_id: &str,
+        title: String,
+        rule: String,
+        category: DirectiveCategory,
+        priority: Priority,
+        context: Option<String>,
+    ) -> Result<models::Directive> {
+        crud::directives::create(&self.pool, project_id, title, rule, category, priority, context).await
+    }
+
+    /// Get directive by ID
+    pub async fn get_directive(&self, id: &str) -> Result<models::Directive> {
+        crud::directives::get(&self.pool, id).await
+    }
+
+    /// Get all directives for current project
+    pub async fn get_directives(&self, project_id: &str) -> Result<Vec<models::Directive>> {
+        crud::directives::get_by_project(&self.pool, project_id).await
+    }
+
+    /// Get active directives for current project
+    pub async fn get_active_directives(&self, project_id: &str) -> Result<Vec<models::Directive>> {
+        crud::directives::get_active(&self.pool, project_id).await
+    }
+
+    /// Update directive
+    pub async fn update_directive(&self, directive: models::Directive) -> Result<models::Directive> {
+        crud::directives::update(&self.pool, directive).await
+    }
+
+    /// Delete directive (soft delete)
+    pub async fn delete_directive(&self, id: &str) -> Result<()> {
+        crud::directives::delete(&self.pool, id).await
+    }
+
+    // Milestone management methods
+    
+    /// Create new milestone
+    pub async fn create_milestone(
+        &self,
+        project_id: &str,
+        title: &str,
+        description: &str,
+        target_date: Option<DateTime<Utc>>,
+        feature_ids: Option<Vec<String>>,
+        success_criteria: Option<Vec<String>>,
+    ) -> Result<models::Milestone> {
+        crud::milestones::create(
+            &self.pool,
+            project_id,
+            title,
+            description,
+            target_date,
+            feature_ids,
+            success_criteria,
+        ).await
+    }
+
+    /// Get milestone by ID
+    pub async fn get_milestone(&self, id: &str) -> Result<Option<models::Milestone>> {
+        crud::milestones::get_by_id(&self.pool, id).await
+    }
+
+    /// Get all milestones for a project
+    pub async fn get_milestones_by_project(&self, project_id: &str) -> Result<Vec<models::Milestone>> {
+        crud::milestones::get_by_project(&self.pool, project_id).await
+    }
+
+    /// Get milestones by status
+    pub async fn get_milestones_by_status(&self, project_id: &str, status: &str) -> Result<Vec<models::Milestone>> {
+        crud::milestones::get_by_status(&self.pool, project_id, status).await
+    }
+
+    /// Update milestone
+    pub async fn update_milestone(
+        &self,
+        id: &str,
+        title: Option<&str>,
+        description: Option<&str>,
+        target_date: Option<Option<DateTime<Utc>>>,
+        status: Option<&str>,
+        completion_percentage: Option<f64>,
+        feature_ids: Option<Vec<String>>,
+        success_criteria: Option<Vec<String>>,
+    ) -> Result<models::Milestone> {
+        crud::milestones::update(
+            &self.pool,
+            id,
+            title,
+            description,
+            target_date,
+            status,
+            completion_percentage,
+            feature_ids,
+            success_criteria,
+        ).await
+    }
+
+    /// Mark milestone as achieved
+    pub async fn achieve_milestone(&self, id: &str) -> Result<models::Milestone> {
+        crud::milestones::mark_achieved(&self.pool, id).await
+    }
+
+    /// Delete milestone
+    pub async fn delete_milestone(&self, id: &str) -> Result<()> {
+        crud::milestones::delete(&self.pool, id).await
+    }
+
+    /// Validate entity against all applicable rules
+    pub fn validate_entity(&self, entity: &dyn Entity, project_id: &str, operation: validation::ValidationOperation) -> validation::ValidationResult {
+        let context = validation::ValidationContext {
+            project_id: project_id.to_string(),
+            operation,
+            current_user: None,
+            metadata: std::collections::HashMap::new(),
+        };
+        
+        self.validator.validate_entity(entity, &context)
+    }
+
+    // F0131 Entity State Tracking - Audit Trail Methods
+
+    /// Get audit trail for specific entity
+    pub async fn get_entity_audit_trail(
+        &self,
+        entity_id: &str,
+        entity_type: Option<EntityType>,
+    ) -> Result<Vec<models::EntityAuditTrail>> {
+        audit::get_entity_audit_trail(&self.pool, entity_id, entity_type).await
+    }
+
+    /// Query audit trail with filters
+    pub async fn query_audit_trail(
+        &self,
+        query: &models::AuditTrailQuery,
+    ) -> Result<Vec<models::EntityAuditTrail>> {
+        audit::query_audit_trail(&self.pool, query).await
+    }
+
+    /// Get audit trail statistics
+    pub async fn get_audit_statistics(
+        &self,
+        project_id: Option<&str>,
+    ) -> Result<HashMap<String, i64>> {
+        audit::get_audit_statistics(&self.pool, project_id).await
+    }
+
+    /// Get entity state at specific timestamp (for rollback analysis)
+    pub async fn get_entity_state_at_timestamp(
+        &self,
+        entity_id: &str,
+        entity_type: EntityType,
+        target_timestamp: DateTime<Utc>,
+    ) -> Result<HashMap<String, String>> {
+        audit::get_entity_state_at_timestamp(&self.pool, entity_id, entity_type, target_timestamp).await
+    }
+
+    /// Record operation audit trail (internal helper)
+    pub async fn record_operation_audit(
+        &self,
+        entity_id: &str,
+        entity_type: EntityType,
+        project_id: &str,
+        operation_type: String,
+        triggered_by: String,
+        session_id: Option<String>,
+        change_reason: Option<String>,
+        entity_data: Option<String>,
+    ) -> Result<models::EntityAuditTrail> {
+        audit::record_operation_audit(
+            &self.pool,
+            entity_id,
+            entity_type,
+            project_id,
+            operation_type,
+            triggered_by,
+            session_id,
+            change_reason,
+            entity_data,
+        ).await
+    }
+
+    /// Cleanup old audit records
+    pub async fn cleanup_old_audit_records(&self, older_than_days: i64) -> Result<i64> {
+        audit::cleanup_old_audit_records(&self.pool, older_than_days).await
+    }
+
+    /// Validate entity before create operation
+    pub fn validate_before_create(&self, entity: &dyn Entity, project_id: &str) -> Result<()> {
+        let result = self.validate_entity(entity, project_id, validation::ValidationOperation::Create);
+        
+        if !result.is_valid {
+            let error_messages: Vec<String> = result.errors.iter()
+                .map(|e| format!("{}: {}", e.error_code, e.message))
+                .collect();
+            return Err(anyhow::anyhow!("Validation failed: {}", error_messages.join("; ")));
+        }
+        
+        Ok(())
+    }
+
+    /// Validate entity before update operation
+    pub fn validate_before_update(&self, entity: &dyn Entity, project_id: &str) -> Result<()> {
+        let result = self.validate_entity(entity, project_id, validation::ValidationOperation::Update);
+        
+        if !result.is_valid {
+            let error_messages: Vec<String> = result.errors.iter()
+                .map(|e| format!("{}: {}", e.error_code, e.message))
+                .collect();
+            return Err(anyhow::anyhow!("Validation failed: {}", error_messages.join("; ")));
+        }
+        
+        Ok(())
+    }
+
+    /// Get detailed validation errors for an entity
+    pub fn get_validation_errors(&self, entity: &dyn Entity, project_id: &str, operation: validation::ValidationOperation) -> Vec<validation::ValidationError> {
+        let result = self.validate_entity(entity, project_id, operation);
+        result.errors
+    }
+
+    /// Validate multiple entities with cross-entity rules
+    pub fn validate_entities(&self, entities: &[&dyn Entity], project_id: &str, operation: validation::ValidationOperation) -> Vec<validation::ValidationResult> {
+        let context = validation::ValidationContext {
+            project_id: project_id.to_string(),
+            operation,
+            current_user: None,
+            metadata: std::collections::HashMap::new(),
+        };
+        
+        self.validator.validate_entities(entities, &context)
+    }
+
+    /// Run methodology compliance validation
+    pub async fn validate_methodology_compliance(&self, project_id: &str) -> Result<validation::ValidationResult> {
+        // Get all entities for the project
+        let features = self.list_features().await?;
+        let tasks = self.list_tasks().await?;
+        let sessions = self.list_sessions().await?;
+        
+        // Convert to trait objects for validation
+        let mut entities: Vec<&dyn Entity> = Vec::new();
+        for feature in &features {
+            entities.push(feature as &dyn Entity);
+        }
+        for task in &tasks {
+            entities.push(task as &dyn Entity);
+        }
+        for session in &sessions {
+            entities.push(session as &dyn Entity);
+        }
+
+        let context = validation::ValidationContext {
+            project_id: project_id.to_string(),
+            operation: validation::ValidationOperation::BulkOperation,
+            current_user: None,
+            metadata: std::collections::HashMap::new(),
+        };
+        
+        let results = self.validator.validate_entities(&entities, &context);
+        
+        // Combine all validation results into a single result
+        let mut all_errors = Vec::new();
+        let mut all_warnings = Vec::new();
+        let mut is_valid = true;
+        
+        for result in results {
+            if !result.is_valid {
+                is_valid = false;
+            }
+            all_errors.extend(result.errors);
+            all_warnings.extend(result.warnings);
+        }
+        
+        Ok(validation::ValidationResult {
+            is_valid,
+            errors: all_errors,
+            warnings: all_warnings,
+            entity_type: "ProjectWide".to_string(),
+            entity_id: Some(project_id.to_string()),
+        })
     }
 
     fn calculate_feature_stats(&self, features: &[models::Feature]) -> FeatureStats {

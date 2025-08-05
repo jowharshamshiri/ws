@@ -1,0 +1,144 @@
+warning: unused variable: `initialize_features`
+    --> src/mcp_protocol.rs:1380:9
+     |
+1380 |         initialize_features: bool
+     |         ^^^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_initialize_features`
+     |
+     = note: `#[warn(unused_variables)]` on by default
+
+warning: methods `generate_features_md`, `generate_template_features`, `generate_directives_md`, and `generate_progress_md` are never used
+    --> src/mcp_protocol.rs:1492:8
+     |
+102  | impl McpProtocolHandler {
+     | ----------------------- methods in this implementation
+...
+1492 |     fn generate_features_md(&self, name: &str, template_type: &str, initialize_features: bool) -> Result<String> {
+     |        ^^^^^^^^^^^^^^^^^^^^
+...
+1528 |     fn generate_template_features(&self, template_type: &str) -> Result<String> {
+     |        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+1562 |     fn generate_directives_md(&self) -> Result<String> {
+     |        ^^^^^^^^^^^^^^^^^^^^^^
+...
+1604 |     fn generate_progress_md(&self, name: &str) -> Result<String> {
+     |        ^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: `#[warn(dead_code)]` on by default
+
+warning: `workspace` (lib) generated 2 warnings
+warning: unused import: `uuid::Uuid`
+    --> src/bin/ws.rs:6068:13
+     |
+6068 |         use uuid::Uuid;
+     |             ^^^^^^^^^^
+     |
+     = note: `#[warn(unused_imports)]` on by default
+
+warning: struct `FileTask` is never constructed
+    --> src/bin/ws.rs:3669:8
+     |
+3669 | struct FileTask {
+     |        ^^^^^^^^
+     |
+     = note: `#[warn(dead_code)]` on by default
+
+warning: method `generate_dependency_scenarios` is never used
+    --> src/bin/ws.rs:6065:14
+     |
+5914 | impl TestDataGenerator {
+     | ---------------------- method in this implementation
+...
+6065 |     async fn generate_dependency_scenarios(&self, pool: &sqlx::SqlitePool) -> Result<()> {
+     |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: struct `FeatureInfo` is never constructed
+    --> src/bin/ws.rs:6191:8
+     |
+6191 | struct FeatureInfo {
+     |        ^^^^^^^^^^^
+
+warning: function `parse_features_from_content` is never used
+    --> src/bin/ws.rs:6200:4
+     |
+6200 | fn parse_features_from_content(content: &str) -> Vec<FeatureInfo> {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `determine_category_from_name` is never used
+    --> src/bin/ws.rs:6225:4
+     |
+6225 | fn determine_category_from_name(name: &str) -> String {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: `workspace` (bin "ws") generated 6 warnings (run `cargo fix --bin "ws"` to apply 1 suggestion)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2.06s
+     Running `target/debug/ws mcp-server --port 3004`
+# To enable ws completions for this session, run:
+fpath=("/Users/bahram/.local/share/zsh/site-functions" $fpath)
+autoload -U compinit && compinit
+# To enable permanently, add the above lines to your ~/.zshrc
+Error creating milestone: error occurred while decoding column "completion_percentage": mismatched types; Rust type `f64` (as SQL type `REAL`) is not compatible with SQL type `INTEGER`
+Error creating milestone: error occurred while decoding column "completion_percentage": mismatched types; Rust type `f64` (as SQL type `REAL`) is not compatible with SQL type `INTEGER`
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState
+Error listing features: error occurred while decoding column "state": invalid value "planned" for enum FeatureState

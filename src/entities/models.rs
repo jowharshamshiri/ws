@@ -3,62 +3,8 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
-use uuid::Uuid;
-use std::str::FromStr;
-
-// Wrapper type for UUID that implements proper SQLite string conversion
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(transparent)]
-pub struct SqliteUuid(pub Uuid);
-
-impl SqliteUuid {
-    pub fn new() -> Self {
-        SqliteUuid(Uuid::new_v4())
-    }
-    
-    pub fn inner(&self) -> Uuid {
-        self.0
-    }
-}
-
-impl From<Uuid> for SqliteUuid {
-    fn from(uuid: Uuid) -> Self {
-        SqliteUuid(uuid)
-    }
-}
-
-impl From<SqliteUuid> for Uuid {
-    fn from(sqlite_uuid: SqliteUuid) -> Self {
-        sqlite_uuid.0
-    }
-}
-
-impl std::fmt::Display for SqliteUuid {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-// SQLite type conversion implementations
-impl sqlx::Type<sqlx::Sqlite> for SqliteUuid {
-    fn type_info() -> sqlx::sqlite::SqliteTypeInfo {
-        <String as sqlx::Type<sqlx::Sqlite>>::type_info()
-    }
-}
-
-impl<'r> sqlx::Decode<'r, sqlx::Sqlite> for SqliteUuid {
-    fn decode(value: sqlx::sqlite::SqliteValueRef<'r>) -> Result<Self, sqlx::error::BoxDynError> {
-        let string_value = <String as sqlx::Decode<sqlx::Sqlite>>::decode(value)?;
-        let uuid = Uuid::from_str(&string_value)?;
-        Ok(SqliteUuid(uuid))
-    }
-}
-
-impl<'q> sqlx::Encode<'q, sqlx::Sqlite> for SqliteUuid {
-    fn encode_by_ref(&self, buf: &mut <sqlx::Sqlite as sqlx::database::HasArguments<'q>>::ArgumentBuffer) -> sqlx::encode::IsNull {
-        self.0.to_string().encode_by_ref(buf)
-    }
-}
+// All entities use string IDs with prefix + counter pattern
+// No UUIDs in the system
 
 
 pub use super::{
@@ -81,16 +27,13 @@ pub struct Project {
 }
 
 impl Entity for Project {
-    fn id(&self) -> Uuid { 
-        // Generate a UUID from the string ID for compatibility
-        Uuid::from_str(&format!("00000000-0000-0000-0000-{:0>12}", self.id.chars().take(12).collect::<String>()))
-            .unwrap_or_else(|_| Uuid::new_v4())
-    }
+    fn id(&self) -> &str { &self.id }
     fn entity_type(&self) -> EntityType { EntityType::Project }
     fn created_at(&self) -> DateTime<Utc> { self.created_at }
     fn updated_at(&self) -> DateTime<Utc> { self.updated_at }
     fn title(&self) -> &str { &self.name }
     fn description(&self) -> Option<&str> { self.description.as_deref() }
+    fn as_any(&self) -> &dyn std::any::Any { self }
 }
 
 /// Feature entity - central tracking for all project capabilities
@@ -113,19 +56,17 @@ pub struct Feature {
     pub completed_at: Option<DateTime<Utc>>,
     pub estimated_effort: Option<i32>,  // hours
     pub actual_effort: Option<i32>,     // hours
+    pub metadata: Option<String>,       // JSON metadata
 }
 
 impl Entity for Feature {
-    fn id(&self) -> Uuid { 
-        // Generate a UUID from the string ID for compatibility
-        Uuid::from_str(&format!("00000000-0000-0000-0000-{:0>12}", self.id.chars().take(12).collect::<String>()))
-            .unwrap_or_else(|_| Uuid::new_v4())
-    }
+    fn id(&self) -> &str { &self.id }
     fn entity_type(&self) -> EntityType { EntityType::Feature }
     fn created_at(&self) -> DateTime<Utc> { self.created_at }
     fn updated_at(&self) -> DateTime<Utc> { self.updated_at }
     fn title(&self) -> &str { &self.name }
     fn description(&self) -> Option<&str> { Some(&self.description) }
+    fn as_any(&self) -> &dyn std::any::Any { self }
 }
 
 /// Task entity - work items with feature integration
@@ -144,7 +85,7 @@ pub struct Task {
     pub acceptance_criteria: Option<String>, // JSON array
     pub validation_steps: Option<String>,    // JSON array
     pub evidence: Option<String>,            // validation evidence
-    pub session_id: Option<Uuid>,           // current/last session working on this
+    pub session_id: Option<String>,         // current/last session working on this
     pub assigned_to: Option<String>,        // assignee if any
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -153,26 +94,24 @@ pub struct Task {
     pub estimated_effort: Option<i32>,       // hours
     pub actual_effort: Option<i32>,          // hours
     pub tags: Option<String>,                // JSON array of tags
+    pub metadata: Option<String>,            // JSON metadata
 }
 
 impl Entity for Task {
-    fn id(&self) -> Uuid { 
-        // Generate a UUID from the string ID for compatibility
-        Uuid::from_str(&format!("00000000-0000-0000-0000-{:0>12}", self.id.chars().take(12).collect::<String>()))
-            .unwrap_or_else(|_| Uuid::new_v4())
-    }
+    fn id(&self) -> &str { &self.id }
     fn entity_type(&self) -> EntityType { EntityType::Task }
     fn created_at(&self) -> DateTime<Utc> { self.created_at }
     fn updated_at(&self) -> DateTime<Utc> { self.updated_at }
     fn title(&self) -> &str { &self.title }
     fn description(&self) -> Option<&str> { Some(&self.description) }
+    fn as_any(&self) -> &dyn std::any::Any { self }
 }
 
 /// Session entity - development sessions with comprehensive tracking
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Session {
-    pub id: SqliteUuid,
-    pub project_id: SqliteUuid,
+    pub id: String,
+    pub project_id: String,
     pub title: String,
     pub description: Option<String>,
     pub state: SessionState,
@@ -189,22 +128,24 @@ pub struct Session {
     pub context_remaining: Option<f64>,      // percentage of context remaining
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    pub metadata: Option<String>,          // JSON metadata
 }
 
 impl Entity for Session {
-    fn id(&self) -> Uuid { self.id.0 }
+    fn id(&self) -> &str { &self.id }
     fn entity_type(&self) -> EntityType { EntityType::Session }
     fn created_at(&self) -> DateTime<Utc> { self.created_at }
     fn updated_at(&self) -> DateTime<Utc> { self.updated_at }
     fn title(&self) -> &str { &self.title }
     fn description(&self) -> Option<&str> { self.description.as_deref() }
+    fn as_any(&self) -> &dyn std::any::Any { self }
 }
 
 /// Directive entity - persistent rules that override AI behavior
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Directive {
-    pub id: SqliteUuid,
-    pub project_id: SqliteUuid,
+    pub id: String,
+    pub project_id: String,
     pub code: String,           // DEV-001, ARCH-001, etc.
     pub title: String,
     pub rule: String,           // the actual rule text
@@ -223,19 +164,20 @@ pub struct Directive {
 }
 
 impl Entity for Directive {
-    fn id(&self) -> Uuid { self.id.0 }
+    fn id(&self) -> &str { &self.id }
     fn entity_type(&self) -> EntityType { EntityType::Directive }
     fn created_at(&self) -> DateTime<Utc> { self.created_at }
     fn updated_at(&self) -> DateTime<Utc> { self.updated_at }
     fn title(&self) -> &str { &self.title }
     fn description(&self) -> Option<&str> { Some(&self.rule) }
+    fn as_any(&self) -> &dyn std::any::Any { self }
 }
 
 /// Template entity - Tera templates for project automation
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Template {
-    pub id: SqliteUuid,
-    pub project_id: SqliteUuid,
+    pub id: String,
+    pub project_id: String,
     pub name: String,
     pub description: Option<String>,
     pub content: String,                // Tera template content
@@ -246,23 +188,25 @@ pub struct Template {
     pub render_count: i32,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    pub metadata: Option<String>,          // JSON metadata
 }
 
 impl Entity for Template {
-    fn id(&self) -> Uuid { self.id.0 }
+    fn id(&self) -> &str { &self.id }
     fn entity_type(&self) -> EntityType { EntityType::Template }
     fn created_at(&self) -> DateTime<Utc> { self.created_at }
     fn updated_at(&self) -> DateTime<Utc> { self.updated_at }
     fn title(&self) -> &str { &self.name }
     fn description(&self) -> Option<&str> { self.description.as_deref() }
+    fn as_any(&self) -> &dyn std::any::Any { self }
 }
 
 /// Test entity - test results linked to features
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Test {
-    pub id: SqliteUuid,
-    pub project_id: SqliteUuid,
-    pub feature_id: Option<Uuid>,
+    pub id: String,
+    pub project_id: String,
+    pub feature_id: Option<String>,
     pub name: String,
     pub description: Option<String>,
     pub test_type: String,              // unit, integration, e2e, etc.
@@ -277,25 +221,27 @@ pub struct Test {
     pub run_at: DateTime<Utc>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    pub metadata: Option<String>,          // JSON metadata
 }
 
 impl Entity for Test {
-    fn id(&self) -> Uuid { self.id.0 }
+    fn id(&self) -> &str { &self.id }
     fn entity_type(&self) -> EntityType { EntityType::Test }
     fn created_at(&self) -> DateTime<Utc> { self.created_at }
     fn updated_at(&self) -> DateTime<Utc> { self.updated_at }
     fn title(&self) -> &str { &self.name }
     fn description(&self) -> Option<&str> { self.description.as_deref() }
+    fn as_any(&self) -> &dyn std::any::Any { self }
 }
 
 /// Dependency entity - relationships between entities
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Dependency {
-    pub id: SqliteUuid,
-    pub project_id: SqliteUuid,
-    pub from_entity_id: SqliteUuid,
+    pub id: String,
+    pub project_id: String,
+    pub from_entity_id: String,
     pub from_entity_type: EntityType,
-    pub to_entity_id: SqliteUuid,
+    pub to_entity_id: String,
     pub to_entity_type: EntityType,
     pub dependency_type: String,        // blocking, soft, resource, sequential
     pub description: Option<String>,
@@ -304,21 +250,49 @@ pub struct Dependency {
 }
 
 impl Entity for Dependency {
-    fn id(&self) -> Uuid { self.id.0 }
+    fn id(&self) -> &str { &self.id }
     fn entity_type(&self) -> EntityType { EntityType::Dependency }
     fn created_at(&self) -> DateTime<Utc> { self.created_at }
     fn updated_at(&self) -> DateTime<Utc> { self.created_at } // No separate updated_at for dependencies
     fn title(&self) -> &str { "Dependency" }
     fn description(&self) -> Option<&str> { self.description.as_deref() }
+    fn as_any(&self) -> &dyn std::any::Any { self }
 }
 
+/// Milestone entity - project milestones with feature linkage
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct Milestone {
+    pub id: String,
+    pub project_id: String,
+    pub title: String,
+    pub description: String,
+    pub target_date: Option<DateTime<Utc>>,
+    pub achieved_date: Option<DateTime<Utc>>,
+    pub status: String,                     // planned, in_progress, achieved, missed
+    pub feature_ids: Option<String>,        // JSON array of linked feature IDs
+    pub success_criteria: Option<String>,   // JSON array of criteria
+    pub completion_percentage: f64,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    pub metadata: Option<String>,          // JSON metadata
+}
+
+impl Entity for Milestone {
+    fn id(&self) -> &str { &self.id }
+    fn entity_type(&self) -> EntityType { EntityType::Milestone }
+    fn created_at(&self) -> DateTime<Utc> { self.created_at }
+    fn updated_at(&self) -> DateTime<Utc> { self.updated_at }
+    fn title(&self) -> &str { &self.title }
+    fn description(&self) -> Option<&str> { Some(&self.description) }
+    fn as_any(&self) -> &dyn std::any::Any { self }
+}
 
 /// Note entity - attachable to any other entity
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Note {
     pub id: String,
     pub project_id: String,
-    pub entity_id: Option<Uuid>,       // if attached to specific entity
+    pub entity_id: Option<String>,     // if attached to specific entity
     pub entity_type: Option<EntityType>, // type of entity this is attached to
     pub note_type: NoteType,
     pub title: String,
@@ -329,25 +303,23 @@ pub struct Note {
     pub is_pinned: bool,                // pinned for importance
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    pub metadata: Option<String>,          // JSON metadata
 }
 
 impl Entity for Note {
-    fn id(&self) -> Uuid { 
-        // Generate a UUID from the string ID for compatibility
-        Uuid::from_str(&format!("00000000-0000-0000-0000-{:0>12}", self.id.chars().take(12).collect::<String>()))
-            .unwrap_or_else(|_| Uuid::new_v4())
-    }
+    fn id(&self) -> &str { &self.id }
     fn entity_type(&self) -> EntityType { EntityType::Note }
     fn created_at(&self) -> DateTime<Utc> { self.created_at }
     fn updated_at(&self) -> DateTime<Utc> { self.updated_at }
     fn title(&self) -> &str { &self.title }
     fn description(&self) -> Option<&str> { Some(&self.content) }
+    fn as_any(&self) -> &dyn std::any::Any { self }
 }
 
 /// Entity reference for linking notes and relationships
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EntityReference {
-    pub id: SqliteUuid,
+    pub id: String,
     pub entity_type: EntityType,
     pub title: String,
     pub description: Option<String>,
@@ -356,7 +328,7 @@ pub struct EntityReference {
 /// Feature state transition with validation
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct FeatureStateTransition {
-    pub feature_id: SqliteUuid,
+    pub feature_id: String,
     pub from_state: FeatureState,
     pub to_state: FeatureState,
     pub evidence: Option<String>,
@@ -385,19 +357,63 @@ pub struct FeatureSuggestion {
     pub category: String,
     pub confidence: f64,                // confidence in suggestion
     pub reasoning: String,              // why this was suggested
-    pub task_id: Uuid,                  // originating task
+    pub task_id: String,                // originating task
 }
 
 /// Comprehensive entity query filters
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EntityQueryFilter {
     pub entity_types: Option<Vec<EntityType>>,
-    pub project_id: Option<Uuid>,
+    pub project_id: Option<String>,
     pub search_text: Option<String>,
     pub tags: Option<Vec<String>>,
     pub date_range: Option<(DateTime<Utc>, DateTime<Utc>)>,
     pub states: Option<Vec<String>>,    // feature states, task statuses, etc.
     pub priorities: Option<Vec<Priority>>,
+    pub limit: Option<i64>,
+    pub offset: Option<i64>,
+}
+
+/// Universal audit trail for all entity state changes - F0131 Entity State Tracking
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct EntityAuditTrail {
+    pub id: String,                     // audit-{counter}
+    pub entity_id: String,              // ID of entity that changed
+    pub entity_type: EntityType,        // Type of entity
+    pub project_id: String,             // Project context
+    pub operation_type: String,         // create, update, delete, state_change
+    pub field_changed: Option<String>,  // Specific field that changed
+    pub old_value: Option<String>,      // Previous value (JSON)
+    pub new_value: Option<String>,      // New value (JSON)
+    pub change_reason: Option<String>,  // Why the change was made
+    pub triggered_by: String,           // Who/what caused the change
+    pub session_id: Option<String>,     // Session context
+    pub timestamp: DateTime<Utc>,       // When change occurred
+    pub metadata: Option<String>,       // Additional context (JSON)
+}
+
+impl Entity for EntityAuditTrail {
+    fn id(&self) -> &str { &self.id }
+    fn entity_type(&self) -> EntityType { EntityType::AuditTrail }
+    fn created_at(&self) -> DateTime<Utc> { self.timestamp }
+    fn updated_at(&self) -> DateTime<Utc> { self.timestamp }
+    fn title(&self) -> &str { 
+        "Entity Audit Record"
+    }
+    fn description(&self) -> Option<&str> { self.change_reason.as_deref() }
+    fn as_any(&self) -> &dyn std::any::Any { self }
+}
+
+/// Audit trail query filters for F0131
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AuditTrailQuery {
+    pub entity_id: Option<String>,
+    pub entity_type: Option<EntityType>,
+    pub project_id: Option<String>,
+    pub operation_type: Option<String>,
+    pub triggered_by: Option<String>,
+    pub field_changed: Option<String>,
+    pub date_range: Option<(DateTime<Utc>, DateTime<Utc>)>,
     pub limit: Option<i64>,
     pub offset: Option<i64>,
 }

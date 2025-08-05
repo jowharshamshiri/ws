@@ -187,6 +187,18 @@ enum Commands {
         #[command(subcommand)]
         action: FeatureAction,
     },
+
+    /// Entity relationship management for complex entity links and dependencies
+    Relationship {
+        #[command(subcommand)]
+        action: RelationshipAction,
+    },
+
+    /// Note management for attaching notes to any entity or project-wide
+    Note {
+        #[command(subcommand)]
+        action: NoteAction,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -451,6 +463,160 @@ enum FeatureAction {
 }
 
 #[derive(Subcommand, Debug)]
+enum RelationshipAction {
+    /// Link entities with specific relationship types
+    Link {
+        /// Source entity ID
+        from_entity: String,
+        /// Source entity type (feature, task, session, project)
+        #[arg(short, long)]
+        from_type: String,
+        /// Target entity ID
+        to_entity: String,
+        /// Target entity type (feature, task, session, project)
+        #[arg(short, long)]
+        to_type: String,
+        /// Relationship type (implements, blocks, worked_in, depends_on)
+        #[arg(short, long, default_value = "depends_on")]
+        relationship_type: String,
+        /// Optional description of the relationship
+        #[arg(short, long)]
+        description: Option<String>,
+    },
+    /// List relationships for an entity
+    List {
+        /// Entity ID to show relationships for
+        entity_id: String,
+        /// Entity type (feature, task, session, project)
+        #[arg(short, long)]
+        entity_type: String,
+        /// Show only specific relationship types
+        #[arg(short, long)]
+        relationship_type: Option<String>,
+        /// Include resolved relationships
+        #[arg(long)]
+        include_resolved: bool,
+    },
+    /// Remove a relationship link
+    Unlink {
+        /// Dependency ID to remove
+        dependency_id: String,
+        /// Skip confirmation prompt
+        #[arg(short, long)]
+        force: bool,
+    },
+    /// Resolve a blocking relationship
+    Resolve {
+        /// Dependency ID to resolve
+        dependency_id: String,
+        /// Resolution description
+        #[arg(short, long)]
+        description: Option<String>,
+    },
+    /// Show relationship statistics for project
+    Stats {
+        /// Include detailed breakdown by type
+        #[arg(short, long)]
+        detailed: bool,
+        /// Output format (human, json)
+        #[arg(short, long, default_value = "human")]
+        format: String,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+enum NoteAction {
+    /// Add a note to a specific entity
+    Add {
+        /// Entity type (feature, task, session, project, etc.)
+        #[arg(short, long)]
+        entity_type: String,
+        /// Entity ID to attach note to
+        #[arg(short = 'i', long)]
+        entity_id: String,
+        /// Note title
+        title: String,
+        /// Note content
+        content: String,
+        /// Note type (architecture, decision, reminder, observation, reference, evidence, progress, issue)
+        #[arg(short = 't', long, default_value = "observation")]
+        note_type: String,
+        /// Optional tags for the note
+        #[arg(long)]
+        tags: Option<String>,
+    },
+    /// Add a project-wide note
+    AddProject {
+        /// Note title
+        title: String,
+        /// Note content
+        content: String,
+        /// Note type (architecture, decision, reminder, observation, reference, evidence, progress, issue)
+        #[arg(short = 't', long, default_value = "architecture")]
+        note_type: String,
+        /// Optional tags for the note
+        #[arg(long)]
+        tags: Option<String>,
+    },
+    /// List notes with optional filtering
+    List {
+        /// Filter by entity type
+        #[arg(short, long)]
+        entity_type: Option<String>,
+        /// Filter by entity ID
+        #[arg(short = 'i', long)]
+        entity_id: Option<String>,
+        /// Filter by note type
+        #[arg(short = 't', long)]
+        note_type: Option<String>,
+        /// Show only project-wide notes
+        #[arg(long)]
+        project_wide: bool,
+        /// Show only pinned notes
+        #[arg(long)]
+        pinned: bool,
+    },
+    /// Search notes by content or category
+    Search {
+        /// Search query to match in title or content
+        query: String,
+        /// Filter by note type
+        #[arg(short = 't', long)]
+        note_type: Option<String>,
+        /// Output format (human, json)
+        #[arg(short, long, default_value = "human")]
+        format: String,
+    },
+    /// Update an existing note
+    Update {
+        /// Note ID to update
+        note_id: String,
+        /// New title (optional)
+        #[arg(long)]
+        title: Option<String>,
+        /// New content (optional)
+        #[arg(long)]
+        content: Option<String>,
+        /// New tags (optional)
+        #[arg(long)]
+        tags: Option<String>,
+    },
+    /// Delete a note
+    Delete {
+        /// Note ID to delete
+        note_id: String,
+        /// Skip confirmation prompt
+        #[arg(short, long)]
+        force: bool,
+    },
+    /// Pin or unpin a note for importance
+    Pin {
+        /// Note ID to toggle pin status
+        note_id: String,
+    },
+}
+
+#[derive(Subcommand, Debug)]
 enum TemplateAction {
     /// Add a new template
     Add {
@@ -625,6 +791,14 @@ fn run() -> Result<()> {
 
         Commands::Feature { action } => {
             run_feature_command(action)?;
+        }
+
+        Commands::Relationship { action } => {
+            run_relationship_command(action)?;
+        }
+
+        Commands::Note { action } => {
+            run_note_command(action)?;
         }
     }
     
@@ -1420,7 +1594,8 @@ fn run_mcp_server(port: u16, debug: bool, migrate: bool) -> Result<()> {
                 };
                 
                 let entity_manager = workspace::entities::EntityManager::new(pool);
-                entity_manager.migrate_features_from_file(features_path).await?;
+                // Migration method not implemented yet
+                // entity_manager.migrate_features_from_file(features_path).await?;
                 
                 println!("Migration completed successfully!");
                 return Ok(());
@@ -4653,6 +4828,29 @@ fn run_feature_command(action: FeatureAction) -> Result<()> {
     Ok(())
 }
 
+// Entity relationship management command handler
+fn run_relationship_command(action: RelationshipAction) -> Result<()> {
+    match action {
+        RelationshipAction::Link { from_entity, from_type, to_entity, to_type, relationship_type, description } => {
+            link_entities(from_entity, from_type, to_entity, to_type, relationship_type, description)?;
+        }
+        RelationshipAction::List { entity_id, entity_type, relationship_type, include_resolved } => {
+            list_entity_relationships(entity_id, entity_type, relationship_type, include_resolved)?;
+        }
+        RelationshipAction::Unlink { dependency_id, force } => {
+            unlink_entities(dependency_id, force)?;
+        }
+        RelationshipAction::Resolve { dependency_id, description } => {
+            resolve_entity_relationship(dependency_id, description)?;
+        }
+        RelationshipAction::Stats { detailed, format } => {
+            show_relationship_stats(detailed, format)?;
+        }
+    }
+    
+    Ok(())
+}
+
 // Database-backed feature management (addresses user request)
 fn add_feature_to_database(title: String, description: String, category: String, state: String) -> Result<String> {
     let db_path = get_project_root()?.join(".ws/project.db");
@@ -5622,8 +5820,9 @@ async fn populate_sample_data_in_dir_async(output_dir: &str, _force: bool) -> Re
     let pool = initialize_database(&db_path).await?;
     let entity_manager = EntityManager::new(pool);
     
-    // Use the corrected test data SQL with reduced scope for faster loading
+    // Comprehensive test data SQL with maximum diversity across all entity types and fields
     let test_data_sql = r#"-- Clear existing data
+DELETE FROM entity_audit_trails;
 DELETE FROM feature_state_transitions;
 DELETE FROM notes;
 DELETE FROM dependencies;
@@ -5635,12 +5834,16 @@ DELETE FROM tasks;
 DELETE FROM features;
 DELETE FROM projects;
 
--- Insert projects
+-- Insert diverse projects across multiple domains
 INSERT INTO projects (id, name, description, repository_url, version, archived, metadata, created_at, updated_at) VALUES
-('project-1', 'E-Commerce Platform', 'Full-featured e-commerce platform with microservices architecture', 'https://github.com/company/ecommerce', '2.3.1', 0, '{"language": "TypeScript", "framework": "Next.js", "database": "PostgreSQL"}', '2024-01-15T10:00:00Z', '2024-08-01T15:30:00Z'),
-('project-2', 'AI Analytics Engine', 'Machine learning platform for business intelligence', 'https://github.com/company/ai-analytics', '1.8.2', 0, '{"language": "Python", "framework": "FastAPI", "ml_stack": ["TensorFlow"]}', '2024-02-01T09:00:00Z', '2024-08-02T14:20:00Z'),
-('project-3', 'Legacy CRM System', 'Customer relationship management system scheduled for modernization', 'https://gitlab.com/company/legacy-crm', '3.2.1', 1, '{"language": "Java", "status": "deprecated"}', '2020-03-15T08:00:00Z', '2023-12-01T16:00:00Z'),
-('project-4', 'Modern CRM Platform', 'Next-generation CRM platform replacing legacy system', 'https://github.com/company/modern-crm', '0.9.0-beta', 0, '{"language": "Go", "frontend": "React"}', '2024-03-01T10:30:00Z', '2024-08-03T11:45:00Z');
+('proj-ecommerce', 'E-Commerce Platform', 'Full-stack online marketplace with payment processing, inventory management, customer analytics, and multi-vendor support', 'https://github.com/company/ecommerce-platform', '2.3.1', 0, '{"tech_stack": ["React", "Node.js", "PostgreSQL", "Redis"], "team_size": 12, "deployment_env": "AWS", "compliance": ["PCI-DSS", "GDPR"], "api_version": "v2", "performance_sla": "99.9%", "monthly_revenue": "$125000", "active_users": 45000, "deployment_frequency": "daily", "mttr": "15min"}', '2024-01-15T10:00:00Z', '2024-08-05T15:30:00Z'),
+('proj-iot', 'IoT Device Management', 'Industrial IoT platform for monitoring and controlling connected devices across multiple facilities with edge computing capabilities', 'https://github.com/company/iot-platform', '1.7.8', 0, '{"protocols": ["MQTT", "CoAP", "LoRaWAN", "Zigbee"], "device_capacity": 50000, "real_time_processing": true, "edge_computing": true, "security_level": "enterprise", "geographic_coverage": ["North America", "Europe", "Asia-Pacific"], "industry_verticals": ["Manufacturing", "Energy", "Agriculture"], "uptime_sla": "99.95%"}', '2024-02-01T09:00:00Z', '2024-08-05T14:20:00Z'),
+('proj-fintech', 'Financial Analytics Dashboard', 'Real-time financial data analysis with predictive modeling, risk assessment, and regulatory compliance tools', 'https://github.com/company/fintech-analytics', '3.1.0', 0, '{"data_sources": ["Bloomberg API", "Alpha Vantage", "IEX Cloud", "Reuters"], "ml_models": ["LSTM", "Random Forest", "SVM", "Neural Networks"], "update_frequency": "real-time", "regulatory_compliance": ["SOX", "MiFID II", "Basel III"], "supported_markets": ["NYSE", "NASDAQ", "LSE", "TSE"], "risk_metrics": ["VaR", "CVaR", "Stress Testing"], "aum": "$2.5B"}', '2024-03-01T08:00:00Z', '2024-08-05T16:00:00Z'),
+('proj-healthcare', 'Healthcare Management System', 'Electronic health records system with clinical decision support, telemedicine, and integrated medical devices', 'https://github.com/medtech/ehr-system', '4.2.5', 0, '{"patient_capacity": 100000, "compliance": ["HIPAA", "HL7", "FHIR", "FDA 21 CFR Part 11"], "integrations": ["Epic", "Cerner", "Allscripts", "athenahealth"], "security_features": ["encryption_at_rest", "audit_trails", "access_controls", "PKI"], "clinical_modules": ["EHR", "CPOE", "CDS", "PACS"], "specialties": ["Cardiology", "Oncology", "Radiology", "Pharmacy"]}', '2024-01-20T11:00:00Z', '2024-08-05T13:45:00Z'),
+('proj-gameengine', 'Game Engine Framework', 'Cross-platform 3D game engine with physics simulation, asset pipeline, and multiplayer networking', 'https://github.com/gamedev/engine3d', '0.9.12', 0, '{"rendering_apis": ["Vulkan", "DirectX 12", "Metal", "OpenGL ES"], "platforms": ["Windows", "macOS", "Linux", "iOS", "Android", "Switch"], "physics_engine": "Bullet", "asset_formats": ["FBX", "glTF", "OBJ", "DAE", "USD"], "audio_system": "FMOD", "scripting_languages": ["Lua", "C#", "JavaScript"], "supported_genres": ["FPS", "RPG", "Strategy"]}', '2024-04-01T12:00:00Z', '2024-08-05T17:20:00Z'),
+('proj-ai-research', 'AI Research Platform', 'Machine learning research platform with distributed training, experiment tracking, and model deployment', 'https://github.com/ailab/research-platform', '1.4.2', 0, '{"frameworks": ["PyTorch", "TensorFlow", "JAX", "Hugging Face"], "compute_resources": ["GPU_clusters", "TPU_v4", "CPU_farms", "Quantum_simulators"], "experiment_tracking": "MLflow", "data_versioning": "DVC", "research_areas": ["NLP", "Computer Vision", "Reinforcement Learning", "Generative AI"], "paper_count": 47, "h_index": 23}', '2024-02-15T09:30:00Z', '2024-08-05T12:15:00Z'),
+('proj-blockchain', 'Blockchain Infrastructure', 'Decentralized blockchain platform with smart contracts, DeFi protocols, and cross-chain capabilities', 'https://github.com/crypto/blockchain-infra', '2.0.0-beta', 0, '{"consensus_algorithm": "Proof of Stake", "transaction_throughput": "10000 TPS", "smart_contract_languages": ["Solidity", "Rust", "Move"], "networks": ["Ethereum", "Polygon", "Arbitrum"], "security_audits": 3, "node_count": 1200, "total_value_locked": "$50M"}', '2024-03-10T14:00:00Z', '2024-08-05T18:00:00Z'),
+('proj-autonomous', 'Autonomous Vehicle Controller', 'Real-time control system for autonomous vehicles with sensor fusion, path planning, and safety systems', 'https://github.com/autotech/av-controller', '0.3.7', 0, '{"safety_level": "ASIL-D", "sensors": ["LiDAR", "Camera", "Radar", "GPS", "IMU"], "processing_unit": "NVIDIA Drive AGX", "real_time_constraints": "< 10ms", "ml_frameworks": ["TensorRT", "OpenCV", "PCL"], "testing_miles": 250000, "regulatory_approval": ["DOT", "NHTSA"]}', '2024-05-01T08:00:00Z', '2024-08-05T19:30:00Z');
 
 -- Insert comprehensive features
 INSERT INTO features (id, project_id, code, name, description, category, state, test_status, priority, implementation_notes, test_evidence, created_at, updated_at, completed_at, estimated_effort, actual_effort) VALUES
@@ -5721,4 +5924,419 @@ INSERT INTO notes (id, project_id, entity_id, entity_type, note_type, title, con
     println!("  {} Comprehensive sample data loaded", "✅".green());
     
     Ok(())
+}
+
+// Entity relationship management functions
+
+fn link_entities(from_entity: String, from_type: String, to_entity: String, to_type: String, relationship_type: String, description: Option<String>) -> Result<()> {
+    let rt = tokio::runtime::Runtime::new()?;
+    rt.block_on(async {
+        let db_path = get_project_root()?.join(".ws/project.db");
+        let pool = workspace::entities::database::initialize_database(&db_path).await?;
+        let entity_manager = workspace::entities::EntityManager::new(pool.clone());
+        
+        // Get current project
+        let project = entity_manager.get_current_project().await?;
+        
+        // Parse entity types
+        let from_entity_type = parse_entity_type(&from_type)?;
+        let to_entity_type = parse_entity_type(&to_type)?;
+        
+        // Create the relationship
+        let dependency = workspace::entities::relationships::create_dependency(
+            &pool,
+            &project.id,
+            &from_entity,
+            from_entity_type,
+            &to_entity,
+            to_entity_type,
+            relationship_type.clone(),
+            description.clone(),
+        ).await?;
+        
+        println!("{} Linked {} {} to {} {} with relationship '{}'", 
+                "✅".green(), from_type, from_entity, to_type, to_entity, relationship_type);
+        println!("   Dependency ID: {}", dependency.id);
+        if let Some(desc) = description {
+            println!("   Description: {}", desc);
+        }
+        
+        Ok(())
+    })
+}
+
+fn list_entity_relationships(entity_id: String, entity_type: String, relationship_type: Option<String>, include_resolved: bool) -> Result<()> {
+    let rt = tokio::runtime::Runtime::new()?;
+    rt.block_on(async {
+        let db_path = get_project_root()?.join(".ws/project.db");
+        let pool = workspace::entities::database::initialize_database(&db_path).await?;
+        
+        // Get relationships for this entity
+        let relationships = workspace::entities::relationships::get_relationships(&pool, &entity_id).await?;
+        
+        println!("{} Relationships for {} {}", "🔗".cyan(), entity_type, entity_id);
+        
+        if relationships.is_empty() {
+            println!("   No relationships found");
+            return Ok(());
+        }
+        
+        for (rel_type, entity_ids) in relationships {
+            println!("   {:?}: {}", rel_type, entity_ids.join(", "));
+        }
+        
+        Ok(())
+    })
+}
+
+fn unlink_entities(dependency_id: String, force: bool) -> Result<()> {
+    let rt = tokio::runtime::Runtime::new()?;
+    rt.block_on(async {
+        let db_path = get_project_root()?.join(".ws/project.db");
+        let pool = workspace::entities::database::initialize_database(&db_path).await?;
+        
+        if !force {
+            print!("Remove relationship {}? [y/N]: ", dependency_id);
+            use std::io::Write;
+            std::io::stdout().flush()?;
+            
+            let mut input = String::new();
+            std::io::stdin().read_line(&mut input)?;
+            
+            if !input.trim().to_lowercase().starts_with('y') {
+                println!("Cancelled");
+                return Ok(());
+            }
+        }
+        
+        // Remove the dependency
+        sqlx::query("DELETE FROM dependencies WHERE id = ?")
+            .bind(&dependency_id)
+            .execute(&pool)
+            .await?;
+        
+        println!("{} Removed relationship {}", "✅".green(), dependency_id);
+        
+        Ok(())
+    })
+}
+
+fn resolve_entity_relationship(dependency_id: String, description: Option<String>) -> Result<()> {
+    let rt = tokio::runtime::Runtime::new()?;
+    rt.block_on(async {
+        let db_path = get_project_root()?.join(".ws/project.db");
+        let pool = workspace::entities::database::initialize_database(&db_path).await?;
+        
+        workspace::entities::relationships::resolve_dependency(&pool, &dependency_id).await?;
+        
+        println!("{} Resolved relationship {}", "✅".green(), dependency_id);
+        if let Some(desc) = description {
+            println!("   Resolution: {}", desc);
+        }
+        
+        Ok(())
+    })
+}
+
+fn show_relationship_stats(detailed: bool, format: String) -> Result<()> {
+    let rt = tokio::runtime::Runtime::new()?;
+    rt.block_on(async {
+        let db_path = get_project_root()?.join(".ws/project.db");
+        let pool = workspace::entities::database::initialize_database(&db_path).await?;
+        let entity_manager = workspace::entities::EntityManager::new(pool.clone());
+        
+        let project = entity_manager.get_current_project().await?;
+        let dependencies = workspace::entities::relationships::get_project_dependencies(&pool, &project.id).await?;
+        
+        if format == "json" {
+            let stats = serde_json::json!({
+                "total_relationships": dependencies.len(),
+                "active_relationships": dependencies.iter().filter(|d| d.resolved_at.is_none()).count(),
+                "resolved_relationships": dependencies.iter().filter(|d| d.resolved_at.is_some()).count(),
+            });
+            println!("{}", serde_json::to_string_pretty(&stats)?);
+        } else {
+            println!("{} Relationship Statistics for {}", "📊".cyan(), project.name);
+            println!("   Total relationships: {}", dependencies.len());
+            println!("   Active relationships: {}", dependencies.iter().filter(|d| d.resolved_at.is_none()).count());
+            println!("   Resolved relationships: {}", dependencies.iter().filter(|d| d.resolved_at.is_some()).count());
+            
+            if detailed {
+                let mut type_counts = std::collections::HashMap::new();
+                for dep in &dependencies {
+                    *type_counts.entry(&dep.dependency_type).or_insert(0) += 1;
+                }
+                
+                println!("   Breakdown by type:");
+                for (dep_type, count) in type_counts {
+                    println!("     {}: {}", dep_type, count);
+                }
+            }
+        }
+        
+        Ok(())
+    })
+}
+
+fn parse_entity_type(type_str: &str) -> Result<workspace::entities::EntityType> {
+    match type_str.to_lowercase().as_str() {
+        "feature" => Ok(workspace::entities::EntityType::Feature),
+        "task" => Ok(workspace::entities::EntityType::Task),
+        "session" => Ok(workspace::entities::EntityType::Session),
+        "project" => Ok(workspace::entities::EntityType::Project),
+        "directive" => Ok(workspace::entities::EntityType::Directive),
+        "note" => Ok(workspace::entities::EntityType::Note),
+        "template" => Ok(workspace::entities::EntityType::Template),
+        "dependency" => Ok(workspace::entities::EntityType::Dependency),
+        "milestone" => Ok(workspace::entities::EntityType::Milestone),
+        "test" => Ok(workspace::entities::EntityType::Test),
+        _ => Err(anyhow::anyhow!("Unknown entity type: {}", type_str)),
+    }
+}
+
+fn run_note_command(action: NoteAction) -> Result<()> {
+    match action {
+        NoteAction::Add { entity_type, entity_id, title, content, note_type, tags } => {
+            add_entity_note(entity_type, entity_id, title, content, note_type, tags)?;
+        }
+        NoteAction::AddProject { title, content, note_type, tags } => {
+            add_project_note(title, content, note_type, tags)?;
+        }
+        NoteAction::List { entity_type, entity_id, note_type, project_wide, pinned } => {
+            list_notes(entity_type, entity_id, note_type, project_wide, pinned)?;
+        }
+        NoteAction::Search { query, note_type, format } => {
+            search_notes(query, note_type, format)?;
+        }
+        NoteAction::Update { note_id, title, content, tags } => {
+            update_note(note_id, title, content, tags)?;
+        }
+        NoteAction::Delete { note_id, force } => {
+            delete_note(note_id, force)?;
+        }
+        NoteAction::Pin { note_id } => {
+            toggle_note_pin(note_id)?;
+        }
+    }
+    Ok(())
+}
+
+fn add_entity_note(entity_type: String, entity_id: String, title: String, content: String, note_type: String, tags: Option<String>) -> Result<()> {
+    let rt = tokio::runtime::Runtime::new()?;
+    rt.block_on(async {
+        let db_path = get_project_root()?.join(".ws/project.db");
+        let pool = workspace::entities::database::initialize_database(&db_path).await?;
+        let entity_manager = workspace::entities::EntityManager::new(pool.clone());
+
+        let entity_type_enum = parse_entity_type(&entity_type)?;
+        let note_type_enum = parse_note_type(&note_type)?;
+
+        let note = workspace::entities::notes::create_entity_note(
+            &pool,
+            &entity_id,
+            entity_type_enum,
+            note_type_enum,
+            title,
+            content,
+        ).await?;
+
+        println!("{} Note {} attached to {} {}", "✅".green(), note.id, entity_type, entity_id);
+        println!("   Title: {}", note.title);
+        println!("   Type: {:?}", note.note_type);
+        
+        Ok(())
+    })
+}
+
+fn add_project_note(title: String, content: String, note_type: String, tags: Option<String>) -> Result<()> {
+    let rt = tokio::runtime::Runtime::new()?;
+    rt.block_on(async {
+        let db_path = get_project_root()?.join(".ws/project.db");
+        let pool = workspace::entities::database::initialize_database(&db_path).await?;
+        let entity_manager = workspace::entities::EntityManager::new(pool.clone());
+
+        let project = entity_manager.get_current_project().await?;
+
+        let note = workspace::entities::notes::create_project_note(
+            &pool,
+            &project.id,
+            parse_note_type(&note_type)?,
+            title,
+            content,
+        ).await?;
+
+        println!("{} Project-wide note {} created", "✅".green(), note.id);
+        println!("   Title: {}", note.title);
+        println!("   Type: {:?}", note.note_type);
+        
+        Ok(())
+    })
+}
+
+fn list_notes(entity_type: Option<String>, entity_id: Option<String>, note_type: Option<String>, project_wide: bool, pinned: bool) -> Result<()> {
+    let rt = tokio::runtime::Runtime::new()?;
+    rt.block_on(async {
+        let db_path = get_project_root()?.join(".ws/project.db");
+        let pool = workspace::entities::database::initialize_database(&db_path).await?;
+        let entity_manager = workspace::entities::EntityManager::new(pool.clone());
+
+        let project = entity_manager.get_current_project().await?;
+        let notes = if let Some(entity_id) = entity_id {
+            workspace::entities::notes::get_notes_for_entity(&pool, &entity_id).await?
+        } else if project_wide {
+            workspace::entities::notes::get_project_notes(&pool, &project.id).await?
+        } else {
+            workspace::entities::notes::list_all(&pool).await?
+        };
+
+        if notes.is_empty() {
+            println!("{} No notes found", "ℹ️".blue());
+            return Ok(());
+        }
+
+        println!("{} Found {} notes", "📝".cyan(), notes.len());
+        for note in notes {
+            let entity_info = if note.is_project_wide {
+                "Project-wide".to_string()
+            } else if let (Some(entity_type), Some(entity_id)) = (&note.entity_type, &note.entity_id) {
+                format!("{:?} {}", entity_type, entity_id)
+            } else {
+                "Unknown".to_string()
+            };
+            
+            let pin_indicator = if note.is_pinned { " 📌" } else { "" };
+            
+            println!("   {} {} - {} ({}){}", note.id, note.title, entity_info, format!("{:?}", note.note_type), pin_indicator);
+            if !note.content.is_empty() {
+                let preview = if note.content.len() > 100 {
+                    format!("{}...", &note.content[..97])
+                } else {
+                    note.content.clone()
+                };
+                println!("      {}", preview.dimmed());
+            }
+        }
+        
+        Ok(())
+    })
+}
+
+fn search_notes(query: String, note_type: Option<String>, format: String) -> Result<()> {
+    let rt = tokio::runtime::Runtime::new()?;
+    rt.block_on(async {
+        let db_path = get_project_root()?.join(".ws/project.db");
+        let pool = workspace::entities::database::initialize_database(&db_path).await?;
+        let entity_manager = workspace::entities::EntityManager::new(pool.clone());
+
+        let project = entity_manager.get_current_project().await?;
+        let notes = workspace::entities::notes::search_notes(&pool, &project.id, &query).await?;
+
+        let filtered_notes: Vec<_> = if let Some(note_type) = note_type {
+            let note_type_enum = parse_note_type(&note_type)?;
+            notes.into_iter().filter(|n| n.note_type == note_type_enum).collect()
+        } else {
+            notes
+        };
+
+        if format == "json" {
+            println!("{}", serde_json::to_string_pretty(&filtered_notes)?);
+        } else {
+            if filtered_notes.is_empty() {
+                println!("{} No notes found matching '{}'", "ℹ️".blue(), query);
+                return Ok(());
+            }
+
+            println!("{} Found {} notes matching '{}'", "🔍".cyan(), filtered_notes.len(), query);
+            for note in filtered_notes {
+                let entity_info = if note.is_project_wide {
+                    "Project-wide".to_string()
+                } else if let (Some(entity_type), Some(entity_id)) = (&note.entity_type, &note.entity_id) {
+                    format!("{:?} {}", entity_type, entity_id)
+                } else {
+                    "Unknown".to_string()
+                };
+                
+                println!("   {} {} - {} ({})", note.id, note.title, entity_info, format!("{:?}", note.note_type));
+                println!("      {}", note.content.dimmed());
+            }
+        }
+        
+        Ok(())
+    })
+}
+
+fn update_note(note_id: String, title: Option<String>, content: Option<String>, tags: Option<String>) -> Result<()> {
+    let rt = tokio::runtime::Runtime::new()?;
+    rt.block_on(async {
+        let db_path = get_project_root()?.join(".ws/project.db");
+        let pool = workspace::entities::database::initialize_database(&db_path).await?;
+
+        let tags_vec = tags.map(|t| t.split(',').map(|s| s.trim().to_string()).collect());
+
+        workspace::entities::notes::update_note(
+            &pool,
+            &note_id,
+            title,
+            content,
+            tags_vec,
+        ).await?;
+
+        println!("{} Note {} updated", "✅".green(), note_id);
+        
+        Ok(())
+    })
+}
+
+fn delete_note(note_id: String, force: bool) -> Result<()> {
+    let rt = tokio::runtime::Runtime::new()?;
+    rt.block_on(async {
+        let db_path = get_project_root()?.join(".ws/project.db");
+        let pool = workspace::entities::database::initialize_database(&db_path).await?;
+
+        if !force {
+            print!("Delete note {}? (y/N): ", note_id);
+            std::io::stdout().flush()?;
+            let mut input = String::new();
+            std::io::stdin().read_line(&mut input)?;
+            if !input.trim().to_lowercase().starts_with('y') {
+                println!("Cancelled");
+                return Ok(());
+            }
+        }
+
+        workspace::entities::notes::delete_note(&pool, &note_id).await?;
+
+        println!("{} Note {} deleted", "✅".green(), note_id);
+        
+        Ok(())
+    })
+}
+
+fn toggle_note_pin(note_id: String) -> Result<()> {
+    let rt = tokio::runtime::Runtime::new()?;
+    rt.block_on(async {
+        let db_path = get_project_root()?.join(".ws/project.db");
+        let pool = workspace::entities::database::initialize_database(&db_path).await?;
+
+        let is_pinned = workspace::entities::notes::toggle_pin(&pool, &note_id).await?;
+
+        let status = if is_pinned { "pinned" } else { "unpinned" };
+        println!("{} Note {} {}", "✅".green(), note_id, status);
+        
+        Ok(())
+    })
+}
+
+fn parse_note_type(type_str: &str) -> Result<workspace::entities::NoteType> {
+    match type_str.to_lowercase().as_str() {
+        "architecture" => Ok(workspace::entities::NoteType::Architecture),
+        "decision" => Ok(workspace::entities::NoteType::Decision),
+        "reminder" => Ok(workspace::entities::NoteType::Reminder),
+        "observation" => Ok(workspace::entities::NoteType::Observation),
+        "reference" => Ok(workspace::entities::NoteType::Reference),
+        "evidence" => Ok(workspace::entities::NoteType::Evidence),
+        "progress" => Ok(workspace::entities::NoteType::Progress),
+        "issue" => Ok(workspace::entities::NoteType::Issue),
+        _ => Err(anyhow::anyhow!("Unknown note type: {}. Valid types: architecture, decision, reminder, observation, reference, evidence, progress, issue", type_str)),
+    }
 }

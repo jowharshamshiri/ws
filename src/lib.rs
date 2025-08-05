@@ -7,6 +7,8 @@ pub mod workspace_state;
 pub mod entities;
 // MCP server
 pub mod mcp_server;
+// MCP protocol
+pub mod mcp_protocol;
 
 use anyhow::{Context, Result};
 use std::path::Path;

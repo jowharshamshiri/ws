@@ -3,8 +3,8 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
-use uuid::Uuid;
-use super::models::{SqliteUuid, Entity, EntityType};
+// No UUID usage - all IDs are strings
+use super::models::{Entity, EntityType};
 
 /// Session types based on historical patterns
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type, PartialEq)]
@@ -81,8 +81,8 @@ impl MessageType {
 /// Enhanced Session entity with comprehensive tracking
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Session {
-    pub id: SqliteUuid,
-    pub project_id: SqliteUuid,
+    pub id: String,
+    pub project_id: String,
     pub session_type: SessionType,
     pub title: String,
     pub description: String,
@@ -94,24 +94,27 @@ pub struct Session {
     pub accomplishments: Option<String>,    // JSON array of achievements
     pub blockers_encountered: Option<String>, // JSON array of issues
     pub next_session_priorities: Option<String>, // JSON array of next steps
+    pub commit_id: Option<String>,          // Git commit ID for this session
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    pub metadata: Option<String>,          // JSON metadata
 }
 
 impl Entity for Session {
-    fn id(&self) -> Uuid { self.id.0 }
+    fn id(&self) -> &str { &self.id }
     fn entity_type(&self) -> EntityType { EntityType::Session }
     fn created_at(&self) -> DateTime<Utc> { self.created_at }
     fn updated_at(&self) -> DateTime<Utc> { self.updated_at }
     fn title(&self) -> &str { &self.title }
     fn description(&self) -> Option<&str> { Some(&self.description) }
+    fn as_any(&self) -> &dyn std::any::Any { self }
 }
 
 /// File modification tracking for precise change attribution
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct FileModification {
-    pub id: SqliteUuid,
-    pub session_id: SqliteUuid,
+    pub id: String,
+    pub session_id: String,
     pub file_path: String,
     pub modification_type: ModificationType,
     pub purpose: String,
@@ -126,9 +129,9 @@ pub struct FileModification {
 /// Evidence tracking for feature validation
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Evidence {
-    pub id: SqliteUuid,
+    pub id: String,
     pub entity_type: String,                // feature, task, session
-    pub entity_id: SqliteUuid,
+    pub entity_id: String,
     pub evidence_type: EvidenceType,
     pub title: String,
     pub description: String,
@@ -142,8 +145,8 @@ pub struct Evidence {
 /// Issue resolution tracking
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct IssueResolution {
-    pub id: SqliteUuid,
-    pub session_id: SqliteUuid,
+    pub id: String,
+    pub session_id: String,
     pub issue_title: String,
     pub issue_description: String,
     pub root_cause: String,
@@ -158,8 +161,8 @@ pub struct IssueResolution {
 /// Conversation message storage
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct ConversationMessage {
-    pub id: SqliteUuid,
-    pub session_id: SqliteUuid,
+    pub id: String,
+    pub session_id: String,
     pub message_type: MessageType,
     pub content: String,
     pub metadata: Option<String>,           // JSON metadata (tool calls, context, etc.)
@@ -170,8 +173,8 @@ pub struct ConversationMessage {
 /// Session metrics and analytics
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct SessionMetrics {
-    pub id: SqliteUuid,
-    pub session_id: SqliteUuid,
+    pub id: String,
+    pub session_id: String,
     pub features_created: i32,
     pub features_completed: i32,
     pub tasks_created: i32,
@@ -189,37 +192,37 @@ pub struct SessionMetrics {
 /// Feature change tracking
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct FeatureChange {
-    pub id: SqliteUuid,
-    pub session_id: SqliteUuid,
-    pub feature_id: SqliteUuid,
+    pub id: String,
+    pub session_id: String,
+    pub feature_id: String,
     pub change_type: String,                // created, state_change, updated, completed
     pub previous_state: Option<String>,     // Previous feature state
     pub new_state: String,                  // New feature state
     pub reason: String,                     // Why the change was made
-    pub evidence_id: Option<SqliteUuid>,    // Link to evidence
+    pub evidence_id: Option<String>,    // Link to evidence
     pub timestamp: DateTime<Utc>,
 }
 
 /// Task change tracking
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct TaskChange {
-    pub id: SqliteUuid,
-    pub session_id: SqliteUuid,
-    pub task_id: SqliteUuid,
+    pub id: String,
+    pub session_id: String,
+    pub task_id: String,
     pub change_type: String,                // created, status_change, updated, completed
     pub previous_status: Option<String>,    // Previous task status
     pub new_status: String,                 // New task status
     pub reason: String,                     // Why the change was made
-    pub evidence_id: Option<SqliteUuid>,    // Link to evidence
+    pub evidence_id: Option<String>,    // Link to evidence
     pub timestamp: DateTime<Utc>,
 }
 
 /// Project snapshot for historical tracking
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct ProjectSnapshot {
-    pub id: SqliteUuid,
-    pub project_id: SqliteUuid,
-    pub session_id: Option<SqliteUuid>,
+    pub id: String,
+    pub project_id: String,
+    pub session_id: Option<String>,
     pub snapshot_type: String,              // session_start, session_end, milestone, backup
     pub title: String,
     pub total_features: i32,
@@ -234,8 +237,8 @@ pub struct ProjectSnapshot {
 /// Development patterns and insights
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct DevelopmentPattern {
-    pub id: SqliteUuid,
-    pub project_id: SqliteUuid,
+    pub id: String,
+    pub project_id: String,
     pub pattern_type: String,               // common_operation, error_pattern, success_pattern
     pub title: String,
     pub description: String,
@@ -250,8 +253,8 @@ pub struct DevelopmentPattern {
 /// API operation tracking for methodology enforcement
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct ApiOperation {
-    pub id: SqliteUuid,
-    pub session_id: SqliteUuid,
+    pub id: String,
+    pub session_id: String,
     pub operation_type: String,             // feature_create, task_update, etc.
     pub endpoint: String,                   // API endpoint called
     pub request_data: Option<String>,       // JSON request payload

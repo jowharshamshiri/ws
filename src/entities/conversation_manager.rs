@@ -6,7 +6,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::{SqlitePool, Row};
 
-use super::models::SqliteUuid;
+// No String usage - all IDs are strings
 use super::session_models::{MessageType, ConversationMessage};
 
 /// Conversation manager for storing and retrieving session conversations
@@ -20,15 +20,15 @@ impl ConversationManager {
     }
 
     /// Start a new conversation session
-    pub async fn start_conversation_session(&self, session_id: SqliteUuid) -> Result<ConversationSession> {
-        let session = ConversationSession::new(session_id, self.pool.clone());
+    pub async fn start_conversation_session(&self, session_id: &str) -> Result<ConversationSession> {
+        let session = ConversationSession::new(session_id.to_string(), self.pool.clone());
         Ok(session)
     }
 
     /// Record a user message
     pub async fn record_user_message(
         &self,
-        session_id: SqliteUuid,
+        session_id: &str,
         content: String,
         metadata: Option<serde_json::Value>,
     ) -> Result<ConversationMessage> {
@@ -38,7 +38,7 @@ impl ConversationManager {
     /// Record a Claude response
     pub async fn record_claude_response(
         &self,
-        session_id: SqliteUuid,
+        session_id: &str,
         content: String,
         metadata: Option<serde_json::Value>,
     ) -> Result<ConversationMessage> {
@@ -48,7 +48,7 @@ impl ConversationManager {
     /// Record a tool execution result
     pub async fn record_tool_result(
         &self,
-        session_id: SqliteUuid,
+        session_id: &str,
         tool_name: String,
         result: String,
         metadata: Option<serde_json::Value>,
@@ -60,7 +60,7 @@ impl ConversationManager {
     /// Record a system message
     pub async fn record_system_message(
         &self,
-        session_id: SqliteUuid,
+        session_id: &str,
         content: String,
         metadata: Option<serde_json::Value>,
     ) -> Result<ConversationMessage> {
@@ -70,7 +70,7 @@ impl ConversationManager {
     /// Record an error message
     pub async fn record_error_message(
         &self,
-        session_id: SqliteUuid,
+        session_id: &str,
         error: String,
         context: Option<serde_json::Value>,
     ) -> Result<ConversationMessage> {
@@ -80,7 +80,7 @@ impl ConversationManager {
     /// Internal method to record any message type
     async fn record_message(
         &self,
-        session_id: SqliteUuid,
+        session_id: &str,
         message_type: MessageType,
         content: String,
         metadata: Option<serde_json::Value>,
@@ -89,8 +89,8 @@ impl ConversationManager {
         let sequence_number = self.get_next_sequence_number(session_id).await?;
 
         let message = ConversationMessage {
-            id: SqliteUuid::new(),
-            session_id,
+            id: format!("msg-{}", uuid::Uuid::new_v4().to_string()[..8].to_lowercase()),
+            session_id: session_id.to_string(),
             message_type,
             content,
             metadata: metadata.map(|m| serde_json::to_string(&m).unwrap_or_default()),
@@ -116,7 +116,7 @@ impl ConversationManager {
     }
 
     /// Get the next sequence number for a session
-    async fn get_next_sequence_number(&self, session_id: SqliteUuid) -> Result<i32> {
+    async fn get_next_sequence_number(&self, session_id: &str) -> Result<i32> {
         let row = sqlx::query(
             "SELECT COALESCE(MAX(sequence_number), 0) + 1 as next_seq FROM conversation_messages WHERE session_id = ?"
         )
@@ -129,7 +129,7 @@ impl ConversationManager {
     }
 
     /// Get all messages for a session in chronological order  
-    pub async fn get_session_conversation(&self, _session_id: SqliteUuid) -> Result<Vec<ConversationMessage>> {
+    pub async fn get_session_conversation(&self, _session_id: &str) -> Result<Vec<ConversationMessage>> {
         // Simplified implementation for now to avoid SQLx macro issues
         // TODO: Implement proper query when database schema is established
         Ok(Vec::new())
@@ -138,7 +138,7 @@ impl ConversationManager {
     /// Get conversation context (last N messages) for session continuity
     pub async fn get_conversation_context(
         &self,
-        _session_id: SqliteUuid,
+        _session_id: String,
         _limit: i32,
     ) -> Result<Vec<ConversationMessage>> {
         // Simplified implementation for now
@@ -158,7 +158,7 @@ impl ConversationManager {
     }
 
     /// Get conversation statistics for a session
-    pub async fn get_session_conversation_stats(&self, _session_id: SqliteUuid) -> Result<ConversationStats> {
+    pub async fn get_session_conversation_stats(&self, _session_id: &str) -> Result<ConversationStats> {
         // Simplified implementation for now
         // TODO: Implement proper stats when database schema is established
         Ok(ConversationStats {
@@ -174,7 +174,7 @@ impl ConversationManager {
     }
 
     /// Export conversation to markdown format
-    pub async fn export_conversation_markdown(&self, session_id: SqliteUuid) -> Result<String> {
+    pub async fn export_conversation_markdown(&self, session_id: &str) -> Result<String> {
         let messages = self.get_session_conversation(session_id).await?;
         let stats = self.get_session_conversation_stats(session_id).await?;
 
@@ -217,13 +217,13 @@ impl ConversationManager {
 
 /// Live conversation session for active development
 pub struct ConversationSession {
-    session_id: SqliteUuid,
+    session_id: String,
     conversation_manager: ConversationManager,
     message_count: i32,
 }
 
 impl ConversationSession {
-    fn new(session_id: SqliteUuid, pool: SqlitePool) -> Self {
+    fn new(session_id: String, pool: SqlitePool) -> Self {
         Self {
             session_id,
             conversation_manager: ConversationManager::new(pool),
@@ -240,7 +240,7 @@ impl ConversationSession {
         });
 
         self.conversation_manager
-            .record_user_message(self.session_id, content, Some(metadata))
+            .record_user_message(&self.session_id, content, Some(metadata))
             .await?;
 
         self.message_count += 1;
@@ -257,7 +257,7 @@ impl ConversationSession {
         });
 
         self.conversation_manager
-            .record_claude_response(self.session_id, content, Some(metadata))
+            .record_claude_response(&self.session_id, content, Some(metadata))
             .await?;
 
         self.message_count += 1;
@@ -281,7 +281,7 @@ impl ConversationSession {
         });
 
         self.conversation_manager
-            .record_tool_result(self.session_id, tool_name, result, Some(metadata))
+            .record_tool_result(&self.session_id, tool_name, result, Some(metadata))
             .await?;
 
         self.message_count += 1;
@@ -291,14 +291,14 @@ impl ConversationSession {
     /// Get current session statistics
     pub async fn get_stats(&self) -> Result<ConversationStats> {
         self.conversation_manager
-            .get_session_conversation_stats(self.session_id)
+            .get_session_conversation_stats(&self.session_id)
             .await
     }
 
     /// Export current conversation
     pub async fn export_markdown(&self) -> Result<String> {
         self.conversation_manager
-            .export_conversation_markdown(self.session_id)
+            .export_conversation_markdown(&self.session_id)
             .await
     }
 }
