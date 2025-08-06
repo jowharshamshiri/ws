@@ -417,3 +417,52 @@ pub struct AuditTrailQuery {
     pub limit: Option<i64>,
     pub offset: Option<i64>,
 }
+
+/// Note link for F0137 Note Linking and References
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct NoteLink {
+    pub id: String,                     // link-{counter}
+    pub project_id: String,
+    pub source_note_id: String,         // Note that contains the link
+    pub target_type: String,            // "note", "entity"
+    pub target_id: String,              // ID of target note or entity
+    pub target_entity_type: Option<String>, // If target is entity, its type
+    pub link_type: String,              // "reference", "response_to", "related", "blocks", "depends_on"
+    pub auto_detected: bool,            // True if link was automatically detected
+    pub detection_reason: Option<String>, // How the link was detected
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    pub metadata: Option<String>,       // Additional link context (JSON)
+}
+
+impl Entity for NoteLink {
+    fn id(&self) -> &str { &self.id }
+    fn entity_type(&self) -> EntityType { EntityType::NoteLink }
+    fn created_at(&self) -> DateTime<Utc> { self.created_at }
+    fn updated_at(&self) -> DateTime<Utc> { self.updated_at }
+    fn title(&self) -> &str { 
+        match self.link_type.as_str() {
+            "reference" => "Note Reference",
+            "response_to" => "Response Link",
+            "related" => "Related Link",
+            "blocks" => "Blocking Link",
+            "depends_on" => "Dependency Link",
+            _ => "Note Link"
+        }
+    }
+    fn description(&self) -> Option<&str> { self.detection_reason.as_deref() }
+    fn as_any(&self) -> &dyn std::any::Any { self }
+}
+
+/// Note link query filters for F0137
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NoteLinkQuery {
+    pub source_note_id: Option<String>,
+    pub target_id: Option<String>,
+    pub target_type: Option<String>,    // "note" or "entity"
+    pub link_type: Option<String>,
+    pub auto_detected: Option<bool>,
+    pub project_id: Option<String>,
+    pub limit: Option<i64>,
+    pub offset: Option<i64>,
+}

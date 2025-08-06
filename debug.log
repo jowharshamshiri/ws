@@ -27,27 +27,27 @@ warning: unused variable: `t_type`
     |                 ^^^^^^ help: if this is intentional, prefix it with an underscore: `_t_type`
 
 warning: unused variable: `state`
-    --> src/mcp_server.rs:1413:11
+    --> src/mcp_server.rs:1407:11
      |
-1413 |     State(state): State<McpServerState>,
+1407 |     State(state): State<McpServerState>,
      |           ^^^^^ help: if this is intentional, prefix it with an underscore: `_state`
 
 warning: unused variable: `state`
-    --> src/mcp_server.rs:1641:11
+    --> src/mcp_server.rs:1635:11
      |
-1641 |     State(state): State<McpServerState>,
+1635 |     State(state): State<McpServerState>,
      |           ^^^^^ help: if this is intentional, prefix it with an underscore: `_state`
 
 warning: unused variable: `state`
-    --> src/mcp_server.rs:1658:11
+    --> src/mcp_server.rs:1652:11
      |
-1658 |     State(state): State<McpServerState>,
+1652 |     State(state): State<McpServerState>,
      |           ^^^^^ help: if this is intentional, prefix it with an underscore: `_state`
 
 warning: unused variable: `e`
-    --> src/mcp_server.rs:1671:13
+    --> src/mcp_server.rs:1665:13
      |
-1671 |         Err(e) => {
+1665 |         Err(e) => {
      |             ^ help: if this is intentional, prefix it with an underscore: `_e`
 
 warning: variable does not need to be mutable
@@ -154,132 +154,132 @@ warning: methods `generate_features_md`, `generate_template_features`, `generate
 
 warning: `workspace` (lib) generated 22 warnings (run `cargo fix --lib -p workspace` to apply 2 suggestions)
 warning: unused variable: `entity_manager`
-    --> src/bin/ws.rs:1759:21
+    --> src/bin/ws.rs:1634:21
      |
-1759 |                 let entity_manager = workspace::entities::EntityManager::new(pool);
+1634 |                 let entity_manager = workspace::entities::EntityManager::new(pool);
      |                     ^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_entity_manager`
      |
      = note: `#[warn(unused_variables)]` on by default
 
 warning: unused variable: `relationship_type`
-    --> src/bin/ws.rs:6911:70
+    --> src/bin/ws.rs:6030:70
      |
-6911 | ...ity_type: String, relationship_type: Option<String>, include_resolved: bool) -> Result<()> {
+6030 | ...ity_type: String, relationship_type: Option<String>, include_resolved: bool) -> Result<()> {
      |                      ^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_relationship_type`
 
 warning: unused variable: `include_resolved`
-    --> src/bin/ws.rs:6911:105
+    --> src/bin/ws.rs:6030:105
      |
-6911 | ...e: Option<String>, include_resolved: bool) -> Result<()> {
+6030 | ...e: Option<String>, include_resolved: bool) -> Result<()> {
      |                       ^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_include_resolved`
 
 warning: unused variable: `tags`
-    --> src/bin/ws.rs:7076:111
+    --> src/bin/ws.rs:6195:111
      |
-7076 | ...nt: String, note_type: String, tags: Option<String>) -> Result<()> {
+6195 | ...nt: String, note_type: String, tags: Option<String>) -> Result<()> {
      |                                   ^^^^ help: if this is intentional, prefix it with an underscore: `_tags`
 
 warning: unused variable: `entity_manager`
-    --> src/bin/ws.rs:7081:13
+    --> src/bin/ws.rs:6200:13
      |
-7081 |         let entity_manager = workspace::entities::EntityManager::new(pool.clone());
+6200 |         let entity_manager = workspace::entities::EntityManager::new(pool.clone());
      |             ^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_entity_manager`
 
 warning: unused variable: `tags`
-    --> src/bin/ws.rs:7103:72
+    --> src/bin/ws.rs:6222:72
      |
-7103 | fn add_project_note(title: String, content: String, note_type: String, tags: Option<String>) -> Result<()> {
+6222 | fn add_project_note(title: String, content: String, note_type: String, tags: Option<String>) -> Result<()> {
      |                                                                        ^^^^ help: if this is intentional, prefix it with an underscore: `_tags`
 
 warning: unused variable: `entity_type`
-    --> src/bin/ws.rs:7128:15
+    --> src/bin/ws.rs:6247:15
      |
-7128 | fn list_notes(entity_type: Option<String>, entity_id: Option<String>, note_type: Option<String>, project_wide: bool, pinned: bool) -> Res...
+6247 | fn list_notes(entity_type: Option<String>, entity_id: Option<String>, note_type: Option<String>, project_wide: bool, pinned: bool) -> Res...
      |               ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_entity_type`
 
 warning: unused variable: `note_type`
-    --> src/bin/ws.rs:7128:71
+    --> src/bin/ws.rs:6247:71
      |
-7128 | ...ntity_id: Option<String>, note_type: Option<String>, project_wide: bool, pinned: bool) -> Result<()> {
+6247 | ...ntity_id: Option<String>, note_type: Option<String>, project_wide: bool, pinned: bool) -> Result<()> {
      |                              ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_note_type`
 
 warning: unused variable: `pinned`
-    --> src/bin/ws.rs:7128:118
+    --> src/bin/ws.rs:6247:118
      |
-7128 | ...String>, project_wide: bool, pinned: bool) -> Result<()> {
+6247 | ...String>, project_wide: bool, pinned: bool) -> Result<()> {
      |                                 ^^^^^^ help: if this is intentional, prefix it with an underscore: `_pinned`
 
 warning: function `create_sample_project` is never used
-    --> src/bin/ws.rs:1811:4
+    --> src/bin/ws.rs:1686:4
      |
-1811 | fn create_sample_project(force: bool) -> Result<()> {
+1686 | fn create_sample_project(force: bool) -> Result<()> {
      |    ^^^^^^^^^^^^^^^^^^^^^
      |
      = note: `#[warn(dead_code)]` on by default
 
 warning: function `populate_sample_data` is never used
-    --> src/bin/ws.rs:1938:4
+    --> src/bin/ws.rs:1813:4
      |
-1938 | fn populate_sample_data(force: bool) -> Result<()> {
+1813 | fn populate_sample_data(force: bool) -> Result<()> {
      |    ^^^^^^^^^^^^^^^^^^^^
 
 warning: function `populate_sample_data_async` is never used
-    --> src/bin/ws.rs:1967:10
+    --> src/bin/ws.rs:1842:10
      |
-1967 | async fn populate_sample_data_async(force: bool) -> Result<()> {
+1842 | async fn populate_sample_data_async(force: bool) -> Result<()> {
      |          ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 warning: function `add_task` is never used
-    --> src/bin/ws.rs:3917:4
+    --> src/bin/ws.rs:3792:4
      |
-3917 | fn add_task(title: String, description: String, feature: Option<String>, priority: String, auto_feature: bool) -> Result<()> {
+3792 | fn add_task(title: String, description: String, feature: Option<String>, priority: String, auto_feature: bool) -> Result<()> {
      |    ^^^^^^^^
 
 warning: function `detect_feature_from_description` is never used
-    --> src/bin/ws.rs:3960:4
+    --> src/bin/ws.rs:3835:4
      |
-3960 | fn detect_feature_from_description(description: &str) -> Option<String> {
+3835 | fn detect_feature_from_description(description: &str) -> Option<String> {
      |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 warning: function `save_task_to_backlog` is never used
-    --> src/bin/ws.rs:3985:4
+    --> src/bin/ws.rs:3860:4
      |
-3985 | fn save_task_to_backlog(task: &Task) -> Result<()> {
+3860 | fn save_task_to_backlog(task: &Task) -> Result<()> {
      |    ^^^^^^^^^^^^^^^^^^^^
 
 warning: function `create_initial_task_backlog` is never used
-    --> src/bin/ws.rs:4021:4
+    --> src/bin/ws.rs:3896:4
      |
-4021 | fn create_initial_task_backlog() -> String {
+3896 | fn create_initial_task_backlog() -> String {
      |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 warning: function `add_feature_to_file` is never used
-    --> src/bin/ws.rs:5145:4
+    --> src/bin/ws.rs:5020:4
      |
-5145 | fn add_feature_to_file(title: String, description: String, category: String, state: String) -> Result<()> {
+5020 | fn add_feature_to_file(title: String, description: String, category: String, state: String) -> Result<()> {
      |    ^^^^^^^^^^^^^^^^^^^
 
 warning: function `get_next_feature_id` is never used
-    --> src/bin/ws.rs:5318:4
+    --> src/bin/ws.rs:5193:4
      |
-5318 | fn get_next_feature_id(features_content: &str) -> String {
+5193 | fn get_next_feature_id(features_content: &str) -> String {
      |    ^^^^^^^^^^^^^^^^^^^
 
 warning: function `add_feature_to_features_file` is never used
-    --> src/bin/ws.rs:5335:4
+    --> src/bin/ws.rs:5210:4
      |
-5335 | fn add_feature_to_features_file(id: &str, title: &str, description: &str, state: &str, category: &str) -> Result<()> {
+5210 | fn add_feature_to_features_file(id: &str, title: &str, description: &str, state: &str, category: &str) -> Result<()> {
      |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 warning: function `check_context_threshold_startup` is never used
-    --> src/bin/ws.rs:5551:4
+    --> src/bin/ws.rs:5426:4
      |
-5551 | fn check_context_threshold_startup() -> Result<()> {
+5426 | fn check_context_threshold_startup() -> Result<()> {
      |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 warning: `workspace` (bin "ws") generated 20 warnings
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.40s
-     Running `target/debug/ws mcp-server --port 3004`
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.34s
+     Running `target/debug/ws mcp-server --port 8080`
 # To enable ws completions for this session, run:
 fpath=("/Users/bahram/.local/share/zsh/site-functions" $fpath)
 autoload -U compinit && compinit

@@ -1,0 +1,102 @@
+# {{ project.name }}
+
+## Project Overview
+
+**Project Name**: {{ project.name }}  
+**Type**: {{ project.description | default(value="Multi-tool development suite") }}  
+**Current Version**: {{ project.version }}  
+**Status**: {{ implementation_percentage }}% implementation ({{ test_percentage }}% tested)
+
+## Current Status
+
+**Development Phase**: Database-backed documentation generation  
+**Test Status**: ✅ {{ test_percentage }}% test coverage ({{ tested_features }}/{{ total_features }} features tested)  
+**Build Status**: ✅ Clean compilation, operational database  
+**Next Priority**: Continue advancing toward 95% implementation milestone
+
+## Key Features Operational
+
+{% for feature in features | slice(end=10) -%}
+- {{ feature.state | feature_state_emoji }} **{{ feature.title }}**: {{ feature.description | truncate(length=100) }}
+{% endfor %}
+
+## Success Criteria
+
+### Core Functionality
+- ✅ CLI tools operational with safety-first architecture
+- ✅ Dashboard displays comprehensive project metrics
+- ✅ Entity management with constraint enforcement operational
+- ✅ Feature state management with real-time tracking
+- ✅ Database-backed storage with metadata support
+
+### Quality Metrics  
+- {{ "✅" if implementation_percentage >= 90 else "🔄" }} {{ implementation_percentage }}% implementation score ({{ implemented_features }}/{{ total_features }} features)
+- {{ "✅" if test_percentage >= 80 else "🔄" }} {{ test_percentage }}% test coverage ({{ tested_features }}/{{ total_features }} features tested)
+- ✅ Zero compilation warnings maintained
+- ✅ Constraint enforcement prevents invalid operations
+
+## Recent Sessions
+
+{% for session in recent_sessions -%}
+### {{ session.title }}
+**Status**: {{ session.state | title }}  
+**Duration**: {{ session.started_at | date(format="%Y-%m-%d") }}{% if session.ended_at %} - {{ session.ended_at | date(format="%Y-%m-%d") }}{% endif %}  
+{% if session.summary -%}
+**Summary**: {{ session.summary }}
+{% endif %}
+{% if session.achievements -%}
+**Achievements**: {{ session.achievements }}
+{% endif %}
+
+{% endfor %}
+
+## Essential Development Rules
+
+### ABSOLUTE CONSTRAINTS
+- **Security**: Defensive security tasks only - never create malicious code
+- **File Creation**: Create files ONLY when explicitly required - always prefer editing
+- **Documentation**: Never proactively create docs unless explicitly requested
+- **Testing**: Always run lint/typecheck before completing tasks
+- **Validation**: Generate fresh test cases, never use old artifacts
+
+### ARCHITECTURAL PRINCIPLES
+- **Safety-First Design**: Multi-layered safety system with collision detection
+- **Multi-Tool Suite**: Independent tools with shared library modules
+- **Template-Driven**: All generation uses template engine, no hardcoded strings
+- **Database-Backed**: SQLite storage with comprehensive entity management
+
+### DEVELOPMENT METHODOLOGY
+1. **Investigation Protocol**: Generate fresh test case → attempt operation → capture logs → compare with reference → fix templates → validate
+2. **Task Management**: Real-time todo updates, one task in-progress, immediate completion marking
+3. **Quality Gates**: Zero warnings, all tests pass, proper validation before completion
+
+## Current Architecture
+
+```
+CLI Layer (ws binary) → Tool Implementations → Project Management (MCP Server) → Data Layer (SQLite + Templates)
+```
+
+**Core Components**:
+- **Entity Management**: Projects, Features, Tasks, Sessions with metadata support
+- **Constraint System**: Operational validation preventing invalid operations
+- **API Layer**: RESTful endpoints for AI integration and dashboard interaction
+- **Safety Architecture**: Collision detection, dry-run mode, binary protection, backup system
+
+## Quick Start Context
+
+**For New Sessions**:
+1. **Current Focus**: F0138 SQLite Database Storage implementation
+2. **Constraint**: Follow safety-first architecture, never bypass tests
+3. **Validation**: `cargo test` after changes, fresh test case generation
+4. **Success Metric**: Feature complete with passing tests and clean compilation
+
+**Immediate Priorities**:
+- Complete database-backed documentation generation
+- Implement template CRUD operations and CLI integration
+- Address remaining unused variable warnings (medium priority)
+- Continue advancing toward 95% implementation milestone
+
+---
+
+*Documentation generated {{ generated_at | date(format="%Y-%m-%d %H:%M:%S UTC") }} from database entities*  
+*Project ready for efficient AI-assisted development continuation*

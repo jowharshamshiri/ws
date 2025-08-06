@@ -7,7 +7,7 @@ use workspace::workspace_state::WorkspaceState;
 use std::env;
 use std::fs::{self, OpenOptions};
 use std::io::Write;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{self, Command};
 
 #[derive(Parser, Debug)]
@@ -614,6 +614,44 @@ enum NoteAction {
         /// Note ID to toggle pin status
         note_id: String,
     },
+    /// Link a note to another entity or note
+    Link {
+        /// Source note ID
+        source_note_id: String,
+        /// Target entity or note ID
+        target_id: String,
+        /// Target type (note, entity)
+        #[arg(short = 't', long, default_value = "entity")]
+        target_type: String,
+        /// Entity type if target is entity (feature, task, project, etc.)
+        #[arg(long)]
+        entity_type: Option<String>,
+        /// Link type (reference, response_to, related, blocks, depends_on)
+        #[arg(short = 'l', long, default_value = "reference")]
+        link_type: String,
+    },
+    /// Remove a link between notes/entities
+    Unlink {
+        /// Link ID to remove
+        link_id: String,
+        /// Skip confirmation prompt
+        #[arg(short, long)]
+        force: bool,
+    },
+    /// List links for a note or entity
+    ListLinks {
+        /// Entity or note ID to show links for
+        id: String,
+        /// Show incoming links (pointing to this entity)
+        #[arg(long)]
+        incoming: bool,
+        /// Show outgoing links (from this entity)
+        #[arg(long)]
+        outgoing: bool,
+        /// Output format (human, json)
+        #[arg(short, long, default_value = "human")]
+        format: String,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -653,6 +691,24 @@ enum TemplateAction {
     },
     /// Render all enabled templates
     Render,
+    /// Generate documentation from database entities
+    GenerateDocs {
+        /// Documentation type to generate (claude, features, progress, status, all)
+        #[arg(default_value = "all")]
+        doc_type: String,
+        /// Output directory for generated files
+        #[arg(short, long)]
+        output: Option<String>,
+        /// Force overwrite existing files
+        #[arg(short, long)]
+        force: bool,
+    },
+    /// Initialize predefined documentation templates
+    InitDocs {
+        /// Force reinitialize even if templates exist
+        #[arg(short, long)]
+        force: bool,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -1222,99 +1278,206 @@ fn log_to_file(message: &str) -> Result<()> {
 }
 
 fn handle_template_command(action: TemplateAction) -> Result<()> {
-    let project_root = get_project_root()?;
-    let state = WorkspaceState::load(&project_root)?;
-    let mut template_manager = TemplateManager::new(&state)?;
+    use tokio::runtime::Runtime;
+    use workspace::entities::{EntityManager, doc_generator::DocumentationGenerator};
+    use std::fs;
+    use std::path::Path;
     
-    match action {
-        TemplateAction::Add { name, template, output, description } => {
-            let template_path = std::path::Path::new(&template);
-            let template_content = if template_path.exists() {
-                fs::read_to_string(template_path)
-                    .context("Failed to read template file")?
-            } else {
-                template
-            };
-            
-            template_manager.add_template(&name, &template_content, &output.unwrap_or_else(|| format!("{}.rendered", name)), description)?;
-            println!("{} Added template: {}", "Success".green(), name);
-        }
+    let rt = Runtime::new()?;
+    let project_root = get_project_root()?;
+    
+    rt.block_on(async {
+        let pool = workspace::entities::database::initialize_database(&project_root).await?;
+        let entity_manager = EntityManager::new(pool.clone());
+        let current_project = entity_manager.get_current_project().await?;
+        let mut doc_generator = DocumentationGenerator::new(pool)?;
         
-        TemplateAction::List => {
-            let templates = template_manager.list_templates();
-            if templates.is_empty() {
-                println!("{} No templates configured", "Info".blue());
-                return Ok(());
+        match action {
+            TemplateAction::Add { name, template, output, description } => {
+                let template_path = Path::new(&template);
+                let template_content = if template_path.exists() {
+                    fs::read_to_string(template_path)?
+                } else {
+                    template
+                };
+                
+                let template = entity_manager.create_template(
+                    &current_project.id,
+                    name.clone(),
+                    description,
+                    template_content,
+                    output,
+                    None,
+                ).await?;
+                
+                println!("{} Added template: {} (ID: {})", "Success".green(), name, template.id);
             }
-            
-            println!("{}", "Templates:".bold());
-            for template in templates {
-                let status = if template.enabled { "enabled".green() } else { "disabled".red() };
-                let output = &template.output_path;
-                println!("  {} [{}] -> {}", template.name.bold(), status, output);
-                if let Some(desc) = &template.description {
-                    println!("    {}", desc);
+        
+            TemplateAction::List => {
+                let templates = entity_manager.get_templates(&current_project.id).await?;
+                if templates.is_empty() {
+                    println!("{} No templates configured", "Info".blue());
+                } else {
+                    println!("{}", "Templates:".bold());
+                    for template in templates {
+                        let status = if template.enabled { "enabled".green() } else { "disabled".red() };
+                        let output = template.output_path.as_deref().unwrap_or("(no output path)");
+                        println!("  {} [{}] -> {}", template.name.bold(), status, output);
+                        if let Some(desc) = &template.description {
+                            println!("    {}", desc);
+                        }
+                    }
                 }
             }
-        }
-        
-        TemplateAction::Show { name } => {
-            let project_root = get_project_root()?;
-            let workspace_state = WorkspaceState::load(&project_root)?;
-            match template_manager.get_template(&name) {
-                Some(template) => {
+            
+            TemplateAction::Show { name } => {
+                let templates = entity_manager.get_templates(&current_project.id).await?;
+                if let Some(template) = templates.iter().find(|t| t.name == name) {
                     println!("{}", format!("Template: {}", name).bold());
                     println!("{}: {}", "Enabled".blue(), if template.enabled { "Yes" } else { "No" });
-                    println!("{}: {}", "Output Path".blue(), &template.output_path);
+                    println!("{}: {}", "Output Path".blue(), 
+                        template.output_path.as_deref().unwrap_or("(no output path)"));
                     if let Some(desc) = &template.description {
                         println!("{}: {}", "Description".blue(), desc);
                     }
+                    println!("{}: {}", "Last Rendered".blue(), 
+                        template.last_rendered.map_or("Never".to_string(), |d| d.format("%Y-%m-%d %H:%M:%S UTC").to_string()));
+                    println!("{}: {}", "Render Count".blue(), template.render_count);
                     println!();
                     println!("{}", "Content:".bold());
-                    // Read and display template content
-                    let templates_dir = workspace_state.tool_dir("st8").join("templates");
-                    let content_path = templates_dir.join(&template.source_path);
-                    if let Ok(content) = fs::read_to_string(&content_path) {
-                        println!("{}", content);
-                    } else {
-                        println!("(Template content could not be read)");
-                    }
-                }
-                None => {
+                    println!("{}", template.content);
+                } else {
                     eprintln!("{}: Template '{}' not found", "Error".red(), name);
                 }
             }
-        }
-        
-        TemplateAction::Enable { name, disable } => {
-            let enabled = !disable;
-            template_manager.set_template_enabled(&name, enabled)?;
-            let status = if enabled { "enabled" } else { "disabled" };
-            println!("{} Template '{}' {}", "Success".green(), name, status);
-        }
-        
-        TemplateAction::Remove { name } => {
-            template_manager.remove_template(&name)?;
-            println!("{} Removed template: {}", "Success".green(), name);
-        }
-        
-        TemplateAction::Render => {
-            let project_root = get_project_root()?;
-            let workspace_state = WorkspaceState::load(&project_root)?;
-            let version_info = VersionInfo::calculate()?;
-            let project_name = workspace_state.project_name.as_deref();
-            let rendered_files = template_manager.render_all_templates(&version_info, project_name)?;
-            if rendered_files.is_empty() {
-                println!("{} No templates to render", "Info".blue());
-            } else {
-                println!("{} Rendered {} templates", "Success".green(), rendered_files.len());
-                for file in rendered_files {
-                    println!("  - {}", file);
+            
+            TemplateAction::Enable { name, disable } => {
+                let templates = entity_manager.get_templates(&current_project.id).await?;
+                if let Some(template) = templates.iter().find(|t| t.name == name) {
+                    let enabled = !disable;
+                    entity_manager.update_template(
+                        &template.id,
+                        None,
+                        None,
+                        None,
+                        None,
+                        None,
+                        Some(enabled),
+                    ).await?;
+                    let status = if enabled { "enabled" } else { "disabled" };
+                    println!("{} Template '{}' {}", "Success".green(), name, status);
+                } else {
+                    eprintln!("{}: Template '{}' not found", "Error".red(), name);
+                }
+            }
+            
+            TemplateAction::Remove { name } => {
+                let templates = entity_manager.get_templates(&current_project.id).await?;
+                if let Some(template) = templates.iter().find(|t| t.name == name) {
+                    entity_manager.delete_template(&template.id).await?;
+                    println!("{} Removed template: {}", "Success".green(), name);
+                } else {
+                    eprintln!("{}: Template '{}' not found", "Error".red(), name);
+                }
+            }
+            
+            TemplateAction::Render => {
+                let rendered_files = doc_generator.render_all_templates(&current_project.id).await?;
+                if rendered_files.is_empty() {
+                    println!("{} No templates to render", "Info".blue());
+                } else {
+                    println!("{} Rendered {} templates", "Success".green(), rendered_files.len());
+                    for (file_path, _content) in &rendered_files {
+                        // Write to filesystem
+                        if let Some(parent) = Path::new(file_path).parent() {
+                            fs::create_dir_all(parent)?;
+                        }
+                        fs::write(file_path, &_content)?;
+                        println!("  - {}", file_path);
+                    }
+                }
+            }
+
+            TemplateAction::GenerateDocs { doc_type, output, force } => {
+                let output_dir = output.as_deref().unwrap_or(".");
+                let output_path = Path::new(output_dir);
+                
+                match doc_type.as_str() {
+                    "claude" => {
+                        let content = doc_generator.generate_claude_md(&current_project.id).await?;
+                        let file_path = output_path.join("CLAUDE.md");
+                        write_doc_file(&file_path, &content, force)?;
+                        println!("{} Generated: {}", "Success".green(), file_path.display());
+                    }
+                    "features" => {
+                        let content = doc_generator.generate_features_md(&current_project.id).await?;
+                        let file_path = output_path.join("internal").join("features.md");
+                        write_doc_file(&file_path, &content, force)?;
+                        println!("{} Generated: {}", "Success".green(), file_path.display());
+                    }
+                    "progress" => {
+                        let content = doc_generator.generate_progress_md(&current_project.id).await?;
+                        let file_path = output_path.join("internal").join("progress_tracking.md");
+                        write_doc_file(&file_path, &content, force)?;
+                        println!("{} Generated: {}", "Success".green(), file_path.display());
+                    }
+                    "status" => {
+                        let content = doc_generator.generate_status_md(&current_project.id).await?;
+                        let file_path = output_path.join("internal").join("current_status.md");
+                        write_doc_file(&file_path, &content, force)?;
+                        println!("{} Generated: {}", "Success".green(), file_path.display());
+                    }
+                    "all" => {
+                        let claude_content = doc_generator.generate_claude_md(&current_project.id).await?;
+                        let features_content = doc_generator.generate_features_md(&current_project.id).await?;
+                        let progress_content = doc_generator.generate_progress_md(&current_project.id).await?;
+                        let status_content = doc_generator.generate_status_md(&current_project.id).await?;
+                        
+                        write_doc_file(&output_path.join("CLAUDE.md"), &claude_content, force)?;
+                        write_doc_file(&output_path.join("internal").join("features.md"), &features_content, force)?;
+                        write_doc_file(&output_path.join("internal").join("progress_tracking.md"), &progress_content, force)?;
+                        write_doc_file(&output_path.join("internal").join("current_status.md"), &status_content, force)?;
+                        
+                        println!("{} Generated all documentation files in {}", "Success".green(), output_dir);
+                    }
+                    _ => {
+                        eprintln!("{}: Unknown documentation type '{}'. Use: claude, features, progress, status, or all", "Error".red(), doc_type);
+                    }
+                }
+            }
+
+            TemplateAction::InitDocs { force } => {
+                let existing_templates = entity_manager.get_templates(&current_project.id).await?;
+                let doc_templates = ["claude_md", "features_md", "progress_md", "status_md"];
+                let has_existing = existing_templates.iter().any(|t| doc_templates.contains(&t.name.as_str()));
+                
+                if has_existing && !force {
+                    println!("{} Documentation templates already exist. Use --force to reinitialize.", "Info".blue());
+                } else {
+                    let templates = entity_manager.initialize_predefined_templates(&current_project.id).await?;
+                    println!("{} Initialized {} documentation templates", "Success".green(), templates.len());
+                    for template in templates {
+                        println!("  - {}: {}", template.name, template.description.as_deref().unwrap_or("No description"));
+                    }
                 }
             }
         }
+        
+        Ok(())
+    })
+}
+
+fn write_doc_file(file_path: &Path, content: &str, force: bool) -> Result<()> {
+    if file_path.exists() && !force {
+        eprintln!("{}: File {} already exists. Use --force to overwrite.", "Error".red(), file_path.display());
+        return Ok(());
     }
     
+    if let Some(parent) = file_path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    
+    std::fs::write(file_path, content)?;
     Ok(())
 }
 
@@ -5775,7 +5938,763 @@ This sample demonstrates:
     std::fs::write(output_path.join("README.md"), readme_content)?;
     println!("  {} Created README.md", "✅".green());
     
+    // Initialize git repository with sample commits
+    println!("  {} Initializing git repository...", "🔧".yellow());
+    init_sample_git_repo(output_path)?;
+    
     println!("{} Sample project structure created in {}", "✅".green().bold(), output_dir);
+    
+    Ok(())
+}
+
+fn init_sample_git_repo(project_path: &std::path::Path) -> Result<()> {
+    use std::process::Command;
+    
+    // Initialize git repository
+    let output = Command::new("git")
+        .arg("init")
+        .current_dir(project_path)
+        .output()?;
+    
+    if !output.status.success() {
+        return Err(anyhow::anyhow!("Failed to initialize git repository"));
+    }
+    
+    // Configure git user for the repo
+    Command::new("git")
+        .args(&["config", "user.name", "Sample Developer"])
+        .current_dir(project_path)
+        .output()?;
+    
+    Command::new("git")
+        .args(&["config", "user.email", "developer@sample-project.com"])
+        .current_dir(project_path)
+        .output()?;
+    
+    // Create sample source files with realistic content
+    create_sample_source_files(project_path)?;
+    
+    // Create initial commit
+    Command::new("git")
+        .args(&["add", "."])
+        .current_dir(project_path)
+        .output()?;
+    
+    let commit_msg = "Initial project setup
+
+- Added basic project structure with package.json
+- Created src/, docs/, tests/ directories  
+- Added project documentation and README
+- Initialized workspace with .ws/ directory";
+    
+    Command::new("git")
+        .args(&["commit", "-m", commit_msg])
+        .current_dir(project_path)
+        .output()?;
+    
+    // Add some development commits to simulate project history
+    create_development_commits(project_path)?;
+    
+    println!("    {} Git repository initialized with sample commits", "✅".green());
+    
+    Ok(())
+}
+
+fn create_sample_source_files(project_path: &std::path::Path) -> Result<()> {
+    // Create sample JavaScript files
+    let app_js = r#"// Main application entry point
+class DashboardApp {
+    constructor() {
+        this.apiBase = '/api';
+        this.currentUser = null;
+        this.init();
+    }
+    
+    async init() {
+        await this.loadUserProfile();
+        this.setupEventListeners();
+        this.renderDashboard();
+    }
+    
+    async loadUserProfile() {
+        try {
+            const response = await fetch(`${this.apiBase}/user/profile`);
+            this.currentUser = await response.json();
+        } catch (error) {
+            console.error('Failed to load user profile:', error);
+        }
+    }
+    
+    setupEventListeners() {
+        document.getElementById('refresh-btn')?.addEventListener('click', () => {
+            this.refreshData();
+        });
+    }
+    
+    renderDashboard() {
+        const container = document.getElementById('dashboard');
+        if (container) {
+            container.innerHTML = `
+                <h1>Welcome, ${this.currentUser?.name || 'User'}</h1>
+                <div class="metrics">
+                    <div class="metric-card">
+                        <h3>Active Projects</h3>
+                        <span class="metric-value">12</span>
+                    </div>
+                    <div class="metric-card">
+                        <h3>Tasks Completed</h3>
+                        <span class="metric-value">84</span>
+                    </div>
+                </div>
+            `;
+        }
+    }
+    
+    async refreshData() {
+        console.log('Refreshing dashboard data...');
+        await this.loadUserProfile();
+        this.renderDashboard();
+    }
+}
+
+// Initialize app when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    new DashboardApp();
+});
+"#;
+    
+    std::fs::write(project_path.join("src/app.js"), app_js)?;
+    
+    // Create sample CSS
+    let styles_css = r#"/* Dashboard Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: #f5f5f5;
+    color: #333;
+}
+
+#dashboard {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+h1 {
+    color: #2c3e50;
+    margin-bottom: 30px;
+    font-weight: 300;
+}
+
+.metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.metric-card {
+    background: white;
+    padding: 24px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    text-align: center;
+}
+
+.metric-card h3 {
+    color: #666;
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 8px;
+}
+
+.metric-value {
+    font-size: 32px;
+    font-weight: 700;
+    color: #3498db;
+}
+
+#refresh-btn {
+    background: #3498db;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+#refresh-btn:hover {
+    background: #2980b9;
+}
+"#;
+    
+    std::fs::write(project_path.join("src/styles.css"), styles_css)?;
+    
+    // Create sample HTML
+    let index_html = r#"<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sample Dashboard</title>
+    <link rel="stylesheet" href="src/styles.css">
+</head>
+<body>
+    <div id="dashboard">
+        <div class="loading">Loading dashboard...</div>
+    </div>
+    <button id="refresh-btn">Refresh Data</button>
+    <script src="src/app.js"></script>
+</body>
+</html>
+"#;
+    
+    std::fs::write(project_path.join("index.html"), index_html)?;
+    
+    // Create sample test file
+    let test_js = r#"// Dashboard App Tests
+describe('DashboardApp', () => {
+    let app;
+    
+    beforeEach(() => {
+        document.body.innerHTML = '<div id="dashboard"></div>';
+        app = new DashboardApp();
+    });
+    
+    test('should initialize with correct API base', () => {
+        expect(app.apiBase).toBe('/api');
+    });
+    
+    test('should render welcome message', () => {
+        app.currentUser = { name: 'Test User' };
+        app.renderDashboard();
+        
+        const dashboard = document.getElementById('dashboard');
+        expect(dashboard.innerHTML).toContain('Welcome, Test User');
+    });
+    
+    test('should handle missing user gracefully', () => {
+        app.currentUser = null;
+        app.renderDashboard();
+        
+        const dashboard = document.getElementById('dashboard');
+        expect(dashboard.innerHTML).toContain('Welcome, User');
+    });
+});
+"#;
+    
+    std::fs::write(project_path.join("tests/app.test.js"), test_js)?;
+    
+    // Create sample documentation
+    let api_docs = r#"# API Documentation
+
+## Overview
+
+This document describes the REST API endpoints for the sample dashboard application.
+
+## Authentication
+
+All API endpoints require authentication via Bearer token in the Authorization header:
+
+```
+Authorization: Bearer <your-token>
+```
+
+## Endpoints
+
+### User Profile
+
+**GET /api/user/profile**
+
+Returns the current user's profile information.
+
+Response:
+```json
+{
+  "id": "user-123",
+  "name": "John Doe",
+  "email": "john@example.com",
+  "role": "developer",
+  "avatar_url": "https://example.com/avatar.jpg"
+}
+```
+
+### Projects
+
+**GET /api/projects**
+
+Returns a list of all projects.
+
+Query Parameters:
+- `status` - Filter by project status (active, archived)
+- `limit` - Number of results to return (default: 20)
+
+Response:
+```json
+{
+  "projects": [
+    {
+      "id": "proj-123",
+      "name": "Sample Project",
+      "status": "active",
+      "created_at": "2024-01-15T10:00:00Z"
+    }
+  ],
+  "total": 1
+}
+```
+
+### Tasks
+
+**POST /api/tasks**
+
+Creates a new task.
+
+Request Body:
+```json
+{
+  "title": "Implement feature X",
+  "description": "Add the new feature to the dashboard",
+  "priority": "high",
+  "assignee": "user-123"
+}
+```
+
+## Error Responses
+
+All errors follow this format:
+
+```json
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Invalid request parameters",
+    "details": ["Missing required field: title"]
+  }
+}
+```
+"#;
+    
+    std::fs::write(project_path.join("docs/api.md"), api_docs)?;
+    
+    Ok(())
+}
+
+fn create_development_commits(project_path: &std::path::Path) -> Result<()> {
+    use std::process::Command;
+    
+    // Commit 2: Add user authentication
+    let auth_js = r#"// User authentication module
+class AuthManager {
+    constructor(apiBase) {
+        this.apiBase = apiBase;
+        this.token = localStorage.getItem('auth_token');
+    }
+    
+    async login(email, password) {
+        const response = await fetch(`${this.apiBase}/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+        });
+        
+        const data = await response.json();
+        if (data.token) {
+            this.token = data.token;
+            localStorage.setItem('auth_token', this.token);
+        }
+        
+        return data;
+    }
+    
+    logout() {
+        this.token = null;
+        localStorage.removeItem('auth_token');
+    }
+    
+    isAuthenticated() {
+        return !!this.token;
+    }
+    
+    getAuthHeaders() {
+        return this.token ? { 'Authorization': `Bearer ${this.token}` } : {};
+    }
+}
+"#;
+    
+    std::fs::write(project_path.join("src/auth.js"), auth_js)?;
+    
+    Command::new("git")
+        .args(&["add", "src/auth.js"])
+        .current_dir(project_path)
+        .output()?;
+    
+    Command::new("git")
+        .args(&["commit", "-m", "Add user authentication module
+
+- Implement AuthManager class for login/logout
+- Add token-based authentication support  
+- Store auth tokens in localStorage
+- Provide helper methods for authenticated requests"])
+        .current_dir(project_path)
+        .output()?;
+    
+    // Commit 3: Update dashboard with authentication
+    let updated_app = r#"// Main application entry point
+class DashboardApp {
+    constructor() {
+        this.apiBase = '/api';
+        this.currentUser = null;
+        this.authManager = new AuthManager(this.apiBase);
+        this.init();
+    }
+    
+    async init() {
+        if (!this.authManager.isAuthenticated()) {
+            this.showLoginForm();
+            return;
+        }
+        
+        await this.loadUserProfile();
+        this.setupEventListeners();
+        this.renderDashboard();
+    }
+    
+    async loadUserProfile() {
+        try {
+            const response = await fetch(`${this.apiBase}/user/profile`, {
+                headers: this.authManager.getAuthHeaders()
+            });
+            this.currentUser = await response.json();
+        } catch (error) {
+            console.error('Failed to load user profile:', error);
+            this.authManager.logout();
+            this.showLoginForm();
+        }
+    }
+    
+    setupEventListeners() {
+        document.getElementById('refresh-btn')?.addEventListener('click', () => {
+            this.refreshData();
+        });
+        
+        document.getElementById('logout-btn')?.addEventListener('click', () => {
+            this.authManager.logout();
+            this.showLoginForm();
+        });
+    }
+    
+    renderDashboard() {
+        const container = document.getElementById('dashboard');
+        if (container) {
+            container.innerHTML = `
+                <div class="header">
+                    <h1>Welcome, ${this.currentUser?.name || 'User'}</h1>
+                    <button id="logout-btn">Logout</button>
+                </div>
+                <div class="metrics">
+                    <div class="metric-card">
+                        <h3>Active Projects</h3>
+                        <span class="metric-value">12</span>
+                    </div>
+                    <div class="metric-card">
+                        <h3>Tasks Completed</h3>
+                        <span class="metric-value">84</span>
+                    </div>
+                    <div class="metric-card">
+                        <h3>Team Members</h3>
+                        <span class="metric-value">6</span>
+                    </div>
+                </div>
+            `;
+            this.setupEventListeners();
+        }
+    }
+    
+    showLoginForm() {
+        const container = document.getElementById('dashboard');
+        if (container) {
+            container.innerHTML = `
+                <div class="login-form">
+                    <h2>Login</h2>
+                    <form id="login-form">
+                        <input type="email" id="email" placeholder="Email" required>
+                        <input type="password" id="password" placeholder="Password" required>
+                        <button type="submit">Login</button>
+                    </form>
+                </div>
+            `;
+            
+            document.getElementById('login-form')?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const email = document.getElementById('email').value;
+                const password = document.getElementById('password').value;
+                
+                try {
+                    await this.authManager.login(email, password);
+                    this.init();
+                } catch (error) {
+                    alert('Login failed: ' + error.message);
+                }
+            });
+        }
+    }
+    
+    async refreshData() {
+        console.log('Refreshing dashboard data...');
+        await this.loadUserProfile();
+        this.renderDashboard();
+    }
+}
+
+// Initialize app when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    new DashboardApp();
+});
+"#;
+    
+    std::fs::write(project_path.join("src/app.js"), updated_app)?;
+    
+    Command::new("git")
+        .args(&["add", "src/app.js"])
+        .current_dir(project_path)
+        .output()?;
+    
+    Command::new("git")
+        .args(&["commit", "-m", "Integrate authentication into dashboard
+
+- Add login/logout functionality to main app
+- Require authentication before showing dashboard
+- Add logout button to dashboard header
+- Handle authentication errors gracefully  
+- Show login form for unauthenticated users"])
+        .current_dir(project_path)
+        .output()?;
+    
+    // Commit 4: Add responsive design
+    let updated_css = r#"/* Dashboard Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: #f5f5f5;
+    color: #333;
+}
+
+#dashboard {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #ddd;
+}
+
+.header h1 {
+    color: #2c3e50;
+    font-weight: 300;
+    margin: 0;
+}
+
+#logout-btn {
+    background: #e74c3c;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+#logout-btn:hover {
+    background: #c0392b;
+}
+
+.metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.metric-card {
+    background: white;
+    padding: 24px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    text-align: center;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.metric-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.metric-card h3 {
+    color: #666;
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.metric-value {
+    font-size: 32px;
+    font-weight: 700;
+    color: #3498db;
+}
+
+.login-form {
+    max-width: 400px;
+    margin: 100px auto;
+    padding: 40px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+}
+
+.login-form h2 {
+    text-align: center;
+    margin-bottom: 30px;
+    color: #2c3e50;
+    font-weight: 300;
+}
+
+.login-form input {
+    width: 100%;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: border-color 0.3s ease;
+}
+
+.login-form input:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+.login-form button {
+    width: 100%;
+    padding: 12px;
+    background: #3498db;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+.login-form button:hover {
+    background: #2980b9;
+}
+
+#refresh-btn {
+    background: #27ae60;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.3s ease;
+}
+
+#refresh-btn:hover {
+    background: #219a52;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    #dashboard {
+        padding: 15px;
+    }
+    
+    .header {
+        flex-direction: column;
+        gap: 15px;
+        align-items: flex-start;
+    }
+    
+    .header h1 {
+        font-size: 24px;
+    }
+    
+    .metrics {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+    
+    .metric-card {
+        padding: 20px;
+    }
+    
+    .metric-value {
+        font-size: 28px;
+    }
+    
+    .login-form {
+        margin: 50px 20px;
+        padding: 30px 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .metric-card {
+        padding: 16px;
+    }
+    
+    .metric-value {
+        font-size: 24px;
+    }
+    
+    .login-form {
+        margin: 30px 15px;
+        padding: 25px 15px;
+    }
+}
+"#;
+    
+    std::fs::write(project_path.join("src/styles.css"), updated_css)?;
+    
+    Command::new("git")
+        .args(&["add", "src/styles.css"])
+        .current_dir(project_path)
+        .output()?;
+    
+    Command::new("git")
+        .args(&["commit", "-m", "Add responsive design and improved styling
+
+- Implement responsive design for mobile devices
+- Add hover effects and smooth transitions
+- Improve login form styling and layout
+- Add header with logout button styling
+- Enhance metric cards with better visual hierarchy
+- Add media queries for tablet and mobile breakpoints"])
+        .current_dir(project_path)
+        .output()?;
     
     Ok(())
 }
@@ -5818,82 +6737,106 @@ async fn populate_sample_data_in_dir_async(output_dir: &str, _force: bool) -> Re
     
     // Initialize database with proper schema
     let pool = initialize_database(&db_path).await?;
-    let entity_manager = EntityManager::new(pool);
+    let entity_manager = EntityManager::new(pool.clone());
     
-    // Comprehensive test data SQL with maximum diversity across all entity types and fields
-    let test_data_sql = r#"-- Clear existing data
+    // Get the current project (first project) to use for all sample data
+    let current_project = entity_manager.get_current_project().await?;
+    let project_id = &current_project.id;
+    
+    // Generate comprehensive test data SQL with dynamic project ID - just add data to existing project
+    let test_data_sql = format!(r#"-- Clear existing sample data (keep project)
 DELETE FROM entity_audit_trails;
 DELETE FROM feature_state_transitions;
+DELETE FROM note_links;
 DELETE FROM notes;
 DELETE FROM dependencies;
 DELETE FROM tests;
 DELETE FROM templates;
 DELETE FROM directives;
+DELETE FROM milestones;
 DELETE FROM sessions;
 DELETE FROM tasks;
 DELETE FROM features;
-DELETE FROM projects;
 
--- Insert diverse projects across multiple domains
-INSERT INTO projects (id, name, description, repository_url, version, archived, metadata, created_at, updated_at) VALUES
-('proj-ecommerce', 'E-Commerce Platform', 'Full-stack online marketplace with payment processing, inventory management, customer analytics, and multi-vendor support', 'https://github.com/company/ecommerce-platform', '2.3.1', 0, '{"tech_stack": ["React", "Node.js", "PostgreSQL", "Redis"], "team_size": 12, "deployment_env": "AWS", "compliance": ["PCI-DSS", "GDPR"], "api_version": "v2", "performance_sla": "99.9%", "monthly_revenue": "$125000", "active_users": 45000, "deployment_frequency": "daily", "mttr": "15min"}', '2024-01-15T10:00:00Z', '2024-08-05T15:30:00Z'),
-('proj-iot', 'IoT Device Management', 'Industrial IoT platform for monitoring and controlling connected devices across multiple facilities with edge computing capabilities', 'https://github.com/company/iot-platform', '1.7.8', 0, '{"protocols": ["MQTT", "CoAP", "LoRaWAN", "Zigbee"], "device_capacity": 50000, "real_time_processing": true, "edge_computing": true, "security_level": "enterprise", "geographic_coverage": ["North America", "Europe", "Asia-Pacific"], "industry_verticals": ["Manufacturing", "Energy", "Agriculture"], "uptime_sla": "99.95%"}', '2024-02-01T09:00:00Z', '2024-08-05T14:20:00Z'),
-('proj-fintech', 'Financial Analytics Dashboard', 'Real-time financial data analysis with predictive modeling, risk assessment, and regulatory compliance tools', 'https://github.com/company/fintech-analytics', '3.1.0', 0, '{"data_sources": ["Bloomberg API", "Alpha Vantage", "IEX Cloud", "Reuters"], "ml_models": ["LSTM", "Random Forest", "SVM", "Neural Networks"], "update_frequency": "real-time", "regulatory_compliance": ["SOX", "MiFID II", "Basel III"], "supported_markets": ["NYSE", "NASDAQ", "LSE", "TSE"], "risk_metrics": ["VaR", "CVaR", "Stress Testing"], "aum": "$2.5B"}', '2024-03-01T08:00:00Z', '2024-08-05T16:00:00Z'),
-('proj-healthcare', 'Healthcare Management System', 'Electronic health records system with clinical decision support, telemedicine, and integrated medical devices', 'https://github.com/medtech/ehr-system', '4.2.5', 0, '{"patient_capacity": 100000, "compliance": ["HIPAA", "HL7", "FHIR", "FDA 21 CFR Part 11"], "integrations": ["Epic", "Cerner", "Allscripts", "athenahealth"], "security_features": ["encryption_at_rest", "audit_trails", "access_controls", "PKI"], "clinical_modules": ["EHR", "CPOE", "CDS", "PACS"], "specialties": ["Cardiology", "Oncology", "Radiology", "Pharmacy"]}', '2024-01-20T11:00:00Z', '2024-08-05T13:45:00Z'),
-('proj-gameengine', 'Game Engine Framework', 'Cross-platform 3D game engine with physics simulation, asset pipeline, and multiplayer networking', 'https://github.com/gamedev/engine3d', '0.9.12', 0, '{"rendering_apis": ["Vulkan", "DirectX 12", "Metal", "OpenGL ES"], "platforms": ["Windows", "macOS", "Linux", "iOS", "Android", "Switch"], "physics_engine": "Bullet", "asset_formats": ["FBX", "glTF", "OBJ", "DAE", "USD"], "audio_system": "FMOD", "scripting_languages": ["Lua", "C#", "JavaScript"], "supported_genres": ["FPS", "RPG", "Strategy"]}', '2024-04-01T12:00:00Z', '2024-08-05T17:20:00Z'),
-('proj-ai-research', 'AI Research Platform', 'Machine learning research platform with distributed training, experiment tracking, and model deployment', 'https://github.com/ailab/research-platform', '1.4.2', 0, '{"frameworks": ["PyTorch", "TensorFlow", "JAX", "Hugging Face"], "compute_resources": ["GPU_clusters", "TPU_v4", "CPU_farms", "Quantum_simulators"], "experiment_tracking": "MLflow", "data_versioning": "DVC", "research_areas": ["NLP", "Computer Vision", "Reinforcement Learning", "Generative AI"], "paper_count": 47, "h_index": 23}', '2024-02-15T09:30:00Z', '2024-08-05T12:15:00Z'),
-('proj-blockchain', 'Blockchain Infrastructure', 'Decentralized blockchain platform with smart contracts, DeFi protocols, and cross-chain capabilities', 'https://github.com/crypto/blockchain-infra', '2.0.0-beta', 0, '{"consensus_algorithm": "Proof of Stake", "transaction_throughput": "10000 TPS", "smart_contract_languages": ["Solidity", "Rust", "Move"], "networks": ["Ethereum", "Polygon", "Arbitrum"], "security_audits": 3, "node_count": 1200, "total_value_locked": "$50M"}', '2024-03-10T14:00:00Z', '2024-08-05T18:00:00Z'),
-('proj-autonomous', 'Autonomous Vehicle Controller', 'Real-time control system for autonomous vehicles with sensor fusion, path planning, and safety systems', 'https://github.com/autotech/av-controller', '0.3.7', 0, '{"safety_level": "ASIL-D", "sensors": ["LiDAR", "Camera", "Radar", "GPS", "IMU"], "processing_unit": "NVIDIA Drive AGX", "real_time_constraints": "< 10ms", "ml_frameworks": ["TensorRT", "OpenCV", "PCL"], "testing_miles": 250000, "regulatory_approval": ["DOT", "NHTSA"]}', '2024-05-01T08:00:00Z', '2024-08-05T19:30:00Z');
-
--- Insert comprehensive features
+-- Insert sample features for current project
 INSERT INTO features (id, project_id, code, name, description, category, state, test_status, priority, implementation_notes, test_evidence, created_at, updated_at, completed_at, estimated_effort, actual_effort) VALUES
-('feat-001', 'project-1', 'F-001', 'User Authentication Portal', 'Secure login system with multi-factor authentication and SSO integration', 'Frontend', 'tested_passing', 'All authentication tests passing', 'critical', 'Implemented using OAuth 2.0 and JWT tokens', 'All authentication tests passing', '2024-06-01T09:00:00Z', '2024-07-15T16:30:00Z', '2024-07-15T16:30:00Z', 40, 45),
-('feat-002', 'project-1', 'F-002', 'Dashboard Analytics Widget', 'Interactive dashboard with real-time metrics and customizable charts', 'Frontend', 'in_progress', 'Unit tests 70% complete', 'high', 'Using Chart.js and WebSocket for real-time updates', 'Unit tests 70% complete', '2024-06-15T10:00:00Z', '2024-08-01T14:20:00Z', NULL, 32, 28),
-('feat-003', 'project-1', 'F-003', 'Mobile Responsive Layout', 'Responsive design system supporting all device sizes', 'Frontend', 'tested_passing', 'Cross-browser testing completed', 'medium', 'Bootstrap 5 with custom breakpoints', 'Cross-browser testing completed', '2024-05-20T11:30:00Z', '2024-07-30T09:15:00Z', '2024-07-28T15:45:00Z', 24, 22),
-('feat-004', 'project-1', 'F-004', 'Progressive Web App', 'PWA capabilities with offline support and push notifications', 'Frontend', 'not_implemented', 'Not yet implemented', 'medium', NULL, NULL, '2024-07-01T08:00:00Z', '2024-07-01T08:00:00Z', NULL, 48, NULL),
-('feat-005', 'project-3', 'F-005', 'Legacy UI Components', 'Deprecated UI components scheduled for removal', 'Frontend', 'critical_issue', 'Tests skipped - components deprecated', 'low', 'Replaced by modern component library', 'Tests skipped - components deprecated', '2023-12-01T10:00:00Z', '2024-06-01T14:00:00Z', NULL, 0, 0),
-('feat-006', 'project-1', 'F-006', 'GraphQL API Gateway', 'Unified GraphQL endpoint aggregating multiple microservices', 'Backend', 'tested_passing', 'Load testing completed', 'critical', 'Apollo Server with federation and caching', 'Load testing completed', '2024-05-01T09:30:00Z', '2024-07-20T11:45:00Z', '2024-07-18T14:20:00Z', 60, 65),
-('feat-007', 'project-1', 'F-007', 'Payment Processing Service', 'Secure payment gateway with multiple provider support', 'Backend', 'tested_failing', 'Payment tests failing on edge cases', 'critical', 'Stripe and PayPal integration with webhook handling', 'Payment tests failing on edge cases', '2024-06-10T10:15:00Z', '2024-08-02T16:00:00Z', NULL, 80, 72),
-('feat-008', 'project-1', 'F-008', 'Inventory Management API', 'RESTful API for product catalog and stock management', 'Backend', 'tested_passing', 'API documentation complete', 'high', 'CRUD operations with optimistic locking', 'API documentation complete', '2024-05-15T14:00:00Z', '2024-07-10T10:30:00Z', '2024-07-08T16:45:00Z', 45, 42),
-('feat-009', 'project-2', 'F-009', 'Machine Learning Pipeline', 'Automated ML pipeline for recommendation engine', 'Backend', 'not_implemented', 'Not yet started', 'medium', NULL, NULL, '2024-07-15T09:00:00Z', '2024-07-15T09:00:00Z', NULL, 120, NULL),
-('feat-010', 'project-4', 'F-010', 'Legacy Database Migration', 'Migration scripts for legacy system data transfer', 'Backend', 'not_implemented', 'Planning in progress', 'high', NULL, NULL, '2024-07-20T11:00:00Z', '2024-07-25T14:30:00Z', NULL, 96, NULL);
+('feat-001', '{project_id}', 'F-001', 'User Authentication Portal', 'Secure login system with multi-factor authentication and SSO integration', 'Frontend', 'tested_passing', 'All authentication tests passing', 'critical', 'Implemented using OAuth 2.0 and JWT tokens', 'All authentication tests passing', '2024-06-01T09:00:00Z', '2024-07-15T16:30:00Z', '2024-07-15T16:30:00Z', 40, 45),
+('feat-002', '{project_id}', 'F-002', 'Dashboard Analytics Widget', 'Interactive dashboard with real-time metrics and customizable charts', 'Frontend', 'in_progress', 'Unit tests 70% complete', 'high', 'Using Chart.js and WebSocket for real-time updates', 'Unit tests 70% complete', '2024-06-15T10:00:00Z', '2024-08-01T14:20:00Z', NULL, 32, 28),
+('feat-003', '{project_id}', 'F-003', 'Mobile Responsive Layout', 'Responsive design system supporting all device sizes', 'Frontend', 'tested_passing', 'Cross-browser testing completed', 'medium', 'Bootstrap 5 with custom breakpoints', 'Cross-browser testing completed', '2024-05-20T11:30:00Z', '2024-07-30T09:15:00Z', '2024-07-28T15:45:00Z', 24, 22),
+('feat-004', '{project_id}', 'F-004', 'Progressive Web App', 'PWA capabilities with offline support and push notifications', 'Frontend', 'not_implemented', 'Not yet implemented', 'medium', NULL, NULL, '2024-07-01T08:00:00Z', '2024-07-01T08:00:00Z', NULL, 48, NULL),
+('feat-005', '{project_id}', 'F-005', 'GraphQL API Gateway', 'Unified GraphQL endpoint aggregating multiple microservices', 'Backend', 'tested_passing', 'Load testing completed', 'critical', 'Apollo Server with federation and caching', 'Load testing completed', '2024-05-01T09:30:00Z', '2024-07-20T11:45:00Z', '2024-07-18T14:20:00Z', 60, 65),
+('feat-006', '{project_id}', 'F-006', 'Payment Processing Service', 'Secure payment gateway with multiple provider support', 'Backend', 'tested_failing', 'Payment tests failing on edge cases', 'critical', 'Stripe and PayPal integration with webhook handling', 'Payment tests failing on edge cases', '2024-06-10T10:15:00Z', '2024-08-02T16:00:00Z', NULL, 80, 72),
+('feat-007', '{project_id}', 'F-007', 'Inventory Management API', 'RESTful API for product catalog and stock management', 'Backend', 'tested_passing', 'API documentation complete', 'high', 'CRUD operations with optimistic locking', 'API documentation complete', '2024-05-15T14:00:00Z', '2024-07-10T10:30:00Z', '2024-07-08T16:45:00Z', 45, 42),
+('feat-008', '{project_id}', 'F-008', 'Machine Learning Pipeline', 'Automated ML pipeline for recommendation engine', 'Backend', 'not_implemented', 'Not yet started', 'medium', NULL, NULL, '2024-07-15T09:00:00Z', '2024-07-15T09:00:00Z', NULL, 120, NULL),
+('feat-009', '{project_id}', 'F-009', 'Search Functionality', 'Full-text search with filtering and pagination', 'Backend', 'in_progress', 'Integration tests passing', 'high', 'Elasticsearch with custom analyzers', 'Integration tests passing', '2024-07-20T11:00:00Z', '2024-08-01T14:30:00Z', NULL, 56, 48),
+('feat-010', '{project_id}', 'F-010', 'Admin Dashboard', 'Administrative interface for system management', 'Frontend', 'tested_passing', 'UI tests complete', 'medium', 'React admin panel with role-based access', 'UI tests complete', '2024-06-01T10:00:00Z', '2024-07-25T16:00:00Z', '2024-07-25T16:00:00Z', 36, 34);
 
 -- Insert comprehensive tasks
 INSERT INTO tasks (id, project_id, code, title, description, category, status, priority, acceptance_criteria, validation_steps, evidence, assigned_to, created_at, updated_at, started_at, completed_at, estimated_effort, actual_effort) VALUES
-('task-001', 'project-1', 'TASK-001', 'Setup Production Infrastructure', 'Configure production AWS environment with security groups and VPC', 'infrastructure', 'completed', 'critical', 'Production environment accessible and secure', '1. VPC configured\n2. Security groups configured\n3. IAM roles configured', 'Infrastructure documentation completed', 'devops-team', '2024-03-01T09:00:00Z', '2024-03-15T16:30:00Z', '2024-03-01T09:30:00Z', '2024-03-15T16:30:00Z', 40, 42),
-('task-002', 'project-1', 'TASK-002', 'Database Schema Design', 'Design and implement normalized database schema', 'infrastructure', 'completed', 'critical', 'Schema supports all business requirements', '1. All entities normalized\n2. Foreign keys in place\n3. Indexes optimized', 'Schema documentation completed', 'backend-team', '2024-03-10T10:00:00Z', '2024-03-25T14:20:00Z', '2024-03-15T11:00:00Z', '2024-03-25T14:20:00Z', 32, 35),
-('task-003', 'project-1', 'TASK-003', 'User Authentication Implementation', 'Implement secure user registration and login system', 'feature', 'completed', 'critical', 'Users can register, login, and access protected resources', '1. Registration flow works\n2. Login with MFA functional\n3. JWT tokens validated', 'All authentication tests passing', 'fullstack-team', '2024-04-01T08:30:00Z', '2024-04-20T17:45:00Z', '2024-04-01T09:00:00Z', '2024-04-20T17:45:00Z', 48, 52),
-('task-004', 'project-1', 'TASK-004', 'Payment Gateway Integration', 'Integrate Stripe and PayPal payment processing', 'feature', 'in_progress', 'critical', 'Secure payment processing with proper error handling', '1. Stripe integration functional\n2. PayPal integration working\n3. Webhook handlers implemented', 'Stripe integration 90% complete', 'backend-team', '2024-06-01T09:00:00Z', '2024-08-02T15:30:00Z', '2024-06-01T09:30:00Z', NULL, 56, 48),
-('task-005', 'project-1', 'TASK-005', 'Mobile App Development', 'Develop React Native mobile application', 'feature', 'in_progress', 'high', 'Mobile app functional on iOS and Android', '1. App builds successfully\n2. Core features working\n3. App store guidelines met', 'iOS version 70% complete', 'mobile-team', '2024-05-15T10:00:00Z', '2024-08-01T14:15:00Z', '2024-05-20T08:00:00Z', NULL, 80, 65),
-('task-006', 'project-1', 'TASK-006', 'API Performance Optimization', 'Optimize API response times and database queries', 'performance', 'in_progress', 'high', 'API response times under 200ms for 95th percentile', '1. Load testing shows improvement\n2. Database optimization complete\n3. Caching strategy implemented', 'Database optimization 60% complete', 'backend-team', '2024-06-15T11:00:00Z', '2024-08-02T12:45:00Z', '2024-06-20T09:00:00Z', NULL, 44, 38),
-('task-007', 'project-1', 'TASK-007', 'Implement Search Functionality', 'Add full-text search with filtering and pagination', 'feature', 'pending', 'medium', 'Users can search and filter content effectively', '1. Search results relevant\n2. Filters work correctly\n3. Pagination handles large result sets', NULL, 'fullstack-team', '2024-07-01T10:00:00Z', '2024-07-15T16:20:00Z', NULL, NULL, 36, NULL),
-('task-008', 'project-1', 'TASK-008', 'Create Admin Dashboard', 'Build administrative interface for system management', 'feature', 'pending', 'medium', 'Administrators can manage users and settings', '1. User management functional\n2. System settings configurable\n3. Audit logs accessible', NULL, 'frontend-team', '2024-07-10T09:30:00Z', '2024-07-20T11:45:00Z', NULL, NULL, 40, NULL),
-('task-009', 'project-1', 'TASK-009', 'Implement Email Notifications', 'Set up transactional email system with templates', 'feature', 'in_progress', 'medium', 'System sends relevant notifications to users', '1. Email templates render correctly\n2. Delivery tracking functional\n3. Unsubscribe mechanism works', 'Email service configured', 'backend-team', '2024-06-20T08:00:00Z', '2024-08-01T13:30:00Z', '2024-06-25T10:00:00Z', NULL, 24, 20),
-('task-010', 'project-1', 'TASK-010', 'Third-party API Integration', 'Integrate external APIs for enhanced functionality', 'integration', 'blocked', 'high', 'External APIs properly integrated with error handling', '1. API calls successful\n2. Rate limiting respected\n3. Error scenarios handled', 'Blocked pending payment system completion', 'integration-team', '2024-07-01T11:00:00Z', '2024-07-25T15:00:00Z', NULL, NULL, 32, NULL);
+('task-001', '{project_id}', 'TASK-001', 'Setup Production Infrastructure', 'Configure production AWS environment with security groups and VPC', 'infrastructure', 'completed', 'critical', 'Production environment accessible and secure', '1. VPC configured\n2. Security groups configured\n3. IAM roles configured', 'Infrastructure documentation completed', 'devops-team', '2024-03-01T09:00:00Z', '2024-03-15T16:30:00Z', '2024-03-01T09:30:00Z', '2024-03-15T16:30:00Z', 40, 42),
+('task-002', '{project_id}', 'TASK-002', 'Database Schema Design', 'Design and implement normalized database schema', 'infrastructure', 'completed', 'critical', 'Schema supports all business requirements', '1. All entities normalized\n2. Foreign keys in place\n3. Indexes optimized', 'Schema documentation completed', 'backend-team', '2024-03-10T10:00:00Z', '2024-03-25T14:20:00Z', '2024-03-15T11:00:00Z', '2024-03-25T14:20:00Z', 32, 35),
+('task-003', '{project_id}', 'TASK-003', 'User Authentication Implementation', 'Implement secure user registration and login system', 'feature', 'completed', 'critical', 'Users can register, login, and access protected resources', '1. Registration flow works\n2. Login with MFA functional\n3. JWT tokens validated', 'All authentication tests passing', 'fullstack-team', '2024-04-01T08:30:00Z', '2024-04-20T17:45:00Z', '2024-04-01T09:00:00Z', '2024-04-20T17:45:00Z', 48, 52),
+('task-004', '{project_id}', 'TASK-004', 'Payment Gateway Integration', 'Integrate Stripe and PayPal payment processing', 'feature', 'in_progress', 'critical', 'Secure payment processing with proper error handling', '1. Stripe integration functional\n2. PayPal integration working\n3. Webhook handlers implemented', 'Stripe integration 90% complete', 'backend-team', '2024-06-01T09:00:00Z', '2024-08-02T15:30:00Z', '2024-06-01T09:30:00Z', NULL, 56, 48),
+('task-005', '{project_id}', 'TASK-005', 'Mobile App Development', 'Develop React Native mobile application', 'feature', 'in_progress', 'high', 'Mobile app functional on iOS and Android', '1. App builds successfully\n2. Core features working\n3. App store guidelines met', 'iOS version 70% complete', 'mobile-team', '2024-05-15T10:00:00Z', '2024-08-01T14:15:00Z', '2024-05-20T08:00:00Z', NULL, 80, 65),
+('task-006', '{project_id}', 'TASK-006', 'API Performance Optimization', 'Optimize API response times and database queries', 'performance', 'in_progress', 'high', 'API response times under 200ms for 95th percentile', '1. Load testing shows improvement\n2. Database optimization complete\n3. Caching strategy implemented', 'Database optimization 60% complete', 'backend-team', '2024-06-15T11:00:00Z', '2024-08-02T12:45:00Z', '2024-06-20T09:00:00Z', NULL, 44, 38),
+('task-007', '{project_id}', 'TASK-007', 'Implement Search Functionality', 'Add full-text search with filtering and pagination', 'feature', 'pending', 'medium', 'Users can search and filter content effectively', '1. Search results relevant\n2. Filters work correctly\n3. Pagination handles large result sets', NULL, 'fullstack-team', '2024-07-01T10:00:00Z', '2024-07-15T16:20:00Z', NULL, NULL, 36, NULL),
+('task-008', '{project_id}', 'TASK-008', 'Create Admin Dashboard', 'Build administrative interface for system management', 'feature', 'pending', 'medium', 'Administrators can manage users and settings', '1. User management functional\n2. System settings configurable\n3. Audit logs accessible', NULL, 'frontend-team', '2024-07-10T09:30:00Z', '2024-07-20T11:45:00Z', NULL, NULL, 40, NULL),
+('task-009', '{project_id}', 'TASK-009', 'Implement Email Notifications', 'Set up transactional email system with templates', 'feature', 'in_progress', 'medium', 'System sends relevant notifications to users', '1. Email templates render correctly\n2. Delivery tracking functional\n3. Unsubscribe mechanism works', 'Email service configured', 'backend-team', '2024-06-20T08:00:00Z', '2024-08-01T13:30:00Z', '2024-06-25T10:00:00Z', NULL, 24, 20),
+('task-010', '{project_id}', 'TASK-010', 'Third-party API Integration', 'Integrate external APIs for enhanced functionality', 'integration', 'blocked', 'high', 'External APIs properly integrated with error handling', '1. API calls successful\n2. Rate limiting respected\n3. Error scenarios handled', 'Blocked pending payment system completion', 'integration-team', '2024-07-01T11:00:00Z', '2024-07-25T15:00:00Z', NULL, NULL, 32, NULL);
 
 -- Insert sessions
 INSERT INTO sessions (id, project_id, title, description, state, started_at, ended_at, summary, achievements, created_at, updated_at) VALUES
-('session-001', 'project-1', 'Sprint 1 Development', 'Initial development sprint focusing on core authentication', 'completed', '2024-03-01T09:00:00Z', '2024-03-15T17:00:00Z', 'Successfully implemented user authentication system', 'Authentication system, database schema, production infrastructure', '2024-03-01T09:00:00Z', '2024-03-15T17:00:00Z'),
-('session-002', 'project-1', 'Sprint 2 Development', 'Payment system integration and testing', 'completed', '2024-03-16T09:00:00Z', '2024-03-30T17:00:00Z', 'Made significant progress on payment integration', 'GraphQL API, inventory management, testing framework', '2024-03-16T09:00:00Z', '2024-03-30T17:00:00Z'),
-('session-003', 'project-1', 'Sprint 3 Development', 'Performance optimization and monitoring setup', 'completed', '2024-04-01T09:00:00Z', '2024-04-15T17:00:00Z', 'Implemented comprehensive monitoring', 'CDN integration, monitoring dashboard, container orchestration', '2024-04-01T09:00:00Z', '2024-04-15T17:00:00Z'),
-('session-004', 'project-1', 'Sprint 4 Development', 'Mobile app development and API enhancements', 'active', '2024-07-15T09:00:00Z', NULL, NULL, NULL, '2024-07-15T09:00:00Z', '2024-08-02T16:00:00Z');
+('session-001', '{project_id}', 'Sprint 1 Development', 'Initial development sprint focusing on core authentication', 'completed', '2024-03-01T09:00:00Z', '2024-03-15T17:00:00Z', 'Successfully implemented user authentication system', 'Authentication system, database schema, production infrastructure', '2024-03-01T09:00:00Z', '2024-03-15T17:00:00Z'),
+('session-002', '{project_id}', 'Sprint 2 Development', 'Payment system integration and testing', 'completed', '2024-03-16T09:00:00Z', '2024-03-30T17:00:00Z', 'Made significant progress on payment integration', 'GraphQL API, inventory management, testing framework', '2024-03-16T09:00:00Z', '2024-03-30T17:00:00Z'),
+('session-003', '{project_id}', 'Sprint 3 Development', 'Performance optimization and monitoring setup', 'completed', '2024-04-01T09:00:00Z', '2024-04-15T17:00:00Z', 'Implemented comprehensive monitoring', 'CDN integration, monitoring dashboard, container orchestration', '2024-04-01T09:00:00Z', '2024-04-15T17:00:00Z'),
+('session-004', '{project_id}', 'Sprint 4 Development', 'Mobile app development and API enhancements', 'active', '2024-07-15T09:00:00Z', NULL, NULL, NULL, '2024-07-15T09:00:00Z', '2024-08-02T16:00:00Z');
 
 -- Insert dependencies
 INSERT INTO dependencies (id, project_id, from_entity_id, from_entity_type, to_entity_id, to_entity_type, dependency_type, description, created_at) VALUES
-('dep-001', 'project-1', 'feat-002', 'Feature', 'feat-001', 'Feature', 'requires', 'Dashboard requires user authentication', '2024-06-15T10:00:00Z'),
-('dep-002', 'project-1', 'feat-004', 'Feature', 'feat-001', 'Feature', 'requires', 'PWA requires authentication system', '2024-07-01T08:00:00Z'),
-('dep-003', 'project-1', 'feat-007', 'Feature', 'feat-001', 'Feature', 'requires', 'Payment system requires authentication', '2024-06-10T10:15:00Z'),
-('dep-004', 'project-1', 'task-002', 'Task', 'task-001', 'Task', 'requires', 'Database schema requires infrastructure', '2024-03-10T10:00:00Z'),
-('dep-005', 'project-1', 'task-003', 'Task', 'task-002', 'Task', 'requires', 'Authentication requires database schema', '2024-04-01T08:30:00Z');
+('dep-001', '{project_id}', 'feat-002', 'feature', 'feat-001', 'feature', 'requires', 'Dashboard requires user authentication', '2024-06-15T10:00:00Z'),
+('dep-002', '{project_id}', 'feat-004', 'feature', 'feat-001', 'feature', 'requires', 'PWA requires authentication system', '2024-07-01T08:00:00Z'),
+('dep-003', '{project_id}', 'feat-007', 'feature', 'feat-001', 'feature', 'requires', 'Payment system requires authentication', '2024-06-10T10:15:00Z'),
+('dep-004', '{project_id}', 'task-002', 'task', 'task-001', 'task', 'requires', 'Database schema requires infrastructure', '2024-03-10T10:00:00Z'),
+('dep-005', '{project_id}', 'task-003', 'task', 'task-002', 'task', 'requires', 'Authentication requires database schema', '2024-04-01T08:30:00Z');
 
 -- Insert notes
 INSERT INTO notes (id, project_id, entity_id, entity_type, note_type, title, content, created_at, updated_at) VALUES
-('note-001', 'project-1', 'feat-001', 'Feature', 'Architecture', 'Authentication Architecture Decision', 'Decided to use OAuth 2.0 with PKCE for mobile clients and standard authorization code flow for web clients.', '2024-03-15T14:30:00Z', '2024-03-15T14:30:00Z'),
-('note-002', 'project-1', 'feat-007', 'Feature', 'Decision', 'Payment Provider Selection', 'After evaluating Stripe, PayPal, and Square, decided on Stripe as primary with PayPal as secondary.', '2024-06-10T15:20:00Z', '2024-06-10T15:20:00Z'),
-('note-003', 'project-1', 'feat-002', 'Feature', 'Issue', 'Performance Bottleneck Identified', 'Database queries for user dashboard are taking 2-3 seconds due to N+1 problem.', '2024-07-25T10:15:00Z', '2024-07-25T10:15:00Z'),
-('note-004', 'project-1', 'task-004', 'Task', 'Issue', 'Payment Webhook Failures', 'Stripe webhooks are failing intermittently due to timeout issues.', '2024-07-28T14:30:00Z', '2024-07-28T14:30:00Z'),
-('note-005', 'project-1', 'feat-004', 'Feature', 'Idea', 'Progressive Web App Enhancement', 'Consider implementing advanced PWA features like background sync and push notifications.', '2024-07-01T12:00:00Z', '2024-07-01T12:00:00Z');
-"#;
+('note-001', '{project_id}', 'feat-001', 'feature', 'Architecture', 'Authentication Architecture Decision', 'Decided to use OAuth 2.0 with PKCE for mobile clients and standard authorization code flow for web clients.', '2024-03-15T14:30:00Z', '2024-03-15T14:30:00Z'),
+('note-002', '{project_id}', 'feat-007', 'feature', 'Decision', 'Payment Provider Selection', 'After evaluating Stripe, PayPal, and Square, decided on Stripe as primary with PayPal as secondary.', '2024-06-10T15:20:00Z', '2024-06-10T15:20:00Z'),
+('note-003', '{project_id}', 'feat-002', 'feature', 'Issue', 'Performance Bottleneck Identified', 'Database queries for user dashboard are taking 2-3 seconds due to N+1 problem.', '2024-07-25T10:15:00Z', '2024-07-25T10:15:00Z'),
+('note-004', '{project_id}', 'task-004', 'task', 'Issue', 'Payment Webhook Failures', 'Stripe webhooks are failing intermittently due to timeout issues.', '2024-07-28T14:30:00Z', '2024-07-28T14:30:00Z'),
+('note-005', '{project_id}', 'feat-004', 'feature', 'Idea', 'Progressive Web App Enhancement', 'Consider implementing advanced PWA features like background sync and push notifications.', '2024-07-01T12:00:00Z', '2024-07-01T12:00:00Z'),
+('note-006', '{project_id}', 'task-001', 'task', 'Progress', 'Infrastructure Setup Complete', 'AWS infrastructure is fully configured with auto-scaling, monitoring, and backup systems operational.', '2024-03-15T16:00:00Z', '2024-03-15T16:00:00Z'),
+('note-007', '{project_id}', 'feat-008', 'feature', 'Evidence', 'Performance Benchmarks', 'API response times: 95th percentile under 150ms, throughput 5000 requests/second with caching layer.', '2024-07-08T14:30:00Z', '2024-07-08T14:30:00Z'),
+('note-008', '{project_id}', '{project_id}', 'project', 'Architecture', 'Microservices Architecture Decision', 'Adopted microservices architecture with API gateway, service mesh, and distributed tracing for scalability.', '2024-02-15T10:00:00Z', '2024-02-15T10:00:00Z');
+
+-- Insert directives (using correct column names: rule instead of description)
+INSERT INTO directives (id, project_id, code, title, rule, category, priority, context, rationale, examples, created_at, updated_at) VALUES
+('dir-001', '{project_id}', 'DEV-001', 'Code Review Mandatory', 'All code changes must undergo peer review before merging to main branch', 'development', 'high', 'All pull requests and merge requests', 'Ensure code quality and knowledge sharing', 'Pull requests blocked without approvals, CI/CD pipeline enforces checks', '2024-03-01T09:00:00Z', '2024-07-15T14:30:00Z'),
+('dir-002', '{project_id}', 'SEC-001', 'Secret Management Policy', 'No secrets or API keys in source code, use environment variables or secure vaults', 'security', 'high', 'All code commits and deployments', 'Prevent security breaches and credential exposure', 'AWS Secrets Manager, HashiCorp Vault, environment-specific configurations', '2024-03-01T09:30:00Z', '2024-06-20T11:15:00Z'),
+('dir-003', '{project_id}', 'TEST-001', 'Minimum Test Coverage', 'Maintain minimum 80% code coverage for all modules', 'testing', 'high', 'All production code modules', 'Ensure code reliability and catch regressions', 'Jest for frontend, pytest for backend, integration tests for APIs', '2024-03-15T10:00:00Z', '2024-07-30T16:45:00Z'),
+('dir-004', '{project_id}', 'ARCH-001', 'API Versioning Strategy', 'All public APIs must include version numbers and maintain backward compatibility', 'architecture', 'medium', 'All public API endpoints', 'Prevent breaking changes for API consumers', 'v1/users, v2/orders, deprecation headers for sunset endpoints', '2024-04-01T08:00:00Z', '2024-07-01T12:30:00Z'),
+('dir-005', '{project_id}', 'PERF-001', 'Performance Budgets', 'Frontend bundle size under 1MB, API response times under 200ms', 'performance', 'medium', 'All frontend builds and API endpoints', 'Maintain optimal user experience', 'Webpack bundle analyzer, New Relic monitoring, Lighthouse CI', '2024-05-01T11:00:00Z', '2024-07-20T09:45:00Z'),
+('dir-006', '{project_id}', 'DOC-001', 'API Documentation Required', 'All API endpoints must have OpenAPI documentation with examples', 'documentation', 'medium', 'All API endpoints', 'Facilitate API integration and maintenance', 'Swagger UI, Redoc, automated doc generation from code annotations', '2024-04-15T14:00:00Z', '2024-06-30T10:20:00Z');
+
+-- Insert milestones (using correct column names: no code column, no validation_evidence, achievement_summary, feature_count, task_count)
+INSERT INTO milestones (id, project_id, title, description, target_date, achieved_date, success_criteria, status, completion_percentage, created_at, updated_at) VALUES
+('milestone-001', '{project_id}', 'MVP Launch', 'Minimum viable product with core authentication and payment features', '2024-06-30T23:59:59Z', '2024-07-15T16:30:00Z', 'User registration, login, payment processing, basic dashboard functional', 'achieved', 100.0, '2024-03-01T09:00:00Z', '2024-07-15T17:00:00Z'),
+('milestone-002', '{project_id}', 'Beta Release', 'Feature-complete beta with advanced analytics and mobile support', '2024-08-31T23:59:59Z', NULL, 'Mobile responsive design, advanced analytics, performance optimizations complete', 'in_progress', 65.0, '2024-06-01T10:00:00Z', '2024-08-01T14:20:00Z'),
+('milestone-003', '{project_id}', 'Production Scaling', 'Production-ready system handling 10,000 concurrent users', '2024-10-31T23:59:59Z', NULL, 'Load testing passed, auto-scaling configured, monitoring comprehensive', 'planned', 0.0, '2024-07-01T11:00:00Z', '2024-07-15T16:00:00Z'),
+('milestone-004', '{project_id}', 'Q4 Feature Expansion', 'Advanced features including AI recommendations and multi-tenant support', '2024-12-31T23:59:59Z', NULL, 'AI models deployed, multi-tenancy implemented, enterprise features complete', 'planned', 0.0, '2024-08-01T09:00:00Z', '2024-08-01T09:00:00Z');
+
+-- Insert note links (using correct column names: target_id and target_type instead of target_entity_id and target_entity_type)
+INSERT INTO note_links (id, project_id, source_note_id, target_id, target_type, link_type, created_at) VALUES
+('link-001', '{project_id}', 'note-001', 'feat-007', 'feature', 'reference', '2024-06-10T15:30:00Z'),
+('link-002', '{project_id}', 'note-002', 'task-004', 'task', 'related', '2024-06-10T15:45:00Z'),
+('link-003', '{project_id}', 'note-003', 'feat-008', 'feature', 'blocks', '2024-07-25T10:30:00Z'),
+('link-004', '{project_id}', 'note-004', 'note-002', 'note', 'response_to', '2024-07-28T14:45:00Z'),
+('link-005', '{project_id}', 'note-005', 'milestone-002', 'milestone', 'depends_on', '2024-07-01T12:15:00Z'),
+('link-006', '{project_id}', 'note-006', 'milestone-001', 'milestone', 'reference', '2024-03-15T16:15:00Z'),
+('link-007', '{project_id}', 'note-007', 'dir-005', 'directive', 'reference', '2024-07-08T14:45:00Z'),
+('link-008', '{project_id}', 'note-008', 'feat-006', 'feature', 'reference', '2024-05-01T09:45:00Z');
+"#, project_id = project_id);
     
     // Execute the test data SQL
     let db_path_str = db_path.to_string_lossy();
@@ -6117,6 +7060,15 @@ fn run_note_command(action: NoteAction) -> Result<()> {
         NoteAction::Pin { note_id } => {
             toggle_note_pin(note_id)?;
         }
+        NoteAction::Link { source_note_id, target_id, target_type, entity_type, link_type } => {
+            link_note_to_target(source_note_id, target_id, target_type, entity_type, link_type)?;
+        }
+        NoteAction::Unlink { link_id, force } => {
+            unlink_note(link_id, force)?;
+        }
+        NoteAction::ListLinks { id, incoming, outgoing, format } => {
+            list_note_links(id, incoming, outgoing, format)?;
+        }
     }
     Ok(())
 }
@@ -6322,6 +7274,117 @@ fn toggle_note_pin(note_id: String) -> Result<()> {
 
         let status = if is_pinned { "pinned" } else { "unpinned" };
         println!("{} Note {} {}", "✅".green(), note_id, status);
+        
+        Ok(())
+    })
+}
+
+fn link_note_to_target(source_note_id: String, target_id: String, target_type: String, entity_type: Option<String>, link_type: String) -> Result<()> {
+    let rt = tokio::runtime::Runtime::new()?;
+    rt.block_on(async {
+        let db_path = get_project_root()?.join(".ws/project.db");
+        let pool = workspace::entities::database::initialize_database(&db_path).await?;
+        let entity_manager = workspace::entities::EntityManager::new(pool);
+
+        let project = entity_manager.get_current_project().await?;
+
+        let link = entity_manager.create_note_link(
+            &project.id,
+            &source_note_id,
+            &target_type,
+            &target_id,
+            entity_type.as_deref(),
+            &link_type,
+            false, // Manual link creation
+            Some(&format!("Manual link creation via CLI")),
+        ).await?;
+
+        println!("{} Created link {} from note {} to {} {}", 
+                 "✅".green(), link.id, source_note_id, target_type, target_id);
+        
+        Ok(())
+    })
+}
+
+fn unlink_note(link_id: String, force: bool) -> Result<()> {
+    let rt = tokio::runtime::Runtime::new()?;
+    rt.block_on(async {
+        let db_path = get_project_root()?.join(".ws/project.db");
+        let pool = workspace::entities::database::initialize_database(&db_path).await?;
+        let entity_manager = workspace::entities::EntityManager::new(pool);
+
+        if !force {
+            print!("Remove link {}? (y/N): ", link_id);
+            std::io::stdout().flush()?;
+            let mut input = String::new();
+            std::io::stdin().read_line(&mut input)?;
+            if !input.trim().to_lowercase().starts_with('y') {
+                println!("Cancelled");
+                return Ok(());
+            }
+        }
+
+        let removed = entity_manager.remove_note_link(&link_id).await?;
+        
+        if removed {
+            println!("{} Link {} removed", "✅".green(), link_id);
+        } else {
+            println!("{} Link {} not found", "❌".red(), link_id);
+        }
+        
+        Ok(())
+    })
+}
+
+fn list_note_links(id: String, incoming: bool, outgoing: bool, format: String) -> Result<()> {
+    let rt = tokio::runtime::Runtime::new()?;
+    rt.block_on(async {
+        let db_path = get_project_root()?.join(".ws/project.db");
+        let pool = workspace::entities::database::initialize_database(&db_path).await?;
+        let entity_manager = workspace::entities::EntityManager::new(pool);
+
+        // If neither incoming nor outgoing specified, show both
+        let show_incoming = incoming || (!incoming && !outgoing);
+        let show_outgoing = outgoing || (!incoming && !outgoing);
+
+        let (outgoing_links, incoming_links) = if show_incoming || show_outgoing {
+            entity_manager.get_bidirectional_links(&id, None).await?
+        } else {
+            (Vec::new(), Vec::new())
+        };
+
+        if format == "json" {
+            let response = serde_json::json!({
+                "entity_id": id,
+                "outgoing_links": if show_outgoing { outgoing_links } else { Vec::new() },
+                "incoming_links": if show_incoming { incoming_links } else { Vec::new() }
+            });
+            println!("{}", serde_json::to_string_pretty(&response)?);
+        } else {
+            println!("{} Links for {}", "🔗".blue(), id);
+            
+            if show_outgoing && !outgoing_links.is_empty() {
+                println!("\n{} Outgoing Links:", "→".blue());
+                for link in &outgoing_links {
+                    println!("  {} {} → {} {} ({})", 
+                             link.id, link.link_type, link.target_type, link.target_id,
+                             if link.auto_detected { "auto" } else { "manual" });
+                }
+            }
+            
+            if show_incoming && !incoming_links.is_empty() {
+                println!("\n{} Incoming Links:", "←".blue());
+                for link in &incoming_links {
+                    println!("  {} {} ← note {} ({})", 
+                             link.id, link.link_type, link.source_note_id,
+                             if link.auto_detected { "auto" } else { "manual" });
+                }
+            }
+            
+            if (show_outgoing && outgoing_links.is_empty()) && (show_incoming && incoming_links.is_empty()) {
+                println!("  No links found for {}", id);
+            }
+        }
         
         Ok(())
     })

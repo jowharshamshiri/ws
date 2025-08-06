@@ -351,6 +351,28 @@ pub async fn initialize_tables(pool: &SqlitePool) -> Result<()> {
     .execute(pool)
     .await?;
 
+    // Note links table for F0137 Note Linking and References
+    sqlx::query(r#"
+        CREATE TABLE IF NOT EXISTS note_links (
+            id TEXT PRIMARY KEY,
+            project_id TEXT NOT NULL,
+            source_note_id TEXT NOT NULL,
+            target_type TEXT NOT NULL,
+            target_id TEXT NOT NULL,
+            target_entity_type TEXT,
+            link_type TEXT NOT NULL,
+            auto_detected BOOLEAN NOT NULL DEFAULT FALSE,
+            detection_reason TEXT,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+            metadata TEXT,
+            FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE,
+            FOREIGN KEY (source_note_id) REFERENCES notes (id) ON DELETE CASCADE
+        )
+    "#)
+    .execute(pool)
+    .await?;
+
     // Create indexes for performance
     create_indexes(pool).await?;
 
@@ -440,6 +462,13 @@ async fn create_indexes(pool: &SqlitePool) -> Result<()> {
         "CREATE INDEX IF NOT EXISTS idx_audit_operation ON entity_audit_trails (operation_type)",
         "CREATE INDEX IF NOT EXISTS idx_audit_triggered_by ON entity_audit_trails (triggered_by)",
         "CREATE INDEX IF NOT EXISTS idx_audit_session ON entity_audit_trails (session_id)",
+        
+        // Note link indexes for F0137
+        "CREATE INDEX IF NOT EXISTS idx_note_links_source ON note_links (source_note_id)",
+        "CREATE INDEX IF NOT EXISTS idx_note_links_target ON note_links (target_id, target_type)",
+        "CREATE INDEX IF NOT EXISTS idx_note_links_project ON note_links (project_id)",
+        "CREATE INDEX IF NOT EXISTS idx_note_links_type ON note_links (link_type)",
+        "CREATE INDEX IF NOT EXISTS idx_note_links_auto ON note_links (auto_detected)",
     ];
 
     for index_sql in indexes {

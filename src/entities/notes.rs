@@ -370,6 +370,7 @@ async fn get_project_id_for_entity(
         EntityType::Milestone => "milestones",
         EntityType::Note => "notes",
         EntityType::AuditTrail => "entity_audit_trails",
+        EntityType::NoteLink => "note_links",
     };
 
     let project_id_str: String = sqlx::query_scalar(&format!(

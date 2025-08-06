@@ -14,10 +14,10 @@ use std::sync::Arc;
 use tower_http::cors::CorsLayer;
 
 use crate::entities::{
-    models::{Feature, Task, Session, Note, Project, Milestone, Dependency},
+    models::{Feature, Task, Session, Note, Project, Milestone, Dependency, NoteLink, NoteLinkQuery},
     validation::{ValidationResult, ValidationError, ValidationWarning, OperationRequest, EntityValidator, ValidationContext},
     git_integration::{GitManager, GitCommit, FileChange},
-    relationships,
+    relationships, note_links,
     EntityManager, EntityType,
 };
 
@@ -145,6 +145,29 @@ pub struct ListMilestonesQuery {
     pub status: Option<String>,
     pub upcoming: Option<bool>,
     pub achieved: Option<bool>,
+}
+
+/// Note link management request/response types for F0137
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CreateNoteLinkRequest {
+    pub source_note_id: String,
+    pub target_type: String,
+    pub target_id: String,
+    pub target_entity_type: Option<String>,
+    pub link_type: String,
+    pub auto_detected: Option<bool>,
+    pub detection_reason: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ListNoteLinksQuery {
+    pub source_note_id: Option<String>,
+    pub target_id: Option<String>,
+    pub target_type: Option<String>,
+    pub link_type: Option<String>,
+    pub auto_detected: Option<bool>,
+    pub incoming: Option<bool>,
+    pub outgoing: Option<bool>,
 }
 
 /// Note management request/response types
@@ -426,6 +449,13 @@ fn create_router(_state: McpServerState) -> Router<McpServerState> {
         .route("/api/notes", get(list_notes).post(add_note))
         .route("/api/notes/project", post(add_project_note))
         .route("/api/notes/search", get(search_notes))
+        
+        // Note link management endpoints for F0137
+        .route("/api/note-links", get(list_note_links_api).post(create_note_link_api))
+        .route("/api/note-links/:id", delete(delete_note_link_api))
+        .route("/api/notes/:note_id/links", get(get_note_links_api))
+        .route("/api/entities/:entity_id/note-links", get(get_entity_note_links_api))
+        .route("/api/note-links/detect", post(detect_note_links_api))
         
         // Session management endpoints
         .route("/api/sessions", get(list_sessions).post(start_session))
@@ -811,13 +841,19 @@ async fn list_relationships(
     let project = state.entity_manager
         .get_current_project()
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        .map_err(|e| {
+            eprintln!("Error getting current project for relationships: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
     
     let dependencies = relationships::get_project_dependencies(
         state.entity_manager.get_pool(),
         &project.id
     ).await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    .map_err(|e| {
+        eprintln!("Error getting project dependencies: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
     
     Ok(Json(dependencies))
 }
@@ -1654,4 +1690,159 @@ fn parse_entity_type_api(type_str: &str) -> Result<EntityType, anyhow::Error> {
         "test" => Ok(EntityType::Test),
         _ => Err(anyhow::anyhow!("Unknown entity type: {}", type_str)),
     }
+}
+
+/// Note link management API handlers for F0137
+
+async fn create_note_link_api(
+    State(state): State<McpServerState>,
+    Json(request): Json<CreateNoteLinkRequest>,
+) -> Result<Json<NoteLink>, StatusCode> {
+    let project = state.entity_manager
+        .get_current_project()
+        .await
+        .map_err(|e| {
+            eprintln!("Error getting current project: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    let link = state.entity_manager
+        .create_note_link(
+            &project.id,
+            &request.source_note_id,
+            &request.target_type,
+            &request.target_id,
+            request.target_entity_type.as_deref(),
+            &request.link_type,
+            request.auto_detected.unwrap_or(false),
+            request.detection_reason.as_deref(),
+        )
+        .await
+        .map_err(|e| {
+            eprintln!("Error creating note link: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    Ok(Json(link))
+}
+
+async fn list_note_links_api(
+    State(state): State<McpServerState>,
+    Query(query): Query<ListNoteLinksQuery>,
+) -> Result<Json<Vec<NoteLink>>, StatusCode> {
+    let note_link_query = NoteLinkQuery {
+        source_note_id: query.source_note_id,
+        target_id: query.target_id,
+        target_type: query.target_type,
+        link_type: query.link_type,
+        auto_detected: query.auto_detected,
+        project_id: None, // Will be filtered by current project
+        limit: Some(100),
+        offset: None,
+    };
+
+    let links = state.entity_manager
+        .query_note_links(&note_link_query)
+        .await
+        .map_err(|e| {
+            eprintln!("Error querying note links: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    Ok(Json(links))
+}
+
+async fn delete_note_link_api(
+    State(state): State<McpServerState>,
+    Path(link_id): Path<String>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    let removed = state.entity_manager
+        .remove_note_link(&link_id)
+        .await
+        .map_err(|e| {
+            eprintln!("Error removing note link: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    if removed {
+        Ok(Json(serde_json::json!({
+            "success": true,
+            "message": format!("Note link {} removed", link_id)
+        })))
+    } else {
+        Err(StatusCode::NOT_FOUND)
+    }
+}
+
+async fn get_note_links_api(
+    State(state): State<McpServerState>,
+    Path(note_id): Path<String>,
+) -> Result<Json<Vec<NoteLink>>, StatusCode> {
+    let links = state.entity_manager
+        .get_note_links(&note_id)
+        .await
+        .map_err(|e| {
+            eprintln!("Error getting note links: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    Ok(Json(links))
+}
+
+async fn get_entity_note_links_api(
+    State(state): State<McpServerState>,
+    Path(entity_id): Path<String>,
+    Query(query): Query<ListNoteLinksQuery>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    let entity_type = if entity_id.starts_with("note-") {
+        Some("note")
+    } else if entity_id.starts_with("F") {
+        Some("entity")
+    } else {
+        Some("entity")
+    };
+
+    let (outgoing_links, incoming_links) = state.entity_manager
+        .get_bidirectional_links(&entity_id, entity_type)
+        .await
+        .map_err(|e| {
+            eprintln!("Error getting bidirectional links: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    let show_incoming = query.incoming.unwrap_or(true);
+    let show_outgoing = query.outgoing.unwrap_or(true);
+
+    Ok(Json(serde_json::json!({
+        "entity_id": entity_id,
+        "outgoing_links": if show_outgoing { outgoing_links } else { Vec::<NoteLink>::new() },
+        "incoming_links": if show_incoming { incoming_links } else { Vec::<NoteLink>::new() }
+    })))
+}
+
+async fn detect_note_links_api(
+    State(state): State<McpServerState>,
+    Json(request): Json<serde_json::Value>,
+) -> Result<Json<Vec<note_links::DetectedLink>>, StatusCode> {
+    let content = request.get("content")
+        .and_then(|v| v.as_str())
+        .ok_or(StatusCode::BAD_REQUEST)?;
+
+    let project = state.entity_manager
+        .get_current_project()
+        .await
+        .map_err(|e| {
+            eprintln!("Error getting current project: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    let detected_links = state.entity_manager
+        .detect_note_links(&project.id, content)
+        .await
+        .map_err(|e| {
+            eprintln!("Error detecting note links: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    Ok(Json(detected_links))
 }

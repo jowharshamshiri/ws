@@ -8,6 +8,11 @@ class Dashboard {
         this.currentTaskFilter = 'all';
         this.currentDirectiveFilter = 'all';
         this.currentRelationshipFilter = 'all';
+        this.currentNoteLinkFilter = 'all';
+        this.currentMilestoneFilter = 'all';
+        
+        // Cached data
+        this.milestones = null;
         
         // Git integration state
         this.currentView = 'timeline';
@@ -26,27 +31,28 @@ class Dashboard {
         this.setupEventListeners();
         this.startAutoRefresh();
         
-        console.log('Dashboard initialized');
+        console.log('Dashboard initialized at', new Date().toISOString());
     }
     
     async loadInitialData() {
-        try {
-            await Promise.all([
-                this.loadProjectStatus(),
-                this.loadFeatures(),
-                this.loadTasks(),
-                this.loadDirectives(),
-                this.loadRelationships(),
-                this.loadMilestones(),
-                this.loadActivity(),
-                this.initializeGitIntegration()
-            ]);
-            
-            this.updateLastUpdated();
-        } catch (error) {
-            console.error('Failed to load initial data:', error);
-            this.showError('Failed to load dashboard data');
-        }
+        console.log('Starting dashboard initialization...');
+        
+        // Load each component independently to avoid total failure
+        const loadPromises = [
+            this.loadProjectStatus().catch(e => console.error('Failed to load project status:', e)),
+            this.loadFeatures().catch(e => console.error('Failed to load features:', e)),
+            this.loadTasks().catch(e => console.error('Failed to load tasks:', e)),
+            this.loadDirectives().catch(e => console.error('Failed to load directives:', e)),
+            this.loadRelationships().catch(e => console.error('Failed to load relationships:', e)),
+            this.loadMilestones().catch(e => console.error('Failed to load milestones:', e)),
+            this.loadNoteLinks().catch(e => console.error('Failed to load note links:', e)),
+            this.loadActivity().catch(e => console.error('Failed to load activity:', e)),
+            this.initializeGitIntegration().catch(e => console.error('Failed to initialize git:', e))
+        ];
+        
+        await Promise.allSettled(loadPromises);
+        this.updateLastUpdated();
+        console.log('Dashboard initialization complete');
     }
     
     async loadProjectStatus() {
@@ -100,14 +106,20 @@ class Dashboard {
     }
     
     async loadRelationships() {
+        console.log('Loading relationships...');
         try {
             const response = await fetch(`${this.apiBase}/relationships`);
             if (!response.ok) throw new Error('Failed to fetch relationships');
             
             const relationships = await response.json();
+            console.log(`Loaded ${relationships.length} relationships`);
             this.renderRelationships(relationships);
         } catch (error) {
             console.error('Error loading relationships:', error);
+            const container = document.getElementById('relationship-list');
+            if (container) {
+                container.innerHTML = '<div class="loading">Failed to load relationships</div>';
+            }
         }
     }
     
@@ -296,7 +308,12 @@ class Dashboard {
     }
     
     renderRelationships(relationships) {
+        console.log('Rendering relationships...');
         const container = document.getElementById('relationship-list');
+        if (!container) {
+            console.error('relationship-list container not found!');
+            return;
+        }
         
         if (relationships.length === 0) {
             container.innerHTML = '<div class="loading">No relationships found</div>';
@@ -351,11 +368,14 @@ class Dashboard {
     }
     
     async loadMilestones() {
+        console.log('Loading milestones...');
         try {
             const response = await fetch(`${this.apiBase}/milestones`);
             if (!response.ok) throw new Error('Failed to fetch milestones');
             
             const milestones = await response.json();
+            console.log(`Loaded ${milestones.length} milestones`);
+            this.milestones = milestones; // Cache milestones
             this.renderMilestones(milestones);
         } catch (error) {
             console.error('Error loading milestones:', error);
@@ -367,8 +387,12 @@ class Dashboard {
     }
     
     renderMilestones(milestones) {
+        console.log('Rendering milestones...', milestones.length, 'milestones, filter:', this.currentMilestoneFilter);
         const container = document.getElementById('milestone-list');
-        if (!container) return;
+        if (!container) {
+            console.error('milestone-list container not found!');
+            return;
+        }
         
         if (milestones.length === 0) {
             container.innerHTML = '<div class="loading">No milestones found</div>';
@@ -393,8 +417,8 @@ class Dashboard {
                         <div class="completion-fill" style="width: ${milestone.completion_percentage}%"></div>
                         <span class="completion-text">${Math.round(milestone.completion_percentage)}%</span>
                     </div>
-                    ${milestone.target_date ? `<div class="target-date">Target: ${this.formatDate(milestone.target_date)}</div>` : ''}
-                    ${milestone.achieved_date ? `<div class="achieved-date">Achieved: ${this.formatDate(milestone.achieved_date)}</div>` : ''}
+                    ${milestone.target_date ? `<div class="target-date">Target: ${this.formatDateTime(milestone.target_date)}</div>` : ''}
+                    ${milestone.achieved_date ? `<div class="achieved-date">Achieved: ${this.formatDateTime(milestone.achieved_date)}</div>` : ''}
                 </div>
             </div>
         `).join('');
@@ -417,8 +441,7 @@ class Dashboard {
             });
         });
 
-        // Setup milestone filters
-        this.setupMilestoneFilters();
+        // Milestone filters are set up in setupEventListeners()
     }
     
     filterMilestones(milestones) {
@@ -441,16 +464,92 @@ class Dashboard {
         
         filterBtns.forEach(btn => {
             btn.addEventListener('click', () => {
+                console.log('Milestone filter clicked:', btn.dataset.filter);
                 filterBtns.forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 
                 this.currentMilestoneFilter = btn.dataset.filter;
-                this.loadMilestones();
+                // Re-render with cached data instead of making new API call
+                if (this.milestones) {
+                    this.renderMilestones(this.milestones);
+                } else {
+                    this.loadMilestones();
+                }
             });
         });
         
         // Initialize filter
         this.currentMilestoneFilter = 'all';
+    }
+    
+    async loadNoteLinks() {
+        try {
+            const response = await fetch(`${this.apiBase}/note-links`);
+            const noteLinks = await response.json();
+            this.renderNoteLinks(noteLinks);
+        } catch (error) {
+            console.error('Failed to load note links:', error);
+            this.showError('Failed to load note links');
+        }
+    }
+    
+    renderNoteLinks(noteLinks) {
+        const container = document.getElementById('note-link-list');
+        const filteredLinks = this.filterNoteLinks(noteLinks);
+        
+        if (filteredLinks.length === 0) {
+            container.innerHTML = '<div class="loading">No note links found</div>';
+            return;
+        }
+        
+        container.innerHTML = filteredLinks.map(link => `
+            <div class="note-link-item" data-entity-id="${link.id}">
+                <div class="link-header">
+                    <span class="link-type-badge link-type-${link.link_type}">${this.formatLinkType(link.link_type)}</span>
+                    <span class="link-direction">${link.source_note_id} → ${link.target_id}</span>
+                    ${link.auto_detected ? '<span class="auto-badge">AUTO</span>' : ''}
+                </div>
+                <div class="link-details">
+                    <span class="target-type">${link.target_type === 'entity' ? (link.target_entity_type || 'entity') : 'note'}</span>
+                    ${link.detection_reason ? `<span class="detection-reason">${link.detection_reason}</span>` : ''}
+                </div>
+            </div>
+        `).join('');
+        
+        // Add click listeners for note link items
+        container.querySelectorAll('.note-link-item').forEach(item => {
+            item.addEventListener('click', async () => {
+                const linkId = item.dataset.entityId;
+                try {
+                    const response = await fetch(`${this.apiBase}/note-links/${linkId}`);
+                    if (response.ok) {
+                        const linkData = await response.json();
+                        this.showEntityDialog('note-link', linkData);
+                    } else {
+                        console.error('Failed to fetch note link details');
+                    }
+                } catch (error) {
+                    console.error('Error fetching note link details:', error);
+                }
+            });
+        });
+    }
+    
+    filterNoteLinks(noteLinks) {
+        if (this.currentNoteLinkFilter === 'all') return noteLinks;
+        if (this.currentNoteLinkFilter === 'auto') return noteLinks.filter(link => link.auto_detected);
+        return noteLinks.filter(link => link.link_type === this.currentNoteLinkFilter);
+    }
+    
+    formatLinkType(linkType) {
+        const typeMap = {
+            'reference': 'REF',
+            'response_to': 'RESP',
+            'related': 'REL',
+            'blocks': 'BLOCKS',
+            'depends_on': 'DEPS'
+        };
+        return typeMap[linkType] || linkType.toUpperCase();
     }
     
     renderActivity(activity) {
@@ -598,6 +697,36 @@ class Dashboard {
                 
                 this.currentRelationshipFilter = e.target.dataset.filter;
                 this.loadRelationships();
+            });
+        });
+        
+        // Note link filter buttons
+        document.querySelectorAll('.note-link-controls .filter-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.note-link-controls .filter-btn').forEach(b => 
+                    b.classList.remove('active'));
+                e.target.classList.add('active');
+                
+                this.currentNoteLinkFilter = e.target.dataset.filter;
+                this.loadNoteLinks();
+            });
+        });
+        
+        // Milestone filter buttons
+        document.querySelectorAll('.milestones .filter-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                console.log('Milestone filter clicked via main event listeners:', e.target.dataset.filter);
+                document.querySelectorAll('.milestones .filter-btn').forEach(b => 
+                    b.classList.remove('active'));
+                e.target.classList.add('active');
+                
+                this.currentMilestoneFilter = e.target.dataset.filter;
+                // Re-render with cached data instead of making new API call
+                if (this.milestones) {
+                    this.renderMilestones(this.milestones);
+                } else {
+                    this.loadMilestones();
+                }
             });
         });
         
@@ -1009,13 +1138,13 @@ class Dashboard {
                     ${milestone.target_date ? `
                     <div class="detail-item">
                         <label>Target Date:</label>
-                        <span>${this.formatDate(milestone.target_date)}</span>
+                        <span>${this.formatDateTime(milestone.target_date)}</span>
                     </div>
                     ` : ''}
                     ${milestone.achieved_date ? `
                     <div class="detail-item">
                         <label>Achieved Date:</label>
-                        <span>${this.formatDate(milestone.achieved_date)}</span>
+                        <span>${this.formatDateTime(milestone.achieved_date)}</span>
                     </div>
                     ` : ''}
                 </div>

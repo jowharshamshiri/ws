@@ -1177,6 +1177,8 @@ pub mod directives {
             DirectiveCategory::Workflow => "WORK",
             DirectiveCategory::Architecture => "ARCH",
             DirectiveCategory::Communication => "COMM",
+            DirectiveCategory::Documentation => "DOC",
+            DirectiveCategory::Performance => "PERF",
         };
 
         let max_code: Option<String> = sqlx::query_scalar(&format!(r#"
@@ -1531,6 +1533,7 @@ pub mod notes {
             EntityType::Milestone => "milestones",
             EntityType::Note => "notes",
             EntityType::AuditTrail => "entity_audit_trails",
+            EntityType::NoteLink => "note_links",
         };
 
         let project_id_str: String = if table == "projects" {
@@ -1543,5 +1546,196 @@ pub mod notes {
         };
 
         Ok(Uuid::parse_str(&project_id_str)?)
+    }
+}
+
+/// Template CRUD operations - Tera templates for documentation generation
+pub mod templates {
+    use super::*;
+
+    pub async fn create(
+        pool: &SqlitePool,
+        project_id: &str,
+        name: String,
+        description: Option<String>,
+        content: String,
+        output_path: Option<String>,
+        variables: Option<String>,
+    ) -> Result<Template> {
+        let id = format!("tmpl-{}", uuid::Uuid::new_v4().to_string()[..8].to_lowercase());
+        let now = Utc::now();
+        
+        let template = Template {
+            id: id.clone(),
+            project_id: project_id.to_string(),
+            name: name.clone(),
+            description: description.clone(),
+            content: content.clone(),
+            output_path: output_path.clone(),
+            enabled: true,
+            variables: variables.clone(),
+            last_rendered: None,
+            render_count: 0,
+            created_at: now,
+            updated_at: now,
+            metadata: None,
+        };
+
+        sqlx::query(r#"
+            INSERT INTO templates (
+                id, project_id, name, description, content, output_path, enabled,
+                variables, last_rendered, render_count, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        "#)
+        .bind(&id)
+        .bind(project_id)
+        .bind(&name)
+        .bind(&description)
+        .bind(&content)
+        .bind(&output_path)
+        .bind(true)
+        .bind(&variables)
+        .bind(None::<String>)
+        .bind(0)
+        .bind(now.to_rfc3339())
+        .bind(now.to_rfc3339())
+        .execute(pool)
+        .await?;
+
+        Ok(template)
+    }
+
+    pub async fn get(pool: &SqlitePool, id: &str) -> Result<Template> {
+        let template = sqlx::query_as::<_, Template>(r#"
+            SELECT id, project_id, name, description, content, output_path, enabled,
+                   variables, last_rendered, render_count, created_at, updated_at, metadata
+            FROM templates WHERE id = ?
+        "#)
+        .bind(id)
+        .fetch_one(pool)
+        .await?;
+
+        Ok(template)
+    }
+
+    pub async fn get_by_project(pool: &SqlitePool, project_id: &str) -> Result<Vec<Template>> {
+        let templates = sqlx::query_as::<_, Template>(r#"
+            SELECT id, project_id, name, description, content, output_path, enabled,
+                   variables, last_rendered, render_count, created_at, updated_at, metadata
+            FROM templates WHERE project_id = ?
+            ORDER BY name
+        "#)
+        .bind(project_id)
+        .fetch_all(pool)
+        .await?;
+
+        Ok(templates)
+    }
+
+    pub async fn get_enabled(pool: &SqlitePool, project_id: &str) -> Result<Vec<Template>> {
+        let templates = sqlx::query_as::<_, Template>(r#"
+            SELECT id, project_id, name, description, content, output_path, enabled,
+                   variables, last_rendered, render_count, created_at, updated_at, metadata
+            FROM templates WHERE project_id = ? AND enabled = TRUE
+            ORDER BY name
+        "#)
+        .bind(project_id)
+        .fetch_all(pool)
+        .await?;
+
+        Ok(templates)
+    }
+
+    pub async fn update(
+        pool: &SqlitePool,
+        id: &str,
+        name: Option<String>,
+        description: Option<String>,
+        content: Option<String>,
+        output_path: Option<String>,
+        variables: Option<String>,
+        enabled: Option<bool>,
+    ) -> Result<Template> {
+        let now = Utc::now();
+        
+        // Build dynamic update query
+        let mut updates = Vec::new();
+        let mut params = Vec::new();
+        
+        if let Some(name) = &name {
+            updates.push("name = ?");
+            params.push(name.as_str());
+        }
+        if let Some(description) = &description {
+            updates.push("description = ?");
+            params.push(description.as_str());
+        }
+        if let Some(content) = &content {
+            updates.push("content = ?");
+            params.push(content.as_str());
+        }
+        if let Some(output_path) = &output_path {
+            updates.push("output_path = ?");
+            params.push(output_path.as_str());
+        }
+        if let Some(variables) = &variables {
+            updates.push("variables = ?");
+            params.push(variables.as_str());
+        }
+        if let Some(enabled) = enabled {
+            updates.push("enabled = ?");
+            params.push(if enabled { "1" } else { "0" });
+        }
+        
+        updates.push("updated_at = ?");
+        let updated_at_str = now.to_rfc3339();
+        params.push(&updated_at_str);
+        
+        let query = format!("UPDATE templates SET {} WHERE id = ?", updates.join(", "));
+        let mut query_builder = sqlx::query(&query);
+        
+        for param in params {
+            query_builder = query_builder.bind(param);
+        }
+        query_builder = query_builder.bind(id);
+        
+        query_builder.execute(pool).await?;
+
+        // Return updated template
+        get(pool, id).await
+    }
+
+    pub async fn delete(pool: &SqlitePool, id: &str) -> Result<()> {
+        sqlx::query("DELETE FROM templates WHERE id = ?")
+            .bind(id)
+            .execute(pool)
+            .await?;
+
+        Ok(())
+    }
+
+    pub async fn toggle_enabled(pool: &SqlitePool, id: &str) -> Result<Template> {
+        let now = Utc::now();
+        
+        sqlx::query("UPDATE templates SET enabled = NOT enabled, updated_at = ? WHERE id = ?")
+            .bind(now.to_rfc3339())
+            .bind(id)
+            .execute(pool)
+            .await?;
+
+        get(pool, id).await
+    }
+
+    pub async fn record_render(pool: &SqlitePool, id: &str) -> Result<Template> {
+        let now = Utc::now();
+        
+        sqlx::query("UPDATE templates SET last_rendered = ?, render_count = render_count + 1, updated_at = ? WHERE id = ?")
+            .bind(now.to_rfc3339())
+            .bind(now.to_rfc3339())
+            .bind(id)
+            .execute(pool)
+            .await?;
+
+        get(pool, id).await
     }
 }

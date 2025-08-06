@@ -5,6 +5,7 @@ pub mod models;
 pub mod database;
 pub mod crud;
 pub mod notes;
+pub mod note_links;
 pub mod relationships;
 pub mod state_machine;
 pub mod session_models;
@@ -14,6 +15,7 @@ pub mod migration;
 pub mod conversation_manager;
 pub mod git_integration;
 pub mod audit;
+pub mod doc_generator;
 
 use anyhow::{Result, Context};
 use chrono::{DateTime, Utc};
@@ -27,6 +29,7 @@ use std::collections::HashMap;
 /// Entity types that can have notes attached
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type, PartialEq, Eq, Hash)]
 #[sqlx(type_name = "entity_type", rename_all = "snake_case")]
+#[serde(rename_all = "snake_case")]
 pub enum EntityType {
     Project,
     Feature,
@@ -39,6 +42,7 @@ pub enum EntityType {
     Milestone,
     Note,
     AuditTrail,
+    NoteLink,
 }
 
 impl std::fmt::Display for EntityType {
@@ -55,6 +59,7 @@ impl std::fmt::Display for EntityType {
             EntityType::Milestone => write!(f, "milestone"),
             EntityType::Note => write!(f, "note"),
             EntityType::AuditTrail => write!(f, "audit_trail"),
+            EntityType::NoteLink => write!(f, "note_link"),
         }
     }
 }
@@ -167,6 +172,8 @@ pub enum DirectiveCategory {
     Workflow,
     Architecture,
     Communication,
+    Documentation,
+    Performance,
 }
 
 /// Base trait for all entities
@@ -690,6 +697,120 @@ impl EntityManager {
     }
 
     /// Record operation audit trail (internal helper)
+    
+    // F0138 Template Management Methods
+
+    /// Create a new template
+    pub async fn create_template(
+        &self,
+        project_id: &str,
+        name: String,
+        description: Option<String>,
+        content: String,
+        output_path: Option<String>,
+        variables: Option<String>,
+    ) -> Result<models::Template> {
+        crud::templates::create(&self.pool, project_id, name, description, content, output_path, variables).await
+    }
+
+    /// Get template by ID
+    pub async fn get_template(&self, id: &str) -> Result<models::Template> {
+        crud::templates::get(&self.pool, id).await
+    }
+
+    /// Get all templates for a project
+    pub async fn get_templates(&self, project_id: &str) -> Result<Vec<models::Template>> {
+        crud::templates::get_by_project(&self.pool, project_id).await
+    }
+
+    /// Get enabled templates for a project
+    pub async fn get_enabled_templates(&self, project_id: &str) -> Result<Vec<models::Template>> {
+        crud::templates::get_enabled(&self.pool, project_id).await
+    }
+
+    /// Update template
+    pub async fn update_template(
+        &self,
+        id: &str,
+        name: Option<String>,
+        description: Option<String>,
+        content: Option<String>,
+        output_path: Option<String>,
+        variables: Option<String>,
+        enabled: Option<bool>,
+    ) -> Result<models::Template> {
+        crud::templates::update(&self.pool, id, name, description, content, output_path, variables, enabled).await
+    }
+
+    /// Delete template
+    pub async fn delete_template(&self, id: &str) -> Result<()> {
+        crud::templates::delete(&self.pool, id).await
+    }
+
+    /// Toggle template enabled status
+    pub async fn toggle_template(&self, id: &str) -> Result<models::Template> {
+        crud::templates::toggle_enabled(&self.pool, id).await
+    }
+
+    /// Record template render
+    pub async fn record_template_render(&self, id: &str) -> Result<models::Template> {
+        crud::templates::record_render(&self.pool, id).await
+    }
+
+    /// Initialize predefined documentation templates for a project
+    pub async fn initialize_predefined_templates(&self, project_id: &str) -> Result<Vec<models::Template>> {
+        use crate::entities::doc_generator::*;
+        
+        let mut templates = Vec::new();
+        
+        // CLAUDE.md template
+        let claude_template = self.create_template(
+            project_id,
+            "claude_md".to_string(),
+            Some("Main project overview and session context".to_string()),
+            get_builtin_claude_template(),
+            Some("CLAUDE.md".to_string()),
+            Some(r#"{"project_name": "string", "version": "string"}"#.to_string()),
+        ).await?;
+        templates.push(claude_template);
+
+        // Features.md template
+        let features_template = self.create_template(
+            project_id,
+            "features_md".to_string(),
+            Some("Feature tracking and implementation status".to_string()),
+            get_builtin_features_template(),
+            Some("internal/features.md".to_string()),
+            Some(r#"{"total_features": "number", "categories": "array"}"#.to_string()),
+        ).await?;
+        templates.push(features_template);
+
+        // Progress tracking template
+        let progress_template = self.create_template(
+            project_id,
+            "progress_md".to_string(),
+            Some("Session-based progress tracking".to_string()),
+            get_builtin_progress_template(),
+            Some("internal/progress_tracking.md".to_string()),
+            Some(r#"{"sessions": "array", "milestones": "array"}"#.to_string()),
+        ).await?;
+        templates.push(progress_template);
+
+        // Current status template
+        let status_template = self.create_template(
+            project_id,
+            "status_md".to_string(),
+            Some("Live project status and metrics".to_string()),
+            get_builtin_status_template(),
+            Some("internal/current_status.md".to_string()),
+            Some(r#"{"active_tasks": "number", "completed_tasks": "number"}"#.to_string()),
+        ).await?;
+        templates.push(status_template);
+
+        Ok(templates)
+    }
+
+    /// Record operation audit trail (internal helper)
     pub async fn record_operation_audit(
         &self,
         entity_id: &str,
@@ -717,6 +838,83 @@ impl EntityManager {
     /// Cleanup old audit records
     pub async fn cleanup_old_audit_records(&self, older_than_days: i64) -> Result<i64> {
         audit::cleanup_old_audit_records(&self.pool, older_than_days).await
+    }
+
+    // F0137 Note Linking and References - Link Management Methods
+
+    /// Create a link between a note and another entity or note
+    pub async fn create_note_link(
+        &self,
+        project_id: &str,
+        source_note_id: &str,
+        target_type: &str,
+        target_id: &str,
+        target_entity_type: Option<&str>,
+        link_type: &str,
+        auto_detected: bool,
+        detection_reason: Option<&str>,
+    ) -> Result<models::NoteLink> {
+        note_links::create_link(
+            &self.pool,
+            project_id,
+            source_note_id,
+            target_type,
+            target_id,
+            target_entity_type,
+            link_type,
+            auto_detected,
+            detection_reason,
+        ).await
+    }
+
+    /// Get all links from a specific note
+    pub async fn get_note_links(&self, note_id: &str) -> Result<Vec<models::NoteLink>> {
+        note_links::get_links_from_note(&self.pool, note_id).await
+    }
+
+    /// Get all links pointing to a specific target
+    pub async fn get_links_to_target(&self, target_id: &str, target_type: Option<&str>) -> Result<Vec<models::NoteLink>> {
+        note_links::get_links_to_target(&self.pool, target_id, target_type).await
+    }
+
+    /// Get bidirectional links for an entity
+    pub async fn get_bidirectional_links(&self, entity_id: &str, entity_type: Option<&str>) -> Result<(Vec<models::NoteLink>, Vec<models::NoteLink>)> {
+        note_links::get_bidirectional_links(&self.pool, entity_id, entity_type).await
+    }
+
+    /// Remove a specific note link
+    pub async fn remove_note_link(&self, link_id: &str) -> Result<bool> {
+        note_links::remove_link(&self.pool, link_id).await
+    }
+
+    /// Query note links with filters
+    pub async fn query_note_links(&self, query: &models::NoteLinkQuery) -> Result<Vec<models::NoteLink>> {
+        note_links::query_links(&self.pool, query).await
+    }
+
+    /// Get note link statistics for a project
+    pub async fn get_note_link_stats(&self, project_id: &str) -> Result<note_links::LinkStats> {
+        note_links::get_link_stats(&self.pool, project_id).await
+    }
+
+    /// Detect potential links in note content
+    pub async fn detect_note_links(&self, project_id: &str, content: &str) -> Result<Vec<note_links::DetectedLink>> {
+        note_links::detect_potential_links(&self.pool, project_id, content).await
+    }
+
+    /// Traverse note link chains to find connected entities
+    pub async fn traverse_note_link_chain(&self, start_entity_id: &str, max_depth: usize) -> Result<Vec<note_links::LinkTraversalResult>> {
+        note_links::traverse_link_chain(&self.pool, start_entity_id, max_depth).await
+    }
+
+    /// Find all entities connected through note links
+    pub async fn find_connected_entities(&self, entity_id: &str) -> Result<Vec<note_links::ConnectedEntity>> {
+        note_links::find_connected_entities(&self.pool, entity_id).await
+    }
+
+    /// Auto-create links when notes are created with detected patterns
+    pub async fn auto_create_note_links(&self, project_id: &str, note_id: &str, content: &str) -> Result<Vec<models::NoteLink>> {
+        note_links::auto_create_detected_links(&self.pool, project_id, note_id, content).await
     }
 
     /// Validate entity before create operation

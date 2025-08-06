@@ -278,8 +278,8 @@ warning: function `check_context_threshold_startup` is never used
      |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 warning: `workspace` (bin "ws") generated 20 warnings
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.40s
-     Running `target/debug/ws mcp-server --port 3004`
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.39s
+     Running `/Users/bahram/ws/prj/workspace/target/debug/ws mcp-server --port 3005`
 # To enable ws completions for this session, run:
 fpath=("/Users/bahram/.local/share/zsh/site-functions" $fpath)
 autoload -U compinit && compinit
