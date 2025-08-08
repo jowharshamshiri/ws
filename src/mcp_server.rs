@@ -1,8 +1,8 @@
 use anyhow::{Context, Result};
 use axum::{
-    extract::{Path, Query, State},
+    extract::{Path, Query, State, WebSocketUpgrade, ws::{WebSocket, Message}},
     http::StatusCode,
-    response::Json,
+    response::{Json, Response},
     routing::{get, post, delete},
     Router,
 };
@@ -10,7 +10,8 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::net::SocketAddr;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
+use tokio::sync::broadcast;
 use tower_http::cors::CorsLayer;
 
 use crate::entities::{
@@ -21,11 +22,23 @@ use crate::entities::{
     EntityManager, EntityType,
 };
 
+/// Real-time update message for WebSocket
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateMessage {
+    pub event_type: String,
+    pub entity_type: String,
+    pub entity_id: String,
+    pub action: String, // created, updated, deleted
+    pub timestamp: DateTime<Utc>,
+    pub data: serde_json::Value,
+}
+
 /// MCP Server state
 #[derive(Clone)]
 pub struct McpServerState {
     pub entity_manager: Arc<EntityManager>,
     pub debug: bool,
+    pub update_sender: Arc<Mutex<Option<broadcast::Sender<UpdateMessage>>>>,
 }
 
 /// Feature management request/response types
@@ -385,12 +398,15 @@ pub async fn start_mcp_server(port: u16, debug: bool) -> Result<()> {
     // Always initialize database to ensure all tables and columns exist
     let pool = crate::entities::database::initialize_database(&db_path).await?;
     
-    let entity_manager = EntityManager::new(pool)
-;
+    let entity_manager = EntityManager::new(pool);
+    
+    // Initialize broadcast channel for real-time updates (F0145)
+    let (update_sender, _) = broadcast::channel(1000);
     
     let state = McpServerState {
         entity_manager: Arc::new(entity_manager),
         debug,
+        update_sender: Arc::new(Mutex::new(Some(update_sender))),
     };
     
     let app = create_router(state.clone());
@@ -479,8 +495,15 @@ fn create_router(_state: McpServerState) -> Router<McpServerState> {
         // Health check
         .route("/health", get(health_check))
         
+        // Dashboard API endpoint 
+        .route("/api/dashboard", get(get_dashboard_data))
+        
+        // WebSocket endpoint for real-time updates (F0145)
+        .route("/ws", get(websocket_handler))
+        
         // Serve static dashboard files
         .route("/", get(serve_dashboard))
+        .route("/ade", get(serve_ade))
         .route("/dashboard/*path", get(serve_static))
         
         .layer(CorsLayer::permissive())
@@ -498,6 +521,15 @@ async fn add_feature(
             eprintln!("Error creating feature: {}", e);
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
+    
+    // Broadcast real-time update (F0145)
+    broadcast_update(
+        &state.update_sender,
+        "feature",
+        &feature.id,
+        "created",
+        serde_json::to_value(&feature).unwrap_or_default(),
+    );
     
     Ok(Json(feature))
 }
@@ -559,6 +591,15 @@ async fn update_feature(
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     
+    // Broadcast real-time update (F0145)
+    broadcast_update(
+        &state.update_sender,
+        "feature",
+        &updated.id,
+        "updated",
+        serde_json::to_value(&updated).unwrap_or_default(),
+    );
+    
     Ok(Json(updated))
 }
 
@@ -588,6 +629,15 @@ async fn add_task(
         .create_task(request.title, request.description)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    
+    // Broadcast real-time update (F0145)
+    broadcast_update(
+        &state.update_sender,
+        "task",
+        &task.id,
+        "created",
+        serde_json::to_value(&task).unwrap_or_default(),
+    );
     
     Ok(Json(task))
 }
@@ -1133,11 +1183,16 @@ async fn add_project_note(
 async fn list_notes(
     State(state): State<McpServerState>,
 ) -> Result<Json<Vec<Note>>, StatusCode> {
+    eprintln!("DEBUG: list_notes API called");
     let notes = state.entity_manager
         .list_notes()
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        .map_err(|e| {
+            eprintln!("ERROR: list_notes failed: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
     
+    eprintln!("DEBUG: list_notes returning {} notes", notes.len());
     Ok(Json(notes))
 }
 
@@ -1262,8 +1317,60 @@ async fn health_check() -> Json<HashMap<&'static str, &'static str>> {
 }
 
 /// Dashboard handlers
+async fn get_dashboard_data(State(state): State<McpServerState>) -> Result<Json<ProjectStatusResponse>, StatusCode> {
+    // Get project overview
+    let project = state.entity_manager
+        .get_current_project()
+        .await
+        .map_err(|e| {
+            eprintln!("Error getting current project for dashboard: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    // Get feature metrics
+    eprintln!("DEBUG: About to get features for project: {}", project.id);
+    let features = state.entity_manager
+        .get_features_by_project(&project.id)
+        .await
+        .map_err(|e| {
+            eprintln!("ERROR: get_features_by_project failed for project {}: {}", project.id, e);
+            eprintln!("ERROR: Error type: {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+    eprintln!("DEBUG: Successfully loaded {} features", features.len());
+
+    let feature_metrics = calculate_feature_metrics(&features);
+
+    // Get task summary
+    let tasks = state.entity_manager
+        .get_tasks_by_project(&project.id)
+        .await
+        .map_err(|e| {
+            eprintln!("Error getting tasks for dashboard: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    let task_summary = calculate_task_summary(&tasks);
+
+    // Get recent activity
+    let recent_activity = get_recent_activity(&state).await?;
+
+    let response = ProjectStatusResponse {
+        project,
+        feature_metrics,
+        task_summary,
+        recent_activity,
+    };
+
+    Ok(Json(response))
+}
+
 async fn serve_dashboard() -> Result<axum::response::Html<&'static str>, StatusCode> {
     Ok(axum::response::Html(include_str!("static/dashboard.html")))
+}
+
+async fn serve_ade() -> Result<axum::response::Html<&'static str>, StatusCode> {
+    Ok(axum::response::Html(include_str!("static/ade.html")))
 }
 
 async fn serve_static(Path(path): Path<String>) -> Result<(axum::http::HeaderMap, String), StatusCode> {
@@ -1271,6 +1378,9 @@ async fn serve_static(Path(path): Path<String>) -> Result<(axum::http::HeaderMap
     let (content, content_type) = match path.as_str() {
         "app.js" => (include_str!("static/app.js"), "application/javascript"),
         "style.css" => (include_str!("static/style.css"), "text/css"),
+        "ade-app.js" => (include_str!("static/ade-app.js"), "application/javascript"),
+        "ade-main.css" => (include_str!("static/ade-main.css"), "text/css"),
+        "chart.min.js" => (include_str!("static/chart.min.js"), "application/javascript"),
         _ => return Err(StatusCode::NOT_FOUND),
     };
     
@@ -1362,46 +1472,99 @@ fn calculate_task_summary(tasks: &[Task]) -> TaskSummary {
 }
 
 async fn get_recent_activity(state: &McpServerState) -> Result<Vec<ActivityItem>, StatusCode> {
-    // Get recent features and tasks for activity feed
-    let features = state.entity_manager
-        .list_features()
+    // Get current project for filtering audit trails
+    let project = state.entity_manager
+        .get_current_project()
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    
-    let tasks = state.entity_manager
-        .list_tasks()
+        .map_err(|e| {
+            eprintln!("Error getting current project for recent activity: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    // Get recent audit trails (real activity data)
+    let audit_trails = state.entity_manager
+        .get_recent_audit_trails(Some(&project.id), Some(20))
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        .map_err(|e| {
+            eprintln!("Error getting audit trails for recent activity: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
     
     let mut activity = Vec::new();
     
-    // Add recent feature updates (last 10)
-    for feature in features.iter().take(10) {
+    // Convert audit trails to activity items
+    for trail in audit_trails {
+        let description = match trail.operation_type.as_str() {
+            "create" => format!("{} created: {}", 
+                trail.entity_type.to_string().to_lowercase(), 
+                trail.entity_id
+            ),
+            "update" => {
+                // Try to get more specific description from field that changed
+                if let Some(field_changed) = &trail.field_changed {
+                    format!("{} updated ({}): {}", 
+                        trail.entity_type.to_string().to_lowercase(),
+                        field_changed,
+                        trail.entity_id
+                    )
+                } else {
+                    format!("{} updated: {}", 
+                        trail.entity_type.to_string().to_lowercase(), 
+                        trail.entity_id
+                    )
+                }
+            },
+            "delete" => format!("{} deleted: {}", 
+                trail.entity_type.to_string().to_lowercase(), 
+                trail.entity_id
+            ),
+            "state_change" => {
+                if let Ok(metadata) = serde_json::from_str::<serde_json::Value>(&trail.metadata.unwrap_or_default()) {
+                    if let Some(new_state) = metadata.get("new_state").and_then(|v| v.as_str()) {
+                        format!("{} state changed to {}: {}", 
+                            trail.entity_type.to_string().to_lowercase(),
+                            new_state,
+                            trail.entity_id
+                        )
+                    } else {
+                        format!("{} state changed: {}", 
+                            trail.entity_type.to_string().to_lowercase(), 
+                            trail.entity_id
+                        )
+                    }
+                } else {
+                    format!("{} state changed: {}", 
+                        trail.entity_type.to_string().to_lowercase(), 
+                        trail.entity_id
+                    )
+                }
+            },
+            _ => format!("{} {}: {}", 
+                trail.entity_type.to_string().to_lowercase(),
+                trail.operation_type,
+                trail.entity_id
+            ),
+        };
+
         activity.push(ActivityItem {
-            timestamp: feature.updated_at,
-            activity_type: "feature_update".to_string(),
-            description: format!("Feature {} updated: {}", feature.code, feature.name),
-            entity_type: "feature".to_string(),
-            entity_id: feature.code.clone(),
+            timestamp: trail.timestamp,
+            activity_type: trail.operation_type.clone(),
+            description,
+            entity_type: trail.entity_type.to_string().to_lowercase(),
+            entity_id: trail.entity_id.clone(),
         });
     }
     
-    // Add recent task updates (last 10)
-    for task in tasks.iter().take(10) {
+    // If no audit trails exist, provide a helpful message
+    if activity.is_empty() {
         activity.push(ActivityItem {
-            timestamp: task.updated_at,
-            activity_type: "task_update".to_string(),
-            description: format!("Task updated: {}", task.title),
-            entity_type: "task".to_string(),
-            entity_id: task.id.to_string(),
+            timestamp: chrono::Utc::now(),
+            activity_type: "system".to_string(), 
+            description: "Project initialized - start working to see activity here".to_string(),
+            entity_type: "system".to_string(),
+            entity_id: "initial".to_string(),
         });
     }
-    
-    // Sort by timestamp descending (most recent first)
-    activity.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
-    
-    // Limit to 20 most recent items
-    activity.truncate(20);
     
     Ok(activity)
 }
@@ -1410,7 +1573,7 @@ async fn get_recent_activity(state: &McpServerState) -> Result<Vec<ActivityItem>
 
 /// Get commits associated with a specific session
 async fn get_session_commits(
-    State(state): State<McpServerState>,
+    State(_state): State<McpServerState>,
     Path(session_id): Path<String>,
 ) -> Result<Json<Vec<GitCommit>>, StatusCode> {
     let current_dir = std::env::current_dir()
@@ -1638,7 +1801,7 @@ async fn get_project_timeline(
 
 /// Validate operation request without executing it
 async fn validate_operation(
-    State(state): State<McpServerState>,
+    State(_state): State<McpServerState>,
     Json(request): Json<ConstraintEnforcementRequest>,
 ) -> Result<Json<ValidationResult>, Json<ValidationErrorResponse>> {
     let validator = EntityValidator::new();
@@ -1655,7 +1818,7 @@ async fn validate_operation(
 
 /// Enforce constraints and block invalid operations
 async fn enforce_constraints(
-    State(state): State<McpServerState>,
+    State(_state): State<McpServerState>,
     Json(request): Json<ConstraintEnforcementRequest>,
 ) -> Result<Json<ValidationSuccessResponse>, Json<ValidationErrorResponse>> {
     let validator = EntityValidator::new();
@@ -1668,7 +1831,7 @@ async fn enforce_constraints(
             entity_type: request.operation.entity_type,
             entity_id: request.operation.entity_id,
         })),
-        Err(e) => {
+        Err(_e) => {
             let result = validator.validate_operation(&request.operation, &context);
             Err(Json(ValidationErrorResponse::from(result)))
         }
@@ -1845,4 +2008,80 @@ async fn detect_note_links_api(
         })?;
 
     Ok(Json(detected_links))
+}
+
+/// WebSocket handler for real-time dashboard updates
+async fn websocket_handler(
+    ws: WebSocketUpgrade,
+    State(state): State<McpServerState>,
+) -> Response {
+    ws.on_upgrade(move |socket| handle_websocket(socket, state))
+}
+
+/// Handle WebSocket connection for real-time updates
+async fn handle_websocket(mut socket: WebSocket, state: McpServerState) {
+    // Create broadcast receiver for updates
+    let receiver = {
+        let sender_guard = state.update_sender.lock().unwrap();
+        if let Some(sender) = sender_guard.as_ref() {
+            Some(sender.subscribe())
+        } else {
+            None
+        }
+    };
+    
+    let mut rx = match receiver {
+        Some(rx) => rx,
+        None => {
+            // No sender available, close connection
+            let _ = socket.close().await;
+            return;
+        }
+    };
+    
+    // Send initial connection confirmation
+    let init_msg = serde_json::json!({
+        "type": "connection",
+        "status": "connected",
+        "timestamp": Utc::now()
+    });
+    
+    if socket.send(Message::Text(init_msg.to_string())).await.is_err() {
+        return;
+    }
+    
+    // Listen for updates and forward to client
+    while let Ok(update) = rx.recv().await {
+        let message = match serde_json::to_string(&update) {
+            Ok(msg) => Message::Text(msg),
+            Err(_) => continue,
+        };
+        
+        if socket.send(message).await.is_err() {
+            break;
+        }
+    }
+}
+
+/// Broadcast update to all connected WebSocket clients
+pub fn broadcast_update(
+    sender: &Arc<Mutex<Option<broadcast::Sender<UpdateMessage>>>>,
+    entity_type: &str,
+    entity_id: &str,
+    action: &str,
+    data: serde_json::Value,
+) {
+    let update = UpdateMessage {
+        event_type: "entity_update".to_string(),
+        entity_type: entity_type.to_string(),
+        entity_id: entity_id.to_string(),
+        action: action.to_string(),
+        timestamp: Utc::now(),
+        data,
+    };
+    
+    if let Some(tx) = sender.lock().unwrap().as_ref() {
+        // Ignore send errors (no connected clients)
+        let _ = tx.send(update);
+    }
 }

@@ -257,7 +257,7 @@ impl EntityValidator {
     /// Validate operation request before execution
     pub fn validate_operation(&self, operation: &OperationRequest, context: &ValidationContext) -> ValidationResult {
         let mut errors = Vec::new();
-        let mut warnings = Vec::new();
+        let warnings = Vec::new();
 
         // Check methodology compliance
         if let Err(methodology_errors) = self.check_methodology_compliance(operation, context) {
@@ -431,7 +431,7 @@ impl ValidationRule for FeatureTestEvidenceRule {
     fn rule_name(&self) -> &str { "feature_test_evidence" }
     fn rule_type(&self) -> ValidationRuleType { ValidationRuleType::MethodologyCompliance }
     
-    fn validate(&self, entity: &dyn Entity, _context: &ValidationContext) -> Result<Vec<ValidationError>> {
+    fn validate(&self, _entity: &dyn Entity, _context: &ValidationContext) -> Result<Vec<ValidationError>> {
         // Implementation for test evidence validation
         Ok(Vec::new())
     }
@@ -442,7 +442,7 @@ impl ValidationRule for FeatureImplementationNotesRule {
     fn rule_name(&self) -> &str { "feature_implementation_notes" }
     fn rule_type(&self) -> ValidationRuleType { ValidationRuleType::MethodologyCompliance }
     
-    fn validate(&self, entity: &dyn Entity, _context: &ValidationContext) -> Result<Vec<ValidationError>> {
+    fn validate(&self, _entity: &dyn Entity, _context: &ValidationContext) -> Result<Vec<ValidationError>> {
         // Implementation for implementation notes validation
         Ok(Vec::new())
     }
@@ -453,7 +453,7 @@ impl ValidationRule for TaskCodeFormatRule {
     fn rule_name(&self) -> &str { "task_code_format" }
     fn rule_type(&self) -> ValidationRuleType { ValidationRuleType::BusinessRule }
     
-    fn validate(&self, entity: &dyn Entity, _context: &ValidationContext) -> Result<Vec<ValidationError>> {
+    fn validate(&self, _entity: &dyn Entity, _context: &ValidationContext) -> Result<Vec<ValidationError>> {
         // Implementation for task code format validation
         Ok(Vec::new())
     }
@@ -464,7 +464,7 @@ impl ValidationRule for TaskFeatureLinkageRule {
     fn rule_name(&self) -> &str { "task_feature_linkage" }
     fn rule_type(&self) -> ValidationRuleType { ValidationRuleType::CrossEntity }
     
-    fn validate(&self, entity: &dyn Entity, _context: &ValidationContext) -> Result<Vec<ValidationError>> {
+    fn validate(&self, _entity: &dyn Entity, _context: &ValidationContext) -> Result<Vec<ValidationError>> {
         // Implementation for task-feature linkage validation
         Ok(Vec::new())
     }
@@ -475,7 +475,7 @@ impl ValidationRule for TaskDateLogicRule {
     fn rule_name(&self) -> &str { "task_date_logic" }
     fn rule_type(&self) -> ValidationRuleType { ValidationRuleType::BusinessRule }
     
-    fn validate(&self, entity: &dyn Entity, _context: &ValidationContext) -> Result<Vec<ValidationError>> {
+    fn validate(&self, _entity: &dyn Entity, _context: &ValidationContext) -> Result<Vec<ValidationError>> {
         // Implementation for task date logic validation
         Ok(Vec::new())
     }
@@ -486,7 +486,7 @@ impl ValidationRule for SessionWorkflowRule {
     fn rule_name(&self) -> &str { "session_workflow" }
     fn rule_type(&self) -> ValidationRuleType { ValidationRuleType::MethodologyCompliance }
     
-    fn validate(&self, entity: &dyn Entity, _context: &ValidationContext) -> Result<Vec<ValidationError>> {
+    fn validate(&self, _entity: &dyn Entity, _context: &ValidationContext) -> Result<Vec<ValidationError>> {
         // Implementation for session workflow validation
         Ok(Vec::new())
     }
@@ -497,7 +497,7 @@ impl ValidationRule for SessionContextRule {
     fn rule_name(&self) -> &str { "session_context" }
     fn rule_type(&self) -> ValidationRuleType { ValidationRuleType::MethodologyCompliance }
     
-    fn validate(&self, entity: &dyn Entity, _context: &ValidationContext) -> Result<Vec<ValidationError>> {
+    fn validate(&self, _entity: &dyn Entity, _context: &ValidationContext) -> Result<Vec<ValidationError>> {
         // Implementation for session context validation
         Ok(Vec::new())
     }
@@ -508,7 +508,7 @@ impl ValidationRule for MilestoneProgressRule {
     fn rule_name(&self) -> &str { "milestone_progress" }
     fn rule_type(&self) -> ValidationRuleType { ValidationRuleType::BusinessRule }
     
-    fn validate(&self, entity: &dyn Entity, _context: &ValidationContext) -> Result<Vec<ValidationError>> {
+    fn validate(&self, _entity: &dyn Entity, _context: &ValidationContext) -> Result<Vec<ValidationError>> {
         // Implementation for milestone progress validation
         Ok(Vec::new())
     }
@@ -519,7 +519,7 @@ impl ValidationRule for MilestoneFeatureLinkageRule {
     fn rule_name(&self) -> &str { "milestone_feature_linkage" }
     fn rule_type(&self) -> ValidationRuleType { ValidationRuleType::CrossEntity }
     
-    fn validate(&self, entity: &dyn Entity, _context: &ValidationContext) -> Result<Vec<ValidationError>> {
+    fn validate(&self, _entity: &dyn Entity, _context: &ValidationContext) -> Result<Vec<ValidationError>> {
         // Implementation for milestone-feature linkage validation
         Ok(Vec::new())
     }
@@ -530,7 +530,7 @@ struct ThreeAccessMethodRule;
 impl CrossEntityValidationRule for ThreeAccessMethodRule {
     fn rule_name(&self) -> &str { "three_access_method" }
     
-    fn validate(&self, entities: &[&dyn Entity], _context: &ValidationContext) -> Result<Vec<ValidationError>> {
+    fn validate(&self, _entities: &[&dyn Entity], _context: &ValidationContext) -> Result<Vec<ValidationError>> {
         // Implementation for three-access-method validation
         Ok(Vec::new())
     }
@@ -540,7 +540,7 @@ struct OrphanedEntityRule;
 impl CrossEntityValidationRule for OrphanedEntityRule {
     fn rule_name(&self) -> &str { "orphaned_entity" }
     
-    fn validate(&self, entities: &[&dyn Entity], _context: &ValidationContext) -> Result<Vec<ValidationError>> {
+    fn validate(&self, _entities: &[&dyn Entity], _context: &ValidationContext) -> Result<Vec<ValidationError>> {
         // Implementation for orphaned entity detection
         Ok(Vec::new())
     }
@@ -550,7 +550,7 @@ struct CircularDependencyRule;
 impl CrossEntityValidationRule for CircularDependencyRule {
     fn rule_name(&self) -> &str { "circular_dependency" }
     
-    fn validate(&self, entities: &[&dyn Entity], _context: &ValidationContext) -> Result<Vec<ValidationError>> {
+    fn validate(&self, _entities: &[&dyn Entity], _context: &ValidationContext) -> Result<Vec<ValidationError>> {
         // Implementation for circular dependency detection
         Ok(Vec::new())
     }

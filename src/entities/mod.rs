@@ -22,6 +22,8 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
 use std::collections::HashMap;
+
+use crate::entities::models::{EntityAuditTrail, AuditTrailQuery};
 // No UUID imports - all entities use string IDs
 
 // FeatureData struct removed - was only used for file-based migration
@@ -290,7 +292,13 @@ impl EntityManager {
 
     /// List all notes in project
     pub async fn list_notes(&self) -> Result<Vec<models::Note>> {
-        notes::list_all(&self.pool).await
+        eprintln!("DEBUG: EntityManager::list_notes called");
+        let result = notes::list_all(&self.pool).await;
+        match &result {
+            Ok(notes) => eprintln!("DEBUG: notes::list_all returned {} notes", notes.len()),
+            Err(e) => eprintln!("ERROR: notes::list_all failed: {}", e),
+        }
+        result
     }
 
     /// Search notes by content
@@ -521,11 +529,23 @@ impl EntityManager {
     }
 
     pub async fn get_features_by_project(&self, project_id: &str) -> Result<Vec<models::Feature>> {
-        crud::features::get_by_project(&self.pool, project_id).await
+        eprintln!("DEBUG: EntityManager::get_features_by_project called with project_id: {}", project_id);
+        let result = crud::features::get_by_project(&self.pool, project_id).await;
+        match &result {
+            Ok(features) => eprintln!("DEBUG: crud::features::get_by_project returned {} features", features.len()),
+            Err(e) => eprintln!("ERROR: crud::features::get_by_project failed: {}", e),
+        }
+        result
     }
 
     pub async fn get_tasks_by_project(&self, project_id: &str) -> Result<Vec<models::Task>> {
-        crud::tasks::get_by_project(&self.pool, project_id).await
+        eprintln!("DEBUG: EntityManager::get_tasks_by_project called with project_id: {}", project_id);
+        let result = crud::tasks::get_by_project(&self.pool, project_id).await;
+        match &result {
+            Ok(tasks) => eprintln!("DEBUG: crud::tasks::get_by_project returned {} tasks", tasks.len()),
+            Err(e) => eprintln!("ERROR: crud::tasks::get_by_project failed: {}", e),
+        }
+        result
     }
 
     pub async fn get_sessions_by_project(&self, project_id: &str) -> Result<Vec<models::Session>> {
@@ -684,6 +704,26 @@ impl EntityManager {
         project_id: Option<&str>,
     ) -> Result<HashMap<String, i64>> {
         audit::get_audit_statistics(&self.pool, project_id).await
+    }
+
+    /// Get recent audit trail for activity feed
+    pub async fn get_recent_audit_trails(
+        &self,
+        project_id: Option<&str>,
+        limit: Option<usize>,
+    ) -> Result<Vec<EntityAuditTrail>> {
+        let query = AuditTrailQuery {
+            entity_id: None,
+            entity_type: None,
+            project_id: project_id.map(|s| s.to_string()),
+            operation_type: None,
+            triggered_by: None,
+            field_changed: None,
+            date_range: None,
+            limit: limit.map(|u| u as i64).or(Some(20)),
+            offset: None,
+        };
+        audit::query_audit_trail(&self.pool, &query).await
     }
 
     /// Get entity state at specific timestamp (for rollback analysis)

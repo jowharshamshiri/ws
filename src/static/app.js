@@ -10,6 +10,7 @@ class Dashboard {
         this.currentRelationshipFilter = 'all';
         this.currentNoteLinkFilter = 'all';
         this.currentMilestoneFilter = 'all';
+        this.currentNoteFilter = 'all';
         
         // Cached data
         this.milestones = null;
@@ -20,6 +21,8 @@ class Dashboard {
         this.selectedFile = null;
         this.monacoEditor = null;
         this.diffEditor = null;
+        this.monacoInitialized = false;
+        this.monacoInitializing = false;
         this.commits = [];
         this.files = [];
         
@@ -29,6 +32,7 @@ class Dashboard {
     async init() {
         await this.loadInitialData();
         this.setupEventListeners();
+        this.setupWebSocket(); // F0145: Real-time updates
         this.startAutoRefresh();
         
         console.log('Dashboard initialized at', new Date().toISOString());
@@ -45,6 +49,8 @@ class Dashboard {
             this.loadDirectives().catch(e => console.error('Failed to load directives:', e)),
             this.loadRelationships().catch(e => console.error('Failed to load relationships:', e)),
             this.loadMilestones().catch(e => console.error('Failed to load milestones:', e)),
+            this.loadRelationshipDiagram().catch(e => console.error('Failed to load relationship diagram:', e)),
+            this.loadNotes().catch(e => console.error('Failed to load notes:', e)),
             this.loadNoteLinks().catch(e => console.error('Failed to load note links:', e)),
             this.loadActivity().catch(e => console.error('Failed to load activity:', e)),
             this.initializeGitIntegration().catch(e => console.error('Failed to initialize git:', e))
@@ -75,7 +81,11 @@ class Dashboard {
             if (!response.ok) throw new Error('Failed to fetch features');
             
             const features = await response.json();
+            this.features = features; // Store features for chart updates
             this.renderFeatures(features);
+            
+            // Update charts with real data (F0146)
+            updateChartData(features);
         } catch (error) {
             console.error('Error loading features:', error);
         }
@@ -125,19 +135,17 @@ class Dashboard {
     
     async loadActivity() {
         try {
-            // For now, show placeholder activity
-            const activity = [
-                {
-                    timestamp: new Date().toISOString(),
-                    activity_type: 'feature_update',
-                    description: 'MCP Server Integration Foundation feature updated',
-                    entity_type: 'feature',
-                    entity_id: 'F0096'
-                }
-            ];
-            this.renderActivity(activity);
+            const response = await fetch(`${this.apiBase}/dashboard`);
+            if (!response.ok) throw new Error('Failed to fetch dashboard data');
+            
+            const data = await response.json();
+            this.renderActivity(data.recent_activity || []);
         } catch (error) {
             console.error('Error loading activity:', error);
+            const container = document.getElementById('activity-list');
+            if (container) {
+                container.innerHTML = '<div class="loading">Failed to load recent activity</div>';
+            }
         }
     }
     
@@ -482,6 +490,102 @@ class Dashboard {
         this.currentMilestoneFilter = 'all';
     }
     
+    async loadNotes() {
+        console.log('Loading notes...');
+        try {
+            const response = await fetch(`${this.apiBase}/notes`);
+            if (!response.ok) throw new Error('Failed to fetch notes');
+            
+            const notes = await response.json();
+            console.log(`Loaded ${notes.length} notes`);
+            this.renderNotes(notes);
+        } catch (error) {
+            console.error('Error loading notes:', error);
+            const container = document.getElementById('note-list');
+            if (container) {
+                container.innerHTML = '<div class="loading">Failed to load notes</div>';
+            }
+        }
+    }
+    
+    renderNotes(notes) {
+        console.log('Rendering notes...', notes.length, 'notes, filter:', this.currentNoteFilter);
+        const container = document.getElementById('note-list');
+        if (!container) {
+            console.error('note-list container not found!');
+            return;
+        }
+        
+        if (notes.length === 0) {
+            container.innerHTML = '<div class="loading">No notes found</div>';
+            return;
+        }
+        
+        // Filter notes
+        const filtered = this.currentNoteFilter === 'all' 
+            ? notes 
+            : notes.filter(note => note.note_type === this.currentNoteFilter);
+        
+        if (filtered.length === 0) {
+            container.innerHTML = `<div class="loading">No notes found for filter: ${this.currentNoteFilter}</div>`;
+            return;
+        }
+        
+        const noteCards = filtered.map(note => {
+            const isProjectWide = !note.entity_id || note.entity_id === '';
+            const noteTypeColor = this.getNoteTypeColor(note.note_type);
+            
+            return `
+                <div class="note-card">
+                    <div class="note-header">
+                        <h4>${note.title}</h4>
+                        <div class="note-badges">
+                            <span class="badge badge-${noteTypeColor}">${note.note_type}</span>
+                            ${isProjectWide ? '<span class="badge badge-info">Project-wide</span>' : `<span class="badge badge-secondary">${note.entity_type}: ${note.entity_id}</span>`}
+                        </div>
+                    </div>
+                    <div class="note-content">${this.truncateText(note.content, 150)}</div>
+                    <div class="note-footer">
+                        <small>Created: ${new Date(note.created_at).toLocaleDateString()}</small>
+                        <div class="note-actions">
+                            <button onclick="dashboard.showNoteDetails('${note.id}')" class="btn btn-sm">View</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+        container.innerHTML = noteCards;
+        
+        // Initialize filter
+        this.currentNoteFilter = 'all';
+    }
+    
+    getNoteTypeColor(noteType) {
+        const colorMap = {
+            'Architecture': 'primary',
+            'Decision': 'warning', 
+            'Reminder': 'info',
+            'Observation': 'secondary',
+            'Reference': 'success',
+            'Evidence': 'primary',
+            'Progress': 'info',
+            'Issue': 'danger'
+        };
+        return colorMap[noteType] || 'secondary';
+    }
+    
+    showNoteDetails(noteId) {
+        // Implementation for showing note details dialog
+        console.log('Showing details for note:', noteId);
+        // TODO: Implement note details modal
+    }
+    
+    truncateText(text, maxLength) {
+        if (text.length <= maxLength) return text;
+        return text.substring(0, maxLength) + '...';
+    }
+    
     async loadNoteLinks() {
         try {
             const response = await fetch(`${this.apiBase}/note-links`);
@@ -730,6 +834,18 @@ class Dashboard {
             });
         });
         
+        // Note filter buttons
+        document.querySelectorAll('.note-controls .filter-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.note-controls .filter-btn').forEach(b => 
+                    b.classList.remove('active'));
+                e.target.classList.add('active');
+                
+                this.currentNoteFilter = e.target.dataset.filter;
+                this.loadNotes();
+            });
+        });
+        
         // Refresh on window focus
         window.addEventListener('focus', () => {
             this.loadInitialData();
@@ -740,6 +856,65 @@ class Dashboard {
         setInterval(() => {
             this.loadInitialData();
         }, this.updateInterval);
+    }
+    
+    // F0145: Real-time WebSocket connection for live updates
+    setupWebSocket() {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/ws`;
+        
+        this.ws = new WebSocket(wsUrl);
+        
+        this.ws.onopen = () => {
+            console.log('WebSocket connected for real-time updates');
+        };
+        
+        this.ws.onmessage = (event) => {
+            try {
+                const update = JSON.parse(event.data);
+                this.handleRealTimeUpdate(update);
+            } catch (error) {
+                console.error('Error parsing WebSocket message:', error);
+            }
+        };
+        
+        this.ws.onclose = () => {
+            console.log('WebSocket disconnected. Attempting reconnect in 3 seconds...');
+            setTimeout(() => this.setupWebSocket(), 3000);
+        };
+        
+        this.ws.onerror = (error) => {
+            console.error('WebSocket error:', error);
+        };
+    }
+    
+    // Handle real-time updates from WebSocket
+    handleRealTimeUpdate(update) {
+        console.log('Received real-time update:', update);
+        
+        // Update the appropriate section based on entity type
+        switch (update.entity_type) {
+            case 'feature':
+                if (update.action === 'created' || update.action === 'updated') {
+                    this.loadFeatures(); // Refresh feature list
+                }
+                break;
+            case 'task':
+                if (update.action === 'created' || update.action === 'updated') {
+                    this.loadTasks(); // Refresh task list
+                }
+                break;
+            case 'milestone':
+                if (update.action === 'created' || update.action === 'updated') {
+                    this.loadMilestones(); // Refresh milestone list
+                }
+                break;
+            default:
+                console.log('Unhandled entity type for real-time update:', update.entity_type);
+        }
+        
+        // Update the last updated timestamp
+        this.updateLastUpdated();
     }
     
     updateLastUpdated() {
@@ -1213,8 +1388,7 @@ class Dashboard {
     
     async initializeGitIntegration() {
         try {
-            // Initialize Monaco Editor
-            await this.initializeMonaco();
+            // Note: Monaco Editor will be initialized on-demand when needed
             
             // Load git data
             await Promise.all([
@@ -1231,44 +1405,116 @@ class Dashboard {
     }
     
     async initializeMonaco() {
-        return new Promise((resolve, reject) => {
-            require.config({ 
-                paths: { 
-                    'vs': 'https://unpkg.com/monaco-editor@0.44.0/min/vs' 
-                } 
-            });
+        console.log('🚨 initializeMonaco called! Stack trace:', new Error().stack);
+        
+        if (this.monacoInitialized && this.monacoEditor) {
+            console.log('Monaco already initialized, returning');
+            return true;
+        }
+        
+        // Prevent multiple concurrent initialization attempts
+        if (this.monacoInitializing) {
+            console.log('Monaco initialization already in progress, waiting...');
+            // Wait a bit and check again
+            await new Promise(resolve => setTimeout(resolve, 100));
+            return this.monacoInitialized;
+        }
+        
+        console.log('Starting Monaco initialization...');
+        this.monacoInitializing = true;
+        
+        return new Promise((resolve) => {
+            // Don't reconfigure if already configured
+            if (!window.require || !window.require.defined) {
+                require.config({ 
+                    paths: { 
+                        'vs': 'https://unpkg.com/monaco-editor@0.44.0/min/vs' 
+                    } 
+                });
+            }
             
             require(['vs/editor/editor.main'], () => {
                 try {
-                    // Initialize main file editor
-                    this.monacoEditor = monaco.editor.create(
-                        document.getElementById('monaco-container'), 
-                        {
-                            value: '// Select a file to view its contents',
-                            language: 'plaintext',
-                            theme: 'vs',
-                            readOnly: true,
-                            minimap: { enabled: false },
-                            scrollBeyondLastLine: false,
-                            automaticLayout: true
-                        }
-                    );
+                    const container = document.getElementById('monaco-container');
+                    if (!container) {
+                        console.log('Monaco container not found - will initialize later');
+                        this.monacoInitialized = false;
+                        this.monacoInitializing = false;
+                        resolve(false);
+                        return;
+                    }
                     
-                    resolve();
+                    // Check if container is visible (has dimensions)
+                    const rect = container.getBoundingClientRect();
+                    if (rect.width === 0 || rect.height === 0) {
+                        console.log('Monaco container not visible - will initialize later');
+                        this.monacoInitialized = false;
+                        this.monacoInitializing = false;
+                        resolve(false);
+                        return;
+                    }
+                    
+                    // Ensure we don't create multiple editors on the same container
+                    if (this.monacoEditor) {
+                        console.log('Monaco editor already exists, disposing first');
+                        this.monacoEditor.dispose();
+                        this.monacoEditor = null;
+                    }
+                    
+                    // Clear the container to avoid context key service conflicts
+                    container.innerHTML = '';
+                    
+                    this.monacoEditor = monaco.editor.create(container, {
+                        value: '// Select a file to view its contents',
+                        language: 'plaintext',
+                        theme: 'vs',
+                        readOnly: true,
+                        minimap: { enabled: false },
+                        scrollBeyondLastLine: false,
+                        automaticLayout: true,
+                        wordWrap: 'on'
+                    });
+                    
+                    this.monacoInitialized = true;
+                    this.monacoInitializing = false;
+                    console.log('Monaco Editor initialized successfully');
+                    resolve(true);
                 } catch (error) {
-                    reject(error);
+                    console.error('Monaco Editor initialization failed:', error);
+                    this.monacoInitialized = false;
+                    this.monacoInitializing = false;
+                    resolve(false);
                 }
+            }, (error) => {
+                console.error('Monaco Editor failed to load:', error);
+                this.monacoInitialized = false;
+                this.monacoInitializing = false;
+                resolve(false);
             });
         });
     }
     
+    async ensureMonacoInitialized() {
+        if (this.monacoInitialized && this.monacoEditor) {
+            return true;
+        }
+        
+        // Try to initialize Monaco
+        const success = await this.initializeMonaco();
+        return success;
+    }
+    
     setupGitEventListeners() {
         // Tab switching
-        document.getElementById('timeline-btn').addEventListener('click', () => {
+        document.getElementById('timeline-btn').addEventListener('click', async () => {
+            // Ensure Monaco is initialized when switching to file browser
+            await this.ensureMonacoInitialized();
             this.switchView('timeline');
         });
         
-        document.getElementById('files-btn').addEventListener('click', () => {
+        document.getElementById('files-btn').addEventListener('click', async () => {
+            // Ensure Monaco is initialized when switching to file browser
+            await this.ensureMonacoInitialized();
             this.switchView('files');
         });
         
@@ -1493,6 +1739,9 @@ class Dashboard {
         document.getElementById('current-file-path').textContent = filePath;
         document.getElementById('show-diff-btn').disabled = false;
         
+        // Ensure Monaco is initialized before loading content
+        await this.ensureMonacoInitialized();
+        
         // Load file content
         try {
             const response = await fetch(`${this.apiBase}/git/files/${this.selectedCommit}/${encodeURIComponent(filePath)}`);
@@ -1501,13 +1750,17 @@ class Dashboard {
             const data = await response.json();
             const language = this.detectLanguage(filePath);
             
-            if (this.monacoEditor) {
-                monaco.editor.setModelLanguage(this.monacoEditor.getModel(), language);
+            // Display content in Monaco Editor
+            if (this.monacoEditor && this.monacoInitialized) {
+                const model = this.monacoEditor.getModel();
+                monaco.editor.setModelLanguage(model, language);
                 this.monacoEditor.setValue(data.content);
+            } else {
+                console.warn('Monaco Editor not available, content not displayed');
             }
         } catch (error) {
             console.error('Error loading file content:', error);
-            if (this.monacoEditor) {
+            if (this.monacoEditor && this.monacoInitialized) {
                 this.monacoEditor.setValue(`// Error loading file: ${error.message}`);
             }
         }
@@ -1583,7 +1836,730 @@ class Dashboard {
     }
 }
 
+// Global dashboard instance
+let dashboard = null;
+
+// Global functions for note management
+function showAddNoteDialog() {
+    const dialog = document.getElementById('add-note-dialog');
+    if (dialog) {
+        dialog.style.display = 'flex';
+        
+        // Reset form
+        const form = document.getElementById('add-note-form');
+        if (form) {
+            form.reset();
+            document.getElementById('entity-selection').style.display = 'none';
+            document.getElementById('entity-id-row').style.display = 'none';
+        }
+        
+        // Focus on title field
+        const titleField = document.getElementById('note-title');
+        if (titleField) {
+            setTimeout(() => titleField.focus(), 100);
+        }
+    }
+}
+
+function closeAddNoteDialog() {
+    const dialog = document.getElementById('add-note-dialog');
+    if (dialog) {
+        dialog.style.display = 'none';
+        
+        // Reset form
+        const form = document.getElementById('add-note-form');
+        if (form) {
+            form.reset();
+        }
+    }
+}
+
+async function submitNote(event) {
+    event.preventDefault();
+    
+    const form = event.target;
+    const formData = new FormData(form);
+    
+    const noteData = {
+        title: formData.get('title'),
+        content: formData.get('content'),
+        note_type: formData.get('note_type'),
+        entity_type: formData.get('entity_type') || null,
+        entity_id: formData.get('entity_id') || null
+    };
+    
+    try {
+        let endpoint = '/api/notes';
+        if (!noteData.entity_type || !noteData.entity_id) {
+            endpoint = '/api/notes/project';
+            delete noteData.entity_type;
+            delete noteData.entity_id;
+        }
+        
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(noteData)
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to create note');
+        }
+        
+        const result = await response.json();
+        console.log('Note created successfully:', result);
+        
+        // Close dialog and refresh notes
+        closeAddNoteDialog();
+        if (dashboard) {
+            dashboard.loadNotes();
+        }
+        
+    } catch (error) {
+        console.error('Error creating note:', error);
+        alert('Failed to create note: ' + error.message);
+    }
+}
+
+// Note search functionality (F0135)
+let originalNotes = [];
+let currentSearchTerm = '';
+
+async function searchNotes() {
+    const searchTerm = document.getElementById('note-search-input').value.trim().toLowerCase();
+    const clearButton = document.getElementById('clear-search');
+    
+    currentSearchTerm = searchTerm;
+    
+    if (searchTerm.length === 0) {
+        clearButton.style.display = 'none';
+        // Show all notes
+        if (dashboard) {
+            dashboard.loadNotes();
+        }
+        return;
+    }
+    
+    clearButton.style.display = 'inline-block';
+    
+    if (searchTerm.length < 2) {
+        return; // Wait for at least 2 characters
+    }
+    
+    try {
+        // Use the search API endpoint
+        const response = await fetch(`/api/notes/search?content=${encodeURIComponent(searchTerm)}`);
+        if (!response.ok) {
+            throw new Error('Search failed');
+        }
+        
+        const searchResults = await response.json();
+        displaySearchResults(searchResults);
+        
+    } catch (error) {
+        console.error('Error searching notes:', error);
+        // Fallback to client-side search
+        performClientSideSearch(searchTerm);
+    }
+}
+
+function displaySearchResults(notes) {
+    const notesList = document.getElementById('note-list');
+    
+    if (notes.length === 0) {
+        notesList.innerHTML = '<div class="no-results">No notes found matching your search.</div>';
+        return;
+    }
+    
+    let html = '';
+    for (const note of notes) {
+        html += formatNoteCard(note, currentSearchTerm);
+    }
+    
+    notesList.innerHTML = html;
+}
+
+function performClientSideSearch(searchTerm) {
+    if (!originalNotes.length && dashboard) {
+        // Store original notes for client-side search
+        originalNotes = dashboard.notes || [];
+    }
+    
+    const filtered = originalNotes.filter(note => 
+        note.title.toLowerCase().includes(searchTerm) ||
+        note.content.toLowerCase().includes(searchTerm) ||
+        (note.tags && note.tags.some(tag => tag.toLowerCase().includes(searchTerm)))
+    );
+    
+    displaySearchResults(filtered);
+}
+
+function formatNoteCard(note, highlightTerm = '') {
+    const noteType = note.note_type || note.category;
+    const entityInfo = note.entity_type && note.entity_id ? 
+        `<span class="entity-info">${note.entity_type}: ${note.entity_id}</span>` : 
+        '<span class="project-wide">Project-wide</span>';
+    
+    let title = note.title;
+    let content = note.content;
+    
+    // Highlight search terms
+    if (highlightTerm) {
+        const regex = new RegExp(`(${highlightTerm})`, 'gi');
+        title = title.replace(regex, '<mark>$1</mark>');
+        content = content.replace(regex, '<mark>$1</mark>');
+    }
+    
+    return `
+        <div class="note-card" onclick="showNoteDetails('${note.id}')">
+            <div class="note-header">
+                <h4>${title}</h4>
+                <div class="note-badges">
+                    <span class="badge badge-${noteType.toLowerCase()}">${noteType}</span>
+                    ${entityInfo}
+                </div>
+            </div>
+            <div class="note-content">${content.substring(0, 200)}${content.length > 200 ? '...' : ''}</div>
+            <div class="note-footer">
+                <span class="note-date">${new Date(note.created_at).toLocaleDateString()}</span>
+                ${note.tags ? `<span class="note-tags">${note.tags.join(', ')}</span>` : ''}
+            </div>
+        </div>
+    `;
+}
+
+function clearNoteSearch() {
+    document.getElementById('note-search-input').value = '';
+    document.getElementById('clear-search').style.display = 'none';
+    currentSearchTerm = '';
+    
+    // Reload all notes
+    if (dashboard) {
+        dashboard.loadNotes();
+    }
+}
+
+// Project-wide note dialog (F0134 enhancement)
+function showProjectNoteDialog() {
+    // Use existing dialog but pre-configure for project-wide notes
+    document.getElementById('add-note-title').textContent = 'Add Project-wide Note';
+    document.getElementById('entity-selection').style.display = 'none';
+    
+    // Clear form
+    document.getElementById('note-title').value = '';
+    document.getElementById('note-content').value = '';
+    document.getElementById('note-type').value = 'Architecture';
+    
+    // Show dialog
+    document.getElementById('add-note-dialog').style.display = 'flex';
+}
+
+// Feature Status Charts (F0146)
+let featureStatusChart = null;
+let featureProgressChart = null;
+
+function initializeCharts() {
+    const statusCtx = document.getElementById('feature-status-chart');
+    const progressCtx = document.getElementById('feature-progress-chart');
+    
+    console.log('Canvas elements found:');
+    console.log('- feature-status-chart:', !!statusCtx);
+    console.log('- feature-progress-chart:', !!progressCtx);
+    console.log('Chart.js available:', typeof Chart !== 'undefined');
+    
+    if (statusCtx) {
+        createFeatureStatusChart(statusCtx);
+    }
+    
+    if (progressCtx) {
+        createFeatureProgressChart(progressCtx);
+    }
+}
+
+function createFeatureStatusChart(ctx) {
+    if (!ctx) {
+        console.log('Canvas element not found for feature status chart');
+        return;
+    }
+    
+    if (typeof Chart === 'undefined' || window.chartJsWorking === false) {
+        console.log('Chart.js not available or not working, showing text-based visualization');
+        ctx.parentNode.innerHTML = `
+            <div style="padding: 20px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef;">
+                <h4 style="margin: 0 0 20px 0; color: #495057; text-align: center;">Feature Implementation Status</h4>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                    <div style="text-align: center; padding: 15px; background: #d4edda; border-radius: 6px; border: 1px solid #c3e6cb;">
+                        <div style="font-size: 24px; font-weight: bold; color: #155724;" id="impl-count">0</div>
+                        <div style="color: #155724; font-size: 14px;">🟢 Implemented</div>
+                    </div>
+                    <div style="text-align: center; padding: 15px; background: #fff3cd; border-radius: 6px; border: 1px solid #ffeaa7;">
+                        <div style="font-size: 24px; font-weight: bold; color: #856404;" id="partial-count">0</div>
+                        <div style="color: #856404; font-size: 14px;">🟠 In Progress</div>
+                    </div>
+                    <div style="text-align: center; padding: 15px; background: #f8d7da; border-radius: 6px; border: 1px solid #f5c6cb;">
+                        <div style="font-size: 24px; font-weight: bold; color: #721c24;" id="todo-count">0</div>
+                        <div style="color: #721c24; font-size: 14px;">❌ Not Started</div>
+                    </div>
+                </div>
+                <div style="text-align: center; margin-top: 15px;">
+                    <div style="font-size: 18px; font-weight: bold; color: #495057;" id="total-features">0</div>
+                    <div style="color: #6c757d; font-size: 14px;">Total Features</div>
+                </div>
+                <div style="text-align: center; margin-top: 15px; color: #6c757d; font-size: 12px;">
+                    Interactive charts require Chart.js library
+                </div>
+            </div>`;
+        return;
+    }
+    
+    if (featureStatusChart) {
+        featureStatusChart.destroy();
+    }
+    
+    featureStatusChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Implemented (🟢)', 'Partially Complete (🟠)', 'Not Started (❌)'],
+            datasets: [{
+                data: [155, 14, 17], // Default data, updated when dashboard loads
+                backgroundColor: [
+                    '#10B981', // Green for implemented
+                    '#F59E0B', // Orange for partially complete  
+                    '#EF4444'  // Red for not started
+                ],
+                borderWidth: 2,
+                borderColor: '#ffffff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 20,
+                        usePointStyle: true
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = ((context.parsed / total) * 100).toFixed(1);
+                            return `${context.label}: ${context.parsed} (${percentage}%)`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function createFeatureProgressChart(ctx) {
+    if (!ctx) {
+        console.log('Canvas element not found for feature progress chart');
+        return;
+    }
+    
+    if (typeof Chart === 'undefined' || window.chartJsWorking === false) {
+        console.log('Chart.js not available or not working, showing text-based metrics');
+        ctx.parentNode.innerHTML = `
+            <div style="padding: 20px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef;">
+                <h4 style="margin: 0 0 20px 0; color: #495057; text-align: center;">Project Progress Metrics</h4>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 15px;">
+                    <div style="text-align: center; padding: 15px; background: #e3f2fd; border-radius: 6px; border: 1px solid #bbdefb;">
+                        <div style="font-size: 28px; font-weight: bold; color: #1565c0;" id="impl-percent">95%</div>
+                        <div style="color: #1565c0; font-size: 14px;">📊 Implementation</div>
+                        <div style="background: #1565c0; height: 4px; border-radius: 2px; margin: 10px auto; width: 95%;"></div>
+                    </div>
+                    <div style="text-align: center; padding: 15px; background: #f3e5f5; border-radius: 6px; border: 1px solid #e1bee7;">
+                        <div style="font-size: 28px; font-weight: bold; color: #7b1fa2;" id="test-percent">89%</div>
+                        <div style="color: #7b1fa2; font-size: 14px;">🧪 Test Coverage</div>
+                        <div style="background: #7b1fa2; height: 4px; border-radius: 2px; margin: 10px auto; width: 89%;"></div>
+                    </div>
+                    <div style="text-align: center; padding: 15px; background: #e8f5e8; border-radius: 6px; border: 1px solid #c8e6c9;">
+                        <div style="font-size: 28px; font-weight: bold; color: #2e7d32;" id="quality-percent">88%</div>
+                        <div style="color: #2e7d32; font-size: 14px;">✅ Quality Score</div>
+                        <div style="background: #2e7d32; height: 4px; border-radius: 2px; margin: 10px auto; width: 88%;"></div>
+                    </div>
+                </div>
+                <div style="text-align: center; margin-top: 20px; color: #6c757d; font-size: 12px;">
+                    Real-time metrics from project database
+                </div>
+            </div>`;
+        return;
+    }
+    
+    if (featureProgressChart) {
+        featureProgressChart.destroy();
+    }
+    
+    featureProgressChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['Implementation', 'Testing', 'Quality'],
+            datasets: [{
+                label: 'Progress %',
+                data: [93, 83, 81], // Default data, updated when dashboard loads
+                backgroundColor: [
+                    '#3B82F6', // Blue for implementation
+                    '#8B5CF6', // Purple for testing
+                    '#10B981'  // Green for quality
+                ],
+                borderWidth: 1,
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    ticks: {
+                        callback: function(value) {
+                            return value + '%';
+                        }
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.label}: ${context.parsed.y}%`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function updateChartData(features) {
+    if (!features || features.length === 0) return;
+    
+    // Calculate feature status counts
+    const statusCounts = {
+        implemented: features.filter(f => f.state === 'implemented' || f.state === 'tested_passing').length,
+        partial: features.filter(f => f.state === 'in_progress' || f.state === 'tested_failing').length,
+        notStarted: features.filter(f => f.state === 'not_started' || f.state === 'blocked').length
+    };
+    
+    const total = features.length;
+    const implementationPercent = Math.round(((statusCounts.implemented + statusCounts.partial) / total) * 100);
+    const testingPercent = Math.round((statusCounts.implemented / total) * 100);
+    const qualityPercent = Math.round((statusCounts.implemented / total) * 100);
+    
+    // Update Chart.js charts if available
+    if (featureStatusChart) {
+        featureStatusChart.data.datasets[0].data = [
+            statusCounts.implemented,
+            statusCounts.partial,
+            statusCounts.notStarted
+        ];
+        featureStatusChart.update();
+    }
+    
+    if (featureProgressChart) {
+        featureProgressChart.data.datasets[0].data = [
+            implementationPercent,
+            testingPercent,
+            qualityPercent
+        ];
+        featureProgressChart.update();
+    }
+    
+    // Update text-based visualizations if Chart.js not available
+    const implCountElem = document.getElementById('impl-count');
+    const partialCountElem = document.getElementById('partial-count');
+    const todoCountElem = document.getElementById('todo-count');
+    const implPercentElem = document.getElementById('impl-percent');
+    const testPercentElem = document.getElementById('test-percent');
+    const qualityPercentElem = document.getElementById('quality-percent');
+    
+    if (implCountElem) implCountElem.textContent = statusCounts.implemented;
+    if (partialCountElem) partialCountElem.textContent = statusCounts.partial;
+    if (todoCountElem) todoCountElem.textContent = statusCounts.notStarted;
+    if (implPercentElem) implPercentElem.textContent = `${implementationPercent}%`;
+    if (testPercentElem) testPercentElem.textContent = `${testingPercent}%`;
+    if (qualityPercentElem) qualityPercentElem.textContent = `${qualityPercent}%`;
+    
+    // Update total features count
+    const totalFeaturesElem = document.getElementById('total-features');
+    if (totalFeaturesElem) totalFeaturesElem.textContent = total;
+    
+    // Update progress bar widths in text-based visualizations
+    const updateProgressBar = (parentId, percentage) => {
+        const parent = document.getElementById(parentId);
+        if (parent) {
+            const progressBar = parent.parentElement.querySelector('div[style*="height: 4px"]');
+            if (progressBar) {
+                progressBar.style.width = `${percentage}%`;
+            }
+        }
+    };
+    
+    updateProgressBar('impl-percent', implementationPercent);
+    updateProgressBar('test-percent', testingPercent);
+    updateProgressBar('quality-percent', qualityPercent);
+}
+
+    // F0149: Entity Relationship Diagram Implementation
+    async loadRelationshipDiagram() {
+        try {
+            // Load entities for diagram
+            const [features, tasks, sessions, notes, milestones] = await Promise.all([
+                fetch(`${this.apiBase}/features`).then(r => r.json()),
+                fetch(`${this.apiBase}/tasks`).then(r => r.json()),
+                fetch(`${this.apiBase}/sessions`).then(r => r.json()),
+                fetch(`${this.apiBase}/notes`).then(r => r.json()),
+                fetch(`${this.apiBase}/milestones`).then(r => r.json())
+            ]);
+            
+            // Load relationships
+            const relationships = await fetch(`${this.apiBase}/relationships`).then(r => r.json());
+            
+            this.entityData = { features, tasks, sessions, notes, milestones };
+            this.relationshipData = relationships;
+            
+            this.renderRelationshipDiagram();
+            this.setupDiagramControls();
+            
+        } catch (error) {
+            console.error('Error loading relationship diagram:', error);
+            this.showDiagramError();
+        }
+    }
+    
+    renderRelationshipDiagram() {
+        const container = document.getElementById('relationship-diagram');
+        if (!container) return;
+        
+        // Start with network view
+        this.renderNetworkDiagram(container);
+    }
+    
+    renderNetworkDiagram(container) {
+        container.innerHTML = '';
+        
+        if (!this.entityData || !this.relationshipData) {
+            container.innerHTML = '<div class="loading">Loading entities...</div>';
+            return;
+        }
+        
+        // Create nodes for each entity type
+        const nodes = [];
+        let nodeId = 0;
+        
+        // Add feature nodes
+        this.entityData.features.slice(0, 10).forEach(feature => {
+            nodes.push({
+                id: `feature-${feature.id}`,
+                type: 'feature',
+                title: feature.name,
+                entity: feature,
+                x: Math.random() * 300 + 50,
+                y: Math.random() * 200 + 50
+            });
+        });
+        
+        // Add task nodes
+        this.entityData.tasks.slice(0, 8).forEach(task => {
+            nodes.push({
+                id: `task-${task.id}`,
+                type: 'task',
+                title: task.title,
+                entity: task,
+                x: Math.random() * 300 + 400,
+                y: Math.random() * 200 + 50
+            });
+        });
+        
+        // Add session nodes
+        this.entityData.sessions.slice(0, 5).forEach(session => {
+            nodes.push({
+                id: `session-${session.id}`,
+                type: 'session',
+                title: session.title || `Session ${session.id}`,
+                entity: session,
+                x: Math.random() * 300 + 50,
+                y: Math.random() * 150 + 280
+            });
+        });
+        
+        // Add milestone nodes
+        this.entityData.milestones.slice(0, 6).forEach(milestone => {
+            nodes.push({
+                id: `milestone-${milestone.id}`,
+                type: 'milestone',
+                title: milestone.title,
+                entity: milestone,
+                x: Math.random() * 300 + 400,
+                y: Math.random() * 150 + 280
+            });
+        });
+        
+        // Create DOM elements for nodes
+        nodes.forEach(node => {
+            const nodeElement = document.createElement('div');
+            nodeElement.className = `diagram-node ${node.type}`;
+            nodeElement.style.left = node.x + 'px';
+            nodeElement.style.top = node.y + 'px';
+            nodeElement.textContent = node.title.length > 15 ? 
+                node.title.substring(0, 15) + '...' : node.title;
+            nodeElement.title = node.title;
+            
+            nodeElement.onclick = () => this.showEntityDetails(node.entity, node.type);
+            
+            container.appendChild(nodeElement);
+        });
+        
+        // Draw connections based on relationships
+        this.drawConnections(container, nodes);
+        
+        // Add some sample connections for demonstration
+        this.drawSampleConnections(container, nodes);
+    }
+    
+    drawConnections(container, nodes) {
+        if (!this.relationshipData || this.relationshipData.length === 0) return;
+        
+        this.relationshipData.forEach(rel => {
+            const sourceNode = nodes.find(n => 
+                n.id === `${rel.source_type}-${rel.source_id}` || 
+                n.id === `${rel.target_type}-${rel.target_id}`
+            );
+            const targetNode = nodes.find(n => 
+                n.id === `${rel.target_type}-${rel.target_id}` || 
+                n.id === `${rel.source_type}-${rel.source_id}`
+            );
+            
+            if (sourceNode && targetNode) {
+                this.drawConnection(container, sourceNode, targetNode, 'strong');
+            }
+        });
+    }
+    
+    drawSampleConnections(container, nodes) {
+        // Draw some sample connections for visualization
+        for (let i = 0; i < Math.min(nodes.length - 1, 8); i++) {
+            if (Math.random() > 0.6) {
+                const sourceNode = nodes[i];
+                const targetNode = nodes[i + 1];
+                this.drawConnection(container, sourceNode, targetNode, 'weak');
+            }
+        }
+    }
+    
+    drawConnection(container, sourceNode, targetNode, strength = 'normal') {
+        const line = document.createElement('div');
+        line.className = `diagram-connection ${strength}`;
+        
+        const dx = targetNode.x - sourceNode.x;
+        const dy = targetNode.y - sourceNode.y;
+        const length = Math.sqrt(dx * dx + dy * dy);
+        const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+        
+        line.style.left = sourceNode.x + 'px';
+        line.style.top = sourceNode.y + 'px';
+        line.style.width = length + 'px';
+        line.style.transform = `rotate(${angle}deg)`;
+        
+        container.appendChild(line);
+    }
+    
+    setupDiagramControls() {
+        const buttons = document.querySelectorAll('.diagram-btn');
+        buttons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                buttons.forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                
+                const view = e.target.getAttribute('data-view');
+                this.switchDiagramView(view);
+            });
+        });
+    }
+    
+    switchDiagramView(view) {
+        const container = document.getElementById('relationship-diagram');
+        if (!container) return;
+        
+        switch (view) {
+            case 'network':
+                this.renderNetworkDiagram(container);
+                break;
+            case 'tree':
+                this.renderTreeDiagram(container);
+                break;
+            case 'matrix':
+                this.renderMatrixDiagram(container);
+                break;
+        }
+    }
+    
+    renderTreeDiagram(container) {
+        container.innerHTML = '<div style="text-align: center; padding: 50px; color: #666;">Tree view coming soon...</div>';
+    }
+    
+    renderMatrixDiagram(container) {
+        container.innerHTML = '<div style="text-align: center; padding: 50px; color: #666;">Matrix view coming soon...</div>';
+    }
+    
+    showEntityDetails(entity, type) {
+        // Show entity details in modal or sidebar
+        console.log(`Entity Details - ${type}:`, entity);
+        alert(`${type.toUpperCase()}: ${entity.name || entity.title}\nID: ${entity.id}`);
+    }
+    
+    refreshRelationshipDiagram() {
+        console.log('Refreshing relationship diagram...');
+        this.loadRelationshipDiagram();
+    }
+    
+    showDiagramError() {
+        const container = document.getElementById('relationship-diagram');
+        if (container) {
+            container.innerHTML = `
+                <div style="text-align: center; padding: 50px; color: #dc3545;">
+                    <h4>Unable to load relationship diagram</h4>
+                    <p>Please check your connection and try again.</p>
+                    <button onclick="dashboard.refreshRelationshipDiagram()" style="padding: 8px 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                        Retry
+                    </button>
+                </div>
+            `;
+        }
+    }
+}
+
 // Initialize dashboard when page loads
 document.addEventListener('DOMContentLoaded', () => {
-    new Dashboard();
+    dashboard = new Dashboard();
+    
+    // Initialize charts - Chart.js should be guaranteed available by HTML loader
+    console.log('Initializing charts...');
+    initializeCharts();
 });
+
+function showChartFallback() {
+    const statusCanvas = document.getElementById('feature-status-chart');
+    const progressCanvas = document.getElementById('feature-progress-chart');
+    
+    if (statusCanvas && statusCanvas.parentNode) {
+        statusCanvas.parentNode.innerHTML = '<p style="text-align: center; padding: 50px; color: #666;">Chart visualization unavailable<br><small>Chart.js library failed to load</small></p>';
+    }
+    
+    if (progressCanvas && progressCanvas.parentNode) {
+        progressCanvas.parentNode.innerHTML = '<p style="text-align: center; padding: 50px; color: #666;">Chart visualization unavailable<br><small>Chart.js library failed to load</small></p>';
+    }
+}

@@ -5,7 +5,6 @@ use chrono::Utc;
 use sqlx::SqlitePool;
 
 use super::models::{NoteLink, NoteLinkQuery};
-use super::EntityType;
 
 /// Create a link between a note and another entity or note
 pub async fn create_link(
@@ -83,15 +82,15 @@ pub async fn get_links_to_target(pool: &SqlitePool, target_id: &str, target_type
                            link_type, auto_detected, detection_reason, created_at, updated_at, metadata
                      FROM note_links WHERE target_id = ?".to_string();
     
-    if let Some(t_type) = target_type {
+    if let Some(_t_type) = target_type {
         query.push_str(" AND target_type = ?");
     }
     query.push_str(" ORDER BY created_at DESC");
     
     let mut query_builder = sqlx::query_as::<_, NoteLink>(&query).bind(target_id);
     
-    if let Some(t_type) = target_type {
-        query_builder = query_builder.bind(t_type);
+    if let Some(_t_type) = target_type {
+        query_builder = query_builder.bind(_t_type);
     }
     
     let links = query_builder.fetch_all(pool).await?;
@@ -237,14 +236,14 @@ pub async fn remove_links_from_note(pool: &SqlitePool, note_id: &str) -> Result<
 pub async fn remove_links_to_target(pool: &SqlitePool, target_id: &str, target_type: Option<&str>) -> Result<u64> {
     let mut query = "DELETE FROM note_links WHERE target_id = ?".to_string();
     
-    if let Some(t_type) = target_type {
+    if let Some(_t_type) = target_type {
         query.push_str(" AND target_type = ?");
     }
     
     let mut query_builder = sqlx::query(&query).bind(target_id);
     
-    if let Some(t_type) = target_type {
-        query_builder = query_builder.bind(t_type);
+    if let Some(_t_type) = target_type {
+        query_builder = query_builder.bind(_t_type);
     }
     
     let result = query_builder.execute(pool).await?;
@@ -355,7 +354,7 @@ pub struct LinkStats {
 }
 
 /// Detect potential links in note content
-pub async fn detect_potential_links(pool: &SqlitePool, project_id: &str, content: &str) -> Result<Vec<DetectedLink>> {
+pub async fn detect_potential_links(pool: &SqlitePool, _project_id: &str, content: &str) -> Result<Vec<DetectedLink>> {
     let mut detected = Vec::new();
     
     // Detect entity ID patterns (F0001, task-123, proj-456, etc.)

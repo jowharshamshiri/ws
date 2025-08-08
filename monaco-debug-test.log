@@ -1,0 +1,21 @@
+   Compiling workspace v0.44.68455 (/Users/bahram/ws/prj/workspace)
+warning: methods `generate_features_md`, `generate_template_features`, `generate_directives_md`, and `generate_progress_md` are never used
+    --> src/mcp_protocol.rs:1527:8
+     |
+102  | impl McpProtocolHandler {
+     | ----------------------- methods in this implementation
+...
+1527 |     fn generate_features_md(&self, name: &str, template_type: &str, initialize_features: bool) -> Result<String> {
+     |        ^^^^^^^^^^^^^^^^^^^^
+...
+1563 |     fn generate_template_features(&self, template_type: &str) -> Result<String> {
+     |        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+1597 |     fn generate_directives_md(&self) -> Result<String> {
+     |        ^^^^^^^^^^^^^^^^^^^^^^
+...
+1639 |     fn generate_progress_md(&self, name: &str) -> Result<String> {
+     |        ^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: `#[warn(dead_code)]` on by default
+

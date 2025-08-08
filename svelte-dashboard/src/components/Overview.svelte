@@ -1,0 +1,482 @@
+<script>
+  import { projectStore, agentActivity } from '../stores.js';
+  
+  $: project = $projectStore;
+  $: activity = $agentActivity;
+</script>
+
+<div class="overview-grid">
+  <!-- Project Status Card -->
+  <div class="metric-card project-card">
+    <div class="card-header">
+      <h3>Project Status</h3>
+      <div class="status-badge active">Active</div>
+    </div>
+    <div class="project-info">
+      <div class="project-name">{project.name}</div>
+      <div class="project-description">{project.description}</div>
+      <div class="project-version">v{project.version}</div>
+    </div>
+  </div>
+
+  <!-- Implementation Progress Card -->
+  <div class="metric-card progress-card">
+    <div class="card-header">
+      <h3>Implementation Progress</h3>
+      <div class="progress-percentage">56%</div>
+    </div>
+    <div class="progress-content">
+      <div class="progress-bar">
+        <div class="progress-fill" style="width: 56%"></div>
+      </div>
+      <div class="progress-stats">
+        <div class="stat">
+          <span class="stat-value">179</span>
+          <span class="stat-label">Implemented</span>
+        </div>
+        <div class="stat">
+          <span class="stat-value">121</span>
+          <span class="stat-label">Remaining</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Test Coverage Card -->
+  <div class="metric-card test-card">
+    <div class="card-header">
+      <h3>Test Coverage</h3>
+      <div class="coverage-percentage">55%</div>
+    </div>
+    <div class="coverage-content">
+      <div class="coverage-bar">
+        <div class="coverage-fill" style="width: 55%"></div>
+      </div>
+      <div class="coverage-stats">
+        <div class="stat">
+          <span class="stat-value">163</span>
+          <span class="stat-label">Tested</span>
+        </div>
+        <div class="stat">
+          <span class="stat-value">137</span>
+          <span class="stat-label">Pending</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Development Velocity Card -->
+  <div class="metric-card velocity-card">
+    <div class="card-header">
+      <h3>Development Velocity</h3>
+      <div class="velocity-trend">↗ +14.3</div>
+    </div>
+    <div class="velocity-content">
+      <div class="velocity-metric">
+        <span class="velocity-value">14.3</span>
+        <span class="velocity-unit">features/week</span>
+      </div>
+      <div class="velocity-chart">
+        <div class="chart-bar" style="height: 40%"></div>
+        <div class="chart-bar" style="height: 60%"></div>
+        <div class="chart-bar" style="height: 80%"></div>
+        <div class="chart-bar" style="height: 100%"></div>
+        <div class="chart-bar" style="height: 90%"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Active Session Card -->
+  <div class="metric-card session-card span-2">
+    <div class="card-header">
+      <h3>Active Session</h3>
+      <div class="session-status online">Online</div>
+    </div>
+    <div class="session-content">
+      <div class="session-info">
+        <div class="session-item">
+          <span class="label">AI Agent:</span>
+          <span class="value">{activity.model}</span>
+        </div>
+        <div class="session-item">
+          <span class="label">Current Task:</span>
+          <span class="value">{activity.currentTask}</span>
+        </div>
+        <div class="session-item">
+          <span class="label">Duration:</span>
+          <span class="value">{activity.sessionDuration}</span>
+        </div>
+        <div class="session-item">
+          <span class="label">Context Usage:</span>
+          <div class="context-usage">
+            <div class="context-bar">
+              <div class="context-fill" style="width: {activity.contextUsage}%"></div>
+            </div>
+            <span class="context-percent" class:warning={activity.contextUsage > 80}>
+              {activity.contextUsage}%
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Activity Card -->
+  <div class="metric-card activity-card span-2">
+    <div class="card-header">
+      <h3>Recent Activity</h3>
+      <div class="activity-count">3 actions</div>
+    </div>
+    <div class="activity-content">
+      <div class="activity-timeline">
+        {#each activity.recentActions as action}
+          <div class="activity-item">
+            <div class="activity-time">{action.time}</div>
+            <div class="activity-description">{action.description}</div>
+            <div class="activity-type">{action.type || 'System'}</div>
+          </div>
+        {:else}
+          <div class="activity-item">
+            <div class="activity-time">12:36</div>
+            <div class="activity-description">ADE overview dashboard implemented</div>
+            <div class="activity-type">Feature</div>
+          </div>
+          <div class="activity-item">
+            <div class="activity-time">12:35</div>
+            <div class="activity-description">Svelte components analyzed</div>
+            <div class="activity-type">Analysis</div>
+          </div>
+          <div class="activity-item">
+            <div class="activity-time">12:34</div>
+            <div class="activity-description">Session initialized successfully</div>
+            <div class="activity-type">System</div>
+          </div>
+        {/each}
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .overview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 20px;
+    align-items: start;
+  }
+
+  .metric-card {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 24px;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .metric-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+
+  .span-2 {
+    grid-column: span 2;
+  }
+
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+
+  .card-header h3 {
+    color: #1f2937;
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: -0.025em;
+  }
+
+  .status-badge {
+    background: #dcfce7;
+    color: #166534;
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  .progress-percentage,
+  .coverage-percentage {
+    background: #dbeafe;
+    color: #1e40af;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 16px;
+    font-weight: 700;
+    font-family: ui-monospace, SFMono-Regular, 'SF Mono', monospace;
+  }
+
+  .velocity-trend {
+    color: #059669;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: ui-monospace, SFMono-Regular, 'SF Mono', monospace;
+  }
+
+  .session-status {
+    background: #dcfce7;
+    color: #166534;
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  .activity-count {
+    background: #f3f4f6;
+    color: #6b7280;
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  /* Project Card */
+  .project-info {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .project-name {
+    font-size: 18px;
+    font-weight: 700;
+    color: #111827;
+  }
+
+  .project-description {
+    color: #6b7280;
+    font-size: 14px;
+  }
+
+  .project-version {
+    background: #dbeafe;
+    color: #1e40af;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-family: ui-monospace, SFMono-Regular, 'SF Mono', monospace;
+    align-self: flex-start;
+    font-weight: 600;
+  }
+
+  /* Progress Card */
+  .progress-content,
+  .coverage-content {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .progress-bar,
+  .coverage-bar {
+    width: 100%;
+    height: 8px;
+    background: #e5e7eb;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: #3b82f6;
+    transition: width 0.3s ease;
+  }
+
+  .coverage-fill {
+    height: 100%;
+    background: #10b981;
+    transition: width 0.3s ease;
+  }
+
+  .progress-stats,
+  .coverage-stats {
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .stat-value {
+    font-size: 20px;
+    font-weight: 700;
+    color: #111827;
+    font-family: ui-monospace, SFMono-Regular, 'SF Mono', monospace;
+  }
+
+  .stat-label {
+    font-size: 12px;
+    color: #6b7280;
+    font-weight: 500;
+  }
+
+  /* Velocity Card */
+  .velocity-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+
+  .velocity-metric {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .velocity-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: #059669;
+    font-family: ui-monospace, SFMono-Regular, 'SF Mono', monospace;
+  }
+
+  .velocity-unit {
+    font-size: 12px;
+    color: #6b7280;
+    font-weight: 500;
+  }
+
+  .velocity-chart {
+    display: flex;
+    align-items: flex-end;
+    gap: 4px;
+    height: 40px;
+  }
+
+  .chart-bar {
+    width: 8px;
+    background: #10b981;
+    border-radius: 2px;
+    transition: all 0.2s ease;
+  }
+
+  .chart-bar:hover {
+    background: #059669;
+  }
+
+  /* Session Card */
+  .session-content {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .session-info {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .session-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+  }
+
+  .session-item .label {
+    color: #6b7280;
+  }
+
+  .session-item .value {
+    color: #111827;
+    font-weight: 600;
+  }
+
+  .context-usage {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .context-bar {
+    width: 80px;
+    height: 6px;
+    background: #e5e7eb;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .context-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #10b981, #f59e0b, #ef4444);
+    transition: width 0.3s ease;
+  }
+
+  .context-percent {
+    font-size: 12px;
+    font-weight: 600;
+    color: #1f2937;
+    font-family: ui-monospace, SFMono-Regular, 'SF Mono', monospace;
+  }
+
+  .context-percent.warning {
+    color: #f59e0b;
+  }
+
+  /* Activity Card */
+  .activity-content {
+    max-height: 200px;
+    overflow-y: auto;
+  }
+
+  .activity-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .activity-item {
+    display: grid;
+    grid-template-columns: 60px 1fr auto;
+    gap: 12px;
+    padding: 12px 16px;
+    background: #f8fafc;
+    border-radius: 6px;
+    font-size: 13px;
+    transition: background 0.2s ease;
+    border: 1px solid #e2e8f0;
+  }
+
+  .activity-item:hover {
+    background: #f1f5f9;
+  }
+
+  .activity-time {
+    color: #3b82f6;
+    font-family: ui-monospace, SFMono-Regular, 'SF Mono', monospace;
+    font-weight: 600;
+  }
+
+  .activity-description {
+    color: #4b5563;
+  }
+
+  .activity-type {
+    background: #dbeafe;
+    color: #1e40af;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+  }
+</style>

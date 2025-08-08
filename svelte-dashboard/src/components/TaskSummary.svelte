@@ -1,0 +1,222 @@
+<script>
+  import { taskMetrics, tasksStore } from '../stores.js';
+  
+  $: metrics = $taskMetrics;
+  $: tasks = $tasksStore;
+
+  function getTaskIcon(status) {
+    switch (status) {
+      case 'pending': return '⏳';
+      case 'in_progress': return '🔄';
+      case 'completed': return '✅';
+      case 'blocked': return '🚫';
+      default: return '❓';
+    }
+  }
+
+  function getTaskColor(status) {
+    switch (status) {
+      case 'pending': return '#888';
+      case 'in_progress': return '#f59e0b';
+      case 'completed': return '#4ade80';
+      case 'blocked': return '#ef4444';
+      default: return '#666';
+    }
+  }
+
+  $: recentTasks = $tasks.slice(0, 5);
+</script>
+
+<div class="task-summary-card">
+  <h2>Task Summary</h2>
+  
+  <div class="task-stats">
+    <div class="stat-item pending">
+      <div class="stat-icon">⏳</div>
+      <div class="stat-info">
+        <div class="stat-count">{metrics.pending}</div>
+        <div class="stat-label">Pending</div>
+      </div>
+    </div>
+    
+    <div class="stat-item progress">
+      <div class="stat-icon">🔄</div>
+      <div class="stat-info">
+        <div class="stat-count">{metrics.inProgress}</div>
+        <div class="stat-label">In Progress</div>
+      </div>
+    </div>
+    
+    <div class="stat-item completed">
+      <div class="stat-icon">✅</div>
+      <div class="stat-info">
+        <div class="stat-count">{metrics.completed}</div>
+        <div class="stat-label">Completed</div>
+      </div>
+    </div>
+    
+    <div class="stat-item blocked">
+      <div class="stat-icon">🚫</div>
+      <div class="stat-info">
+        <div class="stat-count">{metrics.blocked}</div>
+        <div class="stat-label">Blocked</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="active-tasks">
+    <h3>Active Tasks</h3>
+    <div class="task-list">
+      {#each recentTasks as task}
+        <div class="task-item" style="border-left-color: {getTaskColor(task.status)}">
+          <div class="task-header">
+            <span class="task-icon">{getTaskIcon(task.status)}</span>
+            <span class="task-id">{task.id}</span>
+            <span class="task-status" style="color: {getTaskColor(task.status)}">{task.status}</span>
+          </div>
+          <div class="task-content">{task.content || task.description}</div>
+        </div>
+      {:else}
+        <div class="task-placeholder">
+          <div class="task-header">
+            <span class="task-icon">🔄</span>
+            <span class="task-id">todo-001</span>
+            <span class="task-status" style="color: #f59e0b">in_progress</span>
+          </div>
+          <div class="task-content">Set up Svelte framework for ADE implementation</div>
+        </div>
+        <div class="task-placeholder">
+          <div class="task-header">
+            <span class="task-icon">⏳</span>
+            <span class="task-id">todo-002</span>
+            <span class="task-status" style="color: #888">pending</span>
+          </div>
+          <div class="task-content">Implement ADE Overview features</div>
+        </div>
+        <div class="task-placeholder">
+          <div class="task-header">
+            <span class="task-icon">⏳</span>
+            <span class="task-id">todo-003</span>
+            <span class="task-status" style="color: #888">pending</span>
+          </div>
+          <div class="task-content">Create Svelte components for entity management</div>
+        </div>
+      {/each}
+    </div>
+  </div>
+</div>
+
+<style>
+  .task-summary-card {
+    background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+    border: 1px solid #333;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
+
+  .task-summary-card h2 {
+    color: #9b59d0;
+    margin: 0 0 20px 0;
+    font-size: 20px;
+    font-weight: 600;
+  }
+
+  .task-stats {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .stat-item {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 16px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .stat-icon {
+    font-size: 20px;
+  }
+
+  .stat-info {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .stat-count {
+    font-size: 20px;
+    font-weight: 700;
+    color: #ffffff;
+    line-height: 1;
+  }
+
+  .stat-label {
+    font-size: 12px;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .active-tasks {
+    border-top: 1px solid #333;
+    padding-top: 20px;
+  }
+
+  .active-tasks h3 {
+    color: #ccc;
+    font-size: 14px;
+    font-weight: 600;
+    margin: 0 0 16px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .task-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .task-item,
+  .task-placeholder {
+    background: rgba(255, 255, 255, 0.05);
+    border-left: 3px solid;
+    padding: 12px 16px;
+    border-radius: 0 6px 6px 0;
+  }
+
+  .task-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+    font-size: 12px;
+  }
+
+  .task-icon {
+    font-size: 14px;
+  }
+
+  .task-id {
+    color: #9b59d0;
+    font-family: monospace;
+    font-weight: 500;
+  }
+
+  .task-status {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-left: auto;
+  }
+
+  .task-content {
+    color: #ccc;
+    font-size: 13px;
+    line-height: 1.4;
+  }
+</style>

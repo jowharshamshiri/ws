@@ -5,7 +5,6 @@ path = "src/bin/ws.rs"
 [dependencies]
 anyhow = "1.0"
 atty = "0.2"
-axum = "0.6"
 chardet = "0.2.4"
 colored = "2.0"
 content_inspector = "0.2"
@@ -26,6 +25,10 @@ toml = "0.8"
 tower = "0.4"
 url = "2.0"
 walkdir = "2.4"
+
+[dependencies.axum]
+features = ["ws"]
+version = "0.6"
 
 [dependencies.chrono]
 features = ["serde"]
@@ -70,6 +73,7 @@ version = "0.11"
 
 [package]
 authors = ["Bahram Shamshiri <jowharshamshiri@gmail.com>"]
+build = "build.rs"
 categories = ["command-line-utilities", "filesystem"]
 description = "Workspace - A tool suite for file operations, version management, and development workflow automation"
 edition = "2021"
@@ -78,7 +82,7 @@ license = "MIT"
 name = "workspace"
 readme = "README.md"
 repository = "https://github.com/jowharshamshiri/workspace"
-version = "0.44.68455"
+version = "0.45.72626"
 
 [profile.dev]
 debug = true

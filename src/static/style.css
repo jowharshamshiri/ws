@@ -1411,3 +1411,332 @@ header h1 {
     color: #666;
     margin-top: 4px;
 }
+
+/* Note Search Styles */
+.note-search {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+    align-items: center;
+}
+
+.note-search input {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.note-search input:focus {
+    outline: none;
+    border-color: #2196F3;
+    box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);
+}
+
+.note-search button {
+    padding: 8px 16px;
+    background: #f44336;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.note-search button:hover {
+    background: #d32f2f;
+}
+
+.note-search mark {
+    background: #ffeb3b;
+    padding: 2px 4px;
+    border-radius: 2px;
+}
+
+.no-results {
+    text-align: center;
+    color: #666;
+    padding: 40px 20px;
+    font-style: italic;
+}
+
+.project-wide {
+    color: #2196F3;
+    font-weight: 500;
+}
+
+.entity-info {
+    color: #ff9800;
+    font-size: 0.9em;
+}
+
+/* Feature Charts Styles */
+.feature-charts {
+    background: #fff;
+    border-radius: 8px;
+    padding: 24px;
+    margin-bottom: 24px;
+}
+
+.charts-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+    align-items: center;
+}
+
+.chart-section {
+    text-align: center;
+}
+
+.chart-section h3 {
+    color: #374151;
+    font-size: 1.1em;
+    font-weight: 600;
+    margin-bottom: 16px;
+}
+
+.chart-section canvas {
+    max-width: 100%;
+    height: auto;
+}
+
+@media (max-width: 768px) {
+    .charts-container {
+        grid-template-columns: 1fr;
+        gap: 24px;
+    }
+}
+
+/* Note Styles */
+.note-card {
+    background: #fff;
+    border: 1px solid #e1e8ed;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 12px;
+    transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.note-card:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border-color: #3b82f6;
+}
+
+.note-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+}
+
+.note-header h4 {
+    color: #1f2937;
+    font-size: 1.1em;
+    font-weight: 600;
+    margin: 0;
+    flex: 1;
+}
+
+.note-badges {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+    margin-left: 12px;
+}
+
+.note-content {
+    color: #4b5563;
+    font-size: 0.95em;
+    line-height: 1.5;
+    margin-bottom: 12px;
+    word-wrap: break-word;
+}
+
+.note-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 8px;
+    border-top: 1px solid #f3f4f6;
+    font-size: 0.85em;
+    color: #6b7280;
+}
+
+.note-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.note-actions .btn {
+    padding: 4px 12px;
+    font-size: 0.85em;
+    min-width: auto;
+}
+
+/* Note Dialog Styles */
+.floating-dialog {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.dialog-content {
+    background: white;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 600px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.dialog-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.dialog-header h3 {
+    color: #111827;
+    font-size: 1.25em;
+    font-weight: 600;
+    margin: 0;
+}
+
+.dialog-close {
+    background: none;
+    border: none;
+    font-size: 1.5em;
+    color: #6b7280;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: color 0.2s ease, background-color 0.2s ease;
+}
+
+.dialog-close:hover {
+    color: #374151;
+    background-color: #f9fafb;
+}
+
+.dialog-body {
+    padding: 20px 24px;
+}
+
+.form-row {
+    margin-bottom: 20px;
+}
+
+.form-row label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 500;
+    color: #374151;
+    font-size: 0.95em;
+}
+
+.form-row input,
+.form-row select,
+.form-row textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 0.95em;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-row input:focus,
+.form-row select:focus,
+.form-row textarea:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.form-row textarea {
+    resize: vertical;
+    min-height: 120px;
+    font-family: inherit;
+}
+
+.dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding-top: 20px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.dialog-actions button {
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-size: 0.95em;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.dialog-actions button[type="button"] {
+    background: #f9fafb;
+    border: 1px solid #d1d5db;
+    color: #374151;
+}
+
+.dialog-actions button[type="button"]:hover {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+}
+
+.dialog-actions button[type="submit"] {
+    background: #3b82f6;
+    border: 1px solid #3b82f6;
+    color: white;
+}
+
+.dialog-actions button[type="submit"]:hover {
+    background: #2563eb;
+    border-color: #2563eb;
+}
+
+/* Badge color variants for notes */
+.badge.badge-primary {
+    background-color: #dbeafe;
+    color: #1d4ed8;
+}
+
+.badge.badge-warning {
+    background-color: #fef3c7;
+    color: #b45309;
+}
+
+.badge.badge-info {
+    background-color: #dbeafe;
+    color: #1e40af;
+}
+
+.badge.badge-success {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+
+.badge.badge-danger {
+    background-color: #fee2e2;
+    color: #dc2626;
+}
+
+.badge.badge-secondary {
+    background-color: #f3f4f6;
+    color: #4b5563;
+}

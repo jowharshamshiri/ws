@@ -126,7 +126,8 @@ pub mod features {
         sqlx::query(r#"
             UPDATE features 
             SET name = ?, description = ?, category = ?, state = ?, test_status = ?, 
-                priority = ?, implementation_notes = ?, updated_at = ?
+                priority = ?, implementation_notes = ?, test_evidence = ?, dependencies = ?,
+                completed_at = ?, estimated_effort = ?, actual_effort = ?, metadata = ?, updated_at = ?
             WHERE id = ?
         "#)
         .bind(&feature.name)
@@ -136,6 +137,12 @@ pub mod features {
         .bind(&feature.test_status)  
         .bind(&feature.priority)
         .bind(&feature.implementation_notes)
+        .bind(&feature.test_evidence)
+        .bind(&feature.dependencies)
+        .bind(feature.completed_at.map(|dt| dt.to_rfc3339()))
+        .bind(&feature.estimated_effort)
+        .bind(&feature.actual_effort)
+        .bind(&feature.metadata)
         .bind(now.to_rfc3339())
         .bind(feature.id.to_string())
         .execute(pool)
@@ -174,7 +181,8 @@ pub mod features {
         sqlx::query(r#"
             UPDATE features 
             SET name = ?, description = ?, category = ?, state = ?, test_status = ?, 
-                priority = ?, implementation_notes = ?, updated_at = ?
+                priority = ?, implementation_notes = ?, test_evidence = ?, dependencies = ?,
+                completed_at = ?, estimated_effort = ?, actual_effort = ?, metadata = ?, updated_at = ?
             WHERE id = ?
         "#)
         .bind(&feature.name)
@@ -184,6 +192,12 @@ pub mod features {
         .bind(&feature.test_status)
         .bind(&feature.priority)
         .bind(&feature.implementation_notes)
+        .bind(&feature.test_evidence)
+        .bind(&feature.dependencies)
+        .bind(feature.completed_at.map(|dt| dt.to_rfc3339()))
+        .bind(&feature.estimated_effort)
+        .bind(&feature.actual_effort)
+        .bind(&feature.metadata)
         .bind(now.to_rfc3339())  
         .bind(feature.id.to_string())
         .execute(pool)
@@ -245,8 +259,9 @@ pub mod features {
         sqlx::query(r#"
             INSERT INTO features (
                 id, project_id, code, name, description, category, state, test_status, priority,
-                created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                implementation_notes, test_evidence, dependencies, created_at, updated_at, completed_at,
+                estimated_effort, actual_effort, metadata
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         "#)
         .bind(&code)
         .bind(project_id)
@@ -257,8 +272,15 @@ pub mod features {
         .bind("not_implemented")
         .bind("not_tested")
         .bind(&priority)
+        .bind(&feature.implementation_notes)
+        .bind(&feature.test_evidence)
+        .bind(&feature.dependencies)
         .bind(now.to_rfc3339())
         .bind(now.to_rfc3339())
+        .bind(feature.completed_at.map(|dt| dt.to_rfc3339()))
+        .bind(&feature.estimated_effort)
+        .bind(&feature.actual_effort)
+        .bind(&feature.metadata)
         .execute(pool)
         .await?;
 
@@ -281,17 +303,23 @@ pub mod features {
 
 
     pub async fn get_by_project(pool: &SqlitePool, project_id: &str) -> Result<Vec<Feature>> {
+        eprintln!("DEBUG: crud::features::get_by_project called with project_id: {}", project_id);
         let features = sqlx::query_as::<_, Feature>(r#"
             SELECT id, project_id, code, name, description, category, state, test_status, priority,
                    implementation_notes, test_evidence, dependencies, created_at, updated_at,
-                   completed_at, estimated_effort, actual_effort
+                   completed_at, estimated_effort, actual_effort, metadata
             FROM features WHERE project_id = ?
             ORDER BY code
         "#)
         .bind(project_id)
         .fetch_all(pool)
-        .await?;
+        .await
+        .map_err(|e| {
+            eprintln!("ERROR: SQL query failed in features::get_by_project: {}", e);
+            e
+        })?;
 
+        eprintln!("DEBUG: SQL query succeeded, fetched {} features", features.len());
         Ok(features)
     }
 
@@ -531,18 +559,24 @@ pub mod tasks {
 
 
     pub async fn get_by_project(pool: &SqlitePool, project_id: &str) -> Result<Vec<Task>> {
+        eprintln!("DEBUG: crud::tasks::get_by_project called with project_id: {}", project_id);
         let tasks = sqlx::query_as::<_, Task>(r#"
             SELECT id, project_id, code, title, description, category, status, priority,
                    feature_ids, depends_on, acceptance_criteria, validation_steps, evidence,
                    session_id, assigned_to, created_at, updated_at, started_at, completed_at,
-                   estimated_effort, actual_effort, tags
+                   estimated_effort, actual_effort, tags, metadata
             FROM tasks WHERE project_id = ?
             ORDER BY priority DESC, created_at ASC
         "#)
         .bind(project_id)
         .fetch_all(pool)
-        .await?;
+        .await
+        .map_err(|e| {
+            eprintln!("ERROR: SQL query failed in tasks::get_by_project: {}", e);
+            e
+        })?;
 
+        eprintln!("DEBUG: SQL query succeeded, fetched {} tasks", tasks.len());
         Ok(tasks)
     }
 

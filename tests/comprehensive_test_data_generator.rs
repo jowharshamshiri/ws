@@ -4,6 +4,7 @@
 use anyhow::Result;
 use chrono::{DateTime, Utc, Duration};
 use serde_json::{self, Value};
+use sqlx::Row;
 use std::collections::HashMap;
 use std::fs::{self, File};
 use std::io::{Write, BufWriter};
@@ -17,6 +18,8 @@ pub struct ComprehensiveTestDataGenerator {
     pub db_path: std::path::PathBuf,
     pub test_files_root: PathBuf,
     pub git_repo_root: PathBuf,
+    pub project_ids: Vec<String>,
+    pub default_project_id: Option<String>,
 }
 
 impl ComprehensiveTestDataGenerator {
@@ -34,17 +37,55 @@ impl ComprehensiveTestDataGenerator {
         fs::create_dir_all(&test_files_root)?;
         fs::create_dir_all(&git_repo_root)?;
         
-        Ok(Self { temp_dir, db_path, test_files_root, git_repo_root })
+        Ok(Self { 
+            temp_dir, 
+            db_path, 
+            test_files_root, 
+            git_repo_root, 
+            project_ids: Vec::new(),
+            default_project_id: None,
+        })
+    }
+
+    /// Collect project IDs from the database after project generation
+    async fn collect_project_ids(&mut self, entity_manager: &workspace::entities::EntityManager) -> Result<()> {
+        // Use direct database query to get all projects
+        let query = "SELECT id, name FROM projects ORDER BY created_at ASC";
+        let rows = sqlx::query(query)
+            .fetch_all(entity_manager.get_pool())
+            .await?;
+        
+        for row in rows {
+            let project_id: String = row.get("id");
+            self.project_ids.push(project_id.clone());
+            
+            // Set the first project as default
+            if self.default_project_id.is_none() {
+                self.default_project_id = Some(project_id);
+            }
+        }
+        
+        Ok(())
+    }
+
+    /// Get the default project ID for entity creation
+    fn get_default_project_id(&self) -> String {
+        self.default_project_id.clone().unwrap_or_else(|| "proj-fallback".to_string())
     }
 
     /// Generate comprehensive test data covering all model scenarios
-    pub async fn generate_all_test_scenarios(&self) -> Result<()> {
+    pub async fn generate_all_test_scenarios(&mut self) -> Result<()> {
         // Initialize database
         let pool = workspace::entities::database::initialize_database(&self.db_path).await?;
         let entity_manager = workspace::entities::EntityManager::new(pool);
 
-        // Generate all test scenarios
+        // Generate all test scenarios in proper dependency order
+        // Projects must be created first to satisfy foreign key constraints
         self.generate_project_scenarios(&entity_manager).await?;
+        
+        // Collect project IDs from the database for use in other entities
+        self.collect_project_ids(&entity_manager).await?;
+        
         self.generate_feature_scenarios(&entity_manager).await?;
         self.generate_task_scenarios(&entity_manager).await?;
         self.generate_session_scenarios(&entity_manager).await?;
@@ -65,7 +106,7 @@ impl ComprehensiveTestDataGenerator {
     }
 
     /// Generate all possible project scenarios
-    async fn generate_project_scenarios(&self, entity_manager: &workspace::entities::EntityManager) -> Result<()> {
+    async fn generate_project_scenarios(&mut self, entity_manager: &workspace::entities::EntityManager) -> Result<()> {
         // Create projects covering all field combinations - Sample Test Project MUST be first
         let projects = vec![
             // Sample project FIRST - needed by other entities
@@ -107,7 +148,7 @@ impl ComprehensiveTestDataGenerator {
     }
 
     /// Generate all possible feature scenarios including realistic half-done project scenarios
-    async fn generate_feature_scenarios(&self, entity_manager: &workspace::entities::EntityManager) -> Result<()> {
+    async fn generate_feature_scenarios(&mut self, entity_manager: &workspace::entities::EntityManager) -> Result<()> {
         // Cover every FeatureState enum value
         let feature_states = vec!["NotImplemented", "Implemented", "TestedPassing", "TestedFailing", "TautologicalTest", "CriticalIssue"];
         
@@ -298,7 +339,7 @@ impl ComprehensiveTestDataGenerator {
     }
 
     /// Generate all possible task scenarios including realistic half-done project tasks
-    async fn generate_task_scenarios(&self, entity_manager: &workspace::entities::EntityManager) -> Result<()> {
+    async fn generate_task_scenarios(&mut self, entity_manager: &workspace::entities::EntityManager) -> Result<()> {
         // Cover every TaskStatus enum value
         let task_statuses = vec!["Pending", "InProgress", "Completed", "Blocked", "Cancelled"];
         
@@ -498,7 +539,7 @@ impl ComprehensiveTestDataGenerator {
     }
 
     /// Generate session test scenarios including realistic development sessions
-    async fn generate_session_scenarios(&self, entity_manager: &workspace::entities::EntityManager) -> Result<()> {
+    async fn generate_session_scenarios(&mut self, entity_manager: &workspace::entities::EntityManager) -> Result<()> {
         let mut session_count = 0;
         let base_time = Utc::now() - Duration::days(30);
 
@@ -636,7 +677,7 @@ impl ComprehensiveTestDataGenerator {
     }
 
     /// Generate dependency relationship scenarios
-    async fn generate_dependency_scenarios(&self, entity_manager: &workspace::entities::EntityManager) -> Result<()> {
+    async fn generate_dependency_scenarios(&mut self, entity_manager: &workspace::entities::EntityManager) -> Result<()> {
         let dependency_types = vec!["requires", "blocks", "relates_to", "implements", "tests"];
         
         for (i, &dep_type) in dependency_types.iter().enumerate() {
@@ -658,42 +699,42 @@ impl ComprehensiveTestDataGenerator {
     }
 
     /// Generate note scenarios covering all note types with realistic project notes
-    async fn generate_note_scenarios(&self, entity_manager: &workspace::entities::EntityManager) -> Result<()> {
+    async fn generate_note_scenarios(&mut self, entity_manager: &workspace::entities::EntityManager) -> Result<()> {
         let mut note_count = 0;
         let base_time = Utc::now() - Duration::days(45);
 
         // Generate realistic project notes for half-done project scenarios
         let project_notes = vec![
             // Architecture Notes
-            ("System Architecture Overview", "High-level system architecture design with microservices approach", "Architecture", 
+            ("System Architecture Overview", "High-level system architecture design with microservices approach", "architecture", 
              "## System Architecture\n\n### Overview\nOur system follows a microservices architecture with the following key components:\n\n1. **API Gateway**: Routes requests and handles authentication\n2. **User Service**: User management and authentication\n3. **Product Service**: Product catalog and inventory\n4. **Order Service**: Order processing and fulfillment\n5. **Payment Service**: Payment processing with Stripe\n6. **Notification Service**: Email and SMS notifications\n\n### Data Flow\n```\nClient -> API Gateway -> Services -> Database\n```\n\n### Technology Stack\n- **Frontend**: React with TypeScript\n- **Backend**: Node.js with Express\n- **Database**: PostgreSQL with Redis for caching\n- **Message Queue**: RabbitMQ\n- **Monitoring**: Prometheus + Grafana", "high"),
             
-            ("Database Schema Design", "Entity relationship design and data modeling decisions", "Architecture",
+            ("Database Schema Design", "Entity relationship design and data modeling decisions", "architecture",
              "## Database Schema Design\n\n### Core Entities\n1. **Users**: Authentication and profile data\n2. **Products**: Catalog items with categories\n3. **Orders**: Purchase transactions and history\n4. **Payments**: Payment method and transaction records\n\n### Relationships\n- Users have multiple Orders\n- Orders contain multiple Products (many-to-many)\n- Orders have one Payment\n\n### Indexing Strategy\n- Primary keys on all tables\n- Foreign key indexes for joins\n- Search indexes on product names and descriptions\n- Composite indexes on frequently queried combinations", "medium"),
 
             // Decision Records
-            ("Frontend Framework Selection", "Decision to use React over Vue.js for the frontend", "Decision",
+            ("Frontend Framework Selection", "Decision to use React over Vue.js for the frontend", "decision",
              "## Decision: React vs Vue.js\n\n### Context\nWe needed to choose a frontend framework for our e-commerce platform.\n\n### Options Considered\n1. **React**: Large ecosystem, team familiarity\n2. **Vue.js**: Simpler learning curve, good performance\n3. **Angular**: Full framework, enterprise features\n\n### Decision\nWe chose **React** for the following reasons:\n- Team has 3 years of React experience\n- Large ecosystem of libraries and components\n- Better job market for hiring\n- Excellent TypeScript support\n\n### Consequences\n- Steeper learning curve for new team members\n- Need to select additional libraries for state management\n- Larger bundle size compared to Vue.js", "high"),
 
-            ("Payment Gateway Selection", "Decision to use Stripe as the primary payment processor", "Decision",
+            ("Payment Gateway Selection", "Decision to use Stripe as the primary payment processor", "decision",
              "## Decision: Stripe Payment Gateway\n\n### Context\nNeed reliable payment processing for international customers.\n\n### Options Evaluated\n1. **Stripe**: 2.9% + 30¢, excellent developer experience\n2. **PayPal**: 2.9% + 30¢, widespread user adoption\n3. **Square**: 2.6% + 10¢, lower fees\n\n### Decision: Stripe\n**Rationale:**\n- Superior developer API and documentation\n- Built-in fraud protection and compliance\n- Supports 135+ currencies\n- Excellent webhook system for integration\n- Strong TypeScript support\n\n### Implementation Plan\n- Phase 1: Credit card processing\n- Phase 2: Digital wallets (Apple Pay, Google Pay)\n- Phase 3: Buy now, pay later options", "critical"),
 
             // Technical Reminders
-            ("API Rate Limiting Implementation", "Remember to implement rate limiting before production deployment", "Reminder",
+            ("API Rate Limiting Implementation", "Remember to implement rate limiting before production deployment", "reminder",
              "## Rate Limiting Implementation\n\n### Priority: HIGH\n\n**Current Status**: Not implemented\n**Target**: Before production launch\n\n### Requirements\n- 100 requests per minute per IP for anonymous users\n- 1000 requests per minute for authenticated users\n- 10 requests per minute for password reset endpoints\n\n### Implementation Options\n1. **Express Rate Limit**: Simple middleware solution\n2. **Redis-based**: Distributed rate limiting\n3. **API Gateway**: AWS API Gateway or Kong\n\n### Next Steps\n1. Choose implementation approach\n2. Add rate limiting middleware\n3. Add monitoring and alerting\n4. Document rate limits in API docs", "high"),
 
-            ("Security Audit Findings", "Critical security vulnerabilities that need immediate attention", "Issue",
+            ("Security Audit Findings", "Critical security vulnerabilities that need immediate attention", "issue",
              "## Security Audit Results\n\n### 🔴 CRITICAL ISSUES\n\n1. **SQL Injection Vulnerability**\n   - **Location**: User search endpoint\n   - **Risk**: High - Database compromise\n   - **Status**: Fix in progress\n   - **ETA**: 2 days\n\n2. **Authentication Bypass**\n   - **Location**: Admin panel authentication\n   - **Risk**: Critical - Full system access\n   - **Status**: Hotfix deployed\n   - **Verification**: Pending security team review\n\n### 🟡 Medium Priority\n\n3. **XSS Vulnerability**\n   - **Location**: Product review display\n   - **Risk**: Medium - User session hijacking\n   - **Mitigation**: Input sanitization needed\n\n4. **Insecure Direct Object References**\n   - **Location**: User profile endpoints\n   - **Risk**: Medium - Data exposure\n   - **Fix**: Authorization checks needed", "critical"),
 
             // Development Progress Notes
-            ("Sprint 5 Progress Update", "Development progress and blockers for current sprint", "Progress",
+            ("Sprint 5 Progress Update", "Development progress and blockers for current sprint", "progress",
              "## Sprint 5 Progress (Week of Nov 13-17)\n\n### ✅ Completed\n- User authentication system (100%)\n- Product catalog API (100%)\n- Shopping cart frontend (95%)\n- Database migrations (100%)\n\n### 🔄 In Progress\n- Payment integration (60% - Stripe SDK integration)\n- Order management system (40% - Basic CRUD done)\n- Email notifications (30% - Template system setup)\n\n### 🚫 Blocked\n- Mobile app development (waiting for API completion)\n- Third-party inventory sync (vendor API issues)\n\n### 📊 Sprint Metrics\n- Velocity: 32 story points (target: 35)\n- Bug count: 8 open, 15 resolved\n- Code coverage: 78% (target: 80%)\n\n### Next Sprint Planning\n- Focus on payment completion\n- Start order fulfillment workflow\n- Address technical debt in cart component", "medium"),
 
             // Ideas and Innovation
-            ("AI-Powered Product Recommendations", "Ideas for implementing machine learning product recommendations", "Idea",
+            ("AI-Powered Product Recommendations", "Ideas for implementing machine learning product recommendations", "reference",
              "## AI Product Recommendation System\n\n### Concept\nImplement ML-based product recommendations to increase sales and user engagement.\n\n### Recommendation Types\n1. **Collaborative Filtering**: \"Users like you also bought\"\n2. **Content-Based**: Similar products by attributes\n3. **Hybrid Approach**: Combine multiple algorithms\n\n### Data Requirements\n- User browsing history\n- Purchase history\n- Product attributes and categories\n- User ratings and reviews\n\n### Implementation Phases\n**Phase 1**: Simple rule-based recommendations\n- Recently viewed products\n- Popular products in category\n- Cross-sell based on cart contents\n\n**Phase 2**: Basic ML implementation\n- Collaborative filtering with user-item matrix\n- Content similarity using product features\n\n**Phase 3**: Advanced ML\n- Deep learning with TensorFlow\n- Real-time recommendation updates\n- A/B testing framework", "low"),
 
-            ("Mobile App Strategy", "Strategic planning for mobile application development", "Idea",
+            ("Mobile App Strategy", "Strategic planning for mobile application development", "reference",
              "## Mobile App Development Strategy\n\n### Business Case\n- 65% of e-commerce traffic comes from mobile\n- Native apps have 3x higher conversion rates\n- Push notifications increase engagement by 88%\n\n### Technology Options\n1. **React Native**: Code reuse with web team\n2. **Flutter**: Single codebase, native performance\n3. **Native Development**: iOS and Android separately\n\n### Recommendation: React Native\n**Pros:**\n- Leverage existing React expertise\n- Share business logic with web app\n- Faster time to market\n- Single development team\n\n**Cons:**\n- Some platform-specific limitations\n- Bridge performance overhead\n\n### Development Timeline\n- Month 1-2: Setup and core navigation\n- Month 3-4: Product catalog and search\n- Month 5-6: User account and shopping cart\n- Month 7-8: Payment integration and orders\n- Month 9-10: Testing and app store submission", "medium"),
         ];
 
@@ -708,11 +749,11 @@ impl ComprehensiveTestDataGenerator {
                 "entity_id": std::env::var("TEST_PROJECT_ID").unwrap_or("proj-1".to_string()),
                 "is_pinned": priority == "critical" || priority == "high",
                 "tags": match note_type {
-                    "Architecture" => r#"["system-design", "technical", "documentation"]"#,
-                    "Decision" => r#"["decision-record", "planning", "strategy"]"#,
-                    "Reminder" => r#"["todo", "action-required", "urgent"]"#,
-                    "Issue" => r#"["problem", "bug", "security"]"#,
-                    "Idea" => r#"["innovation", "future", "enhancement"]"#,
+                    "architecture" => r#"["system-design", "technical", "documentation"]"#,
+                    "decision" => r#"["decision-record", "planning", "strategy"]"#,
+                    "reminder" => r#"["todo", "action-required", "urgent"]"#,
+                    "issue" => r#"["problem", "bug", "security"]"#,
+                    "reference" => r#"["innovation", "future", "enhancement"]"#,
                     _ => r#"["general", "project"]"#
                 },
                 "created_at": (base_time + Duration::days((note_count / 2) as i64)).to_rfc3339(),
@@ -720,20 +761,20 @@ impl ComprehensiveTestDataGenerator {
                 "metadata": serde_json::json!({
                     "priority": priority,
                     "stakeholder": match note_type {
-                        "Architecture" => "tech_lead",
-                        "Decision" => "product_owner",
-                        "Issue" => "security_team",
+                        "architecture" => "tech_lead",
+                        "decision" => "product_owner",
+                        "issue" => "security_team",
                         _ => "development_team"
                     },
-                    "review_date": if note_type == "Decision" {
+                    "review_date": if note_type == "decision" {
                         Some((Utc::now() + Duration::days(90)).format("%Y-%m-%d").to_string())
                     } else { None },
                     "implementation_status": match note_type {
-                        "Architecture" => "documented",
-                        "Decision" => "approved",
-                        "Reminder" => "pending",
-                        "Issue" => "in_progress",
-                        "Idea" => "proposed",
+                        "architecture" => "documented",
+                        "decision" => "approved",
+                        "reminder" => "pending",
+                        "issue" => "in_progress",
+                        "reference" => "proposed",
                         _ => "unknown"
                     }
                 }).to_string()
@@ -743,7 +784,7 @@ impl ComprehensiveTestDataGenerator {
         }
 
         // Generate basic note type coverage for testing
-        let note_types = vec!["Architecture", "Decision", "Reminder", "Observation", "Reference", "Evidence", "Progress", "Issue"];
+        let note_types = vec!["architecture", "decision", "reminder", "observation", "reference", "evidence", "progress", "issue"];
         let entity_types = vec!["Project", "Feature", "Task", "Session"];
 
         for &note_type in &note_types {
@@ -773,7 +814,7 @@ impl ComprehensiveTestDataGenerator {
     }
 
     /// Generate template scenarios covering all template types
-    async fn generate_template_scenarios(&self, entity_manager: &workspace::entities::EntityManager) -> Result<()> {
+    async fn generate_template_scenarios(&mut self, entity_manager: &workspace::entities::EntityManager) -> Result<()> {
         let template_types = vec!["Component", "Service", "Model", "Test", "Documentation"];
         let template_formats = vec!["Handlebars", "Tera", "Liquid", "Plain"];
         
@@ -833,7 +874,7 @@ impl ComprehensiveTestDataGenerator {
     }
 
     /// Generate directive scenarios covering all directive types
-    async fn generate_directive_scenarios(&self, entity_manager: &workspace::entities::EntityManager) -> Result<()> {
+    async fn generate_directive_scenarios(&mut self, entity_manager: &workspace::entities::EntityManager) -> Result<()> {
         let directive_categories = vec!["Security", "Performance", "Quality", "Process", "Documentation"];
         let enforcement_levels = vec!["Mandatory", "Recommended", "Optional"];
         let directive_types = vec!["Rule", "Guideline", "Standard", "Best Practice"];
@@ -909,7 +950,7 @@ impl ComprehensiveTestDataGenerator {
     }
 
     /// Generate edge case and boundary value scenarios
-    async fn generate_edge_case_scenarios(&self, entity_manager: &workspace::entities::EntityManager) -> Result<()> {
+    async fn generate_edge_case_scenarios(&mut self, entity_manager: &workspace::entities::EntityManager) -> Result<()> {
         // Test boundary dates
         let boundary_dates = vec![
             "1970-01-01T00:00:00Z", // Unix epoch
@@ -954,7 +995,7 @@ impl ComprehensiveTestDataGenerator {
     }
 
     /// Execute raw SQL insert with actual database operations
-    async fn execute_raw_insert(&self, table: &str, data: &Value) -> Result<()> {
+    async fn execute_raw_insert(&mut self, table: &str, data: &Value) -> Result<()> {
         let pool = workspace::entities::database::initialize_database(&self.db_path).await?;
         
         match table {
@@ -998,15 +1039,8 @@ impl ComprehensiveTestDataGenerator {
                 let description = data["description"].as_str().unwrap_or("").to_string();
                 let category = data["category"].as_str().map(|s| s.to_string());
                 
-                // Get actual project ID from environment or use first available project
-                let project_id = std::env::var("TEST_PROJECT_ID")
-                    .or_else(|_| std::env::var("STANDARD_PROJECT_ID"))
-                    .or_else(|_| std::env::var("COMPLEX_PROJECT_ID"))
-                    .or_else(|_| std::env::var("MINIMAL_PROJECT_ID"))
-                    .unwrap_or_else(|_| {
-                        log::warn!("No project ID found in environment, features may fail to create");
-                        "missing-project-id".to_string()
-                    });
+                // Use the default project ID from the generator
+                let project_id = self.get_default_project_id();
                 
                 workspace::entities::crud::features::create(
                     &pool,
@@ -1040,15 +1074,8 @@ impl ComprehensiveTestDataGenerator {
                 let description = data["description"].as_str().unwrap_or("").to_string();
                 let category = data["category"].as_str().unwrap_or("general").to_string();
                 
-                // Get actual project ID from environment
-                let project_id = std::env::var("TEST_PROJECT_ID")
-                    .or_else(|_| std::env::var("STANDARD_PROJECT_ID"))
-                    .or_else(|_| std::env::var("COMPLEX_PROJECT_ID"))
-                    .or_else(|_| std::env::var("MINIMAL_PROJECT_ID"))
-                    .unwrap_or_else(|_| {
-                        log::warn!("No project ID found in environment, tasks may fail to create");
-                        "missing-project-id".to_string()
-                    });
+                // Use the default project ID from the generator
+                let project_id = self.get_default_project_id();
                 let feature_ids = None; // No feature linking for now
                 
                 workspace::entities::crud::tasks::create(
@@ -1069,10 +1096,8 @@ impl ComprehensiveTestDataGenerator {
                     _ => workspace::entities::SessionState::Active,
                 };
                 
-                // Use the crud::sessions::create function with individual parameters
-                let project_id = std::env::var("TEST_PROJECT_ID").unwrap_or_else(|_| {
-                    "proj-1".to_string() // Fallback to first project
-                });
+                // Use the default project ID from the generator
+                let project_id = self.get_default_project_id();
                 let title = data["name"].as_str().unwrap_or("").to_string();
                 let description = data["description"].as_str().map(|s| s.to_string());
                 
@@ -1080,10 +1105,8 @@ impl ComprehensiveTestDataGenerator {
                 let _session_placeholder = ();
             },
             "dependencies" => {
-                // Use the relationships::create_dependency function with string IDs
-                let project_id = std::env::var("TEST_PROJECT_ID").unwrap_or_else(|_| {
-                    "proj-1".to_string()
-                });
+                // Use the default project ID from the generator  
+                let project_id = self.get_default_project_id();
                 
                 // Create placeholder entity IDs for dependencies
                 let uuid1 = uuid::Uuid::new_v4().to_string();
@@ -1107,15 +1130,15 @@ impl ComprehensiveTestDataGenerator {
                 ).await?;
             },
             "notes" => {
-                let note_type = match data["note_type"].as_str().unwrap_or("Architecture") {
-                    "Architecture" => workspace::entities::NoteType::Architecture,
-                    "Decision" => workspace::entities::NoteType::Decision,
-                    "Reminder" => workspace::entities::NoteType::Reminder,
-                    "Issue" => workspace::entities::NoteType::Issue,
-                    "Observation" => workspace::entities::NoteType::Observation,
-                    "Reference" => workspace::entities::NoteType::Reference,
-                    "Evidence" => workspace::entities::NoteType::Evidence,
-                    "Progress" => workspace::entities::NoteType::Progress,
+                let note_type = match data["note_type"].as_str().unwrap_or("architecture") {
+                    "architecture" => workspace::entities::NoteType::Architecture,
+                    "decision" => workspace::entities::NoteType::Decision,
+                    "reminder" => workspace::entities::NoteType::Reminder,
+                    "issue" => workspace::entities::NoteType::Issue,
+                    "observation" => workspace::entities::NoteType::Observation,
+                    "reference" => workspace::entities::NoteType::Reference,
+                    "evidence" => workspace::entities::NoteType::Evidence,
+                    "progress" => workspace::entities::NoteType::Progress,
                     _ => workspace::entities::NoteType::Architecture,
                 };
                 
@@ -1531,11 +1554,13 @@ pub async fn setup_workspace_temp_test_environment() -> Result<ComprehensiveTest
     std::fs::create_dir_all(&test_files_root)?;
     std::fs::create_dir_all(&git_repo_root)?;
     
-    let generator = ComprehensiveTestDataGenerator {
+    let mut generator = ComprehensiveTestDataGenerator {
         temp_dir,
         db_path,
         test_files_root,
         git_repo_root,
+        project_ids: Vec::new(),
+        default_project_id: None,
     };
     
     generator.generate_all_test_scenarios().await?;
@@ -1548,7 +1573,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_comprehensive_data_generation() -> Result<()> {
-        let generator = ComprehensiveTestDataGenerator::new()?;
+        let mut generator = ComprehensiveTestDataGenerator::new()?;
         
         // Generate all test scenarios
         generator.generate_all_test_scenarios().await?;
@@ -1570,7 +1595,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_isolated_temp_project() -> Result<()> {
-        let generator = ComprehensiveTestDataGenerator::new()?;
+        let mut generator = ComprehensiveTestDataGenerator::new()?;
         
         // Verify temp project structure
         assert!(generator.get_project_path().exists());
@@ -1587,7 +1612,7 @@ mod tests {
 
 /// Helper function for tests to create comprehensive test environment
 pub async fn setup_comprehensive_test_environment() -> Result<ComprehensiveTestDataGenerator> {
-    let generator = ComprehensiveTestDataGenerator::new()?;
+    let mut generator = ComprehensiveTestDataGenerator::new()?;
     generator.generate_all_test_scenarios().await?;
     Ok(generator)
 }

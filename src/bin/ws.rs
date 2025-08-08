@@ -1287,7 +1287,8 @@ fn handle_template_command(action: TemplateAction) -> Result<()> {
     let project_root = get_project_root()?;
     
     rt.block_on(async {
-        let pool = workspace::entities::database::initialize_database(&project_root).await?;
+        let db_path = project_root.join(".ws/project.db");
+        let pool = workspace::entities::database::initialize_database(&db_path).await?;
         let entity_manager = EntityManager::new(pool.clone());
         let current_project = entity_manager.get_current_project().await?;
         let mut doc_generator = DocumentationGenerator::new(pool)?;
@@ -1756,7 +1757,7 @@ fn run_mcp_server(port: u16, debug: bool, migrate: bool) -> Result<()> {
                     workspace::entities::database::initialize_database(&db_path).await?
                 };
                 
-                let entity_manager = workspace::entities::EntityManager::new(pool);
+                let _entity_manager = workspace::entities::EntityManager::new(pool);
                 // Migration method not implemented yet
                 // entity_manager.migrate_features_from_file(features_path).await?;
                 
@@ -6800,15 +6801,15 @@ INSERT INTO dependencies (id, project_id, from_entity_id, from_entity_type, to_e
 ('dep-005', '{project_id}', 'task-003', 'task', 'task-002', 'task', 'requires', 'Authentication requires database schema', '2024-04-01T08:30:00Z');
 
 -- Insert notes
-INSERT INTO notes (id, project_id, entity_id, entity_type, note_type, title, content, created_at, updated_at) VALUES
-('note-001', '{project_id}', 'feat-001', 'feature', 'Architecture', 'Authentication Architecture Decision', 'Decided to use OAuth 2.0 with PKCE for mobile clients and standard authorization code flow for web clients.', '2024-03-15T14:30:00Z', '2024-03-15T14:30:00Z'),
-('note-002', '{project_id}', 'feat-007', 'feature', 'Decision', 'Payment Provider Selection', 'After evaluating Stripe, PayPal, and Square, decided on Stripe as primary with PayPal as secondary.', '2024-06-10T15:20:00Z', '2024-06-10T15:20:00Z'),
-('note-003', '{project_id}', 'feat-002', 'feature', 'Issue', 'Performance Bottleneck Identified', 'Database queries for user dashboard are taking 2-3 seconds due to N+1 problem.', '2024-07-25T10:15:00Z', '2024-07-25T10:15:00Z'),
-('note-004', '{project_id}', 'task-004', 'task', 'Issue', 'Payment Webhook Failures', 'Stripe webhooks are failing intermittently due to timeout issues.', '2024-07-28T14:30:00Z', '2024-07-28T14:30:00Z'),
-('note-005', '{project_id}', 'feat-004', 'feature', 'Idea', 'Progressive Web App Enhancement', 'Consider implementing advanced PWA features like background sync and push notifications.', '2024-07-01T12:00:00Z', '2024-07-01T12:00:00Z'),
-('note-006', '{project_id}', 'task-001', 'task', 'Progress', 'Infrastructure Setup Complete', 'AWS infrastructure is fully configured with auto-scaling, monitoring, and backup systems operational.', '2024-03-15T16:00:00Z', '2024-03-15T16:00:00Z'),
-('note-007', '{project_id}', 'feat-008', 'feature', 'Evidence', 'Performance Benchmarks', 'API response times: 95th percentile under 150ms, throughput 5000 requests/second with caching layer.', '2024-07-08T14:30:00Z', '2024-07-08T14:30:00Z'),
-('note-008', '{project_id}', '{project_id}', 'project', 'Architecture', 'Microservices Architecture Decision', 'Adopted microservices architecture with API gateway, service mesh, and distributed tracing for scalability.', '2024-02-15T10:00:00Z', '2024-02-15T10:00:00Z');
+INSERT INTO notes (id, project_id, entity_id, entity_type, note_type, title, content, tags, author, is_project_wide, is_pinned, created_at, updated_at, metadata) VALUES
+('note-001', '{project_id}', 'feat-001', 'feature', 'architecture', 'Authentication Architecture Decision', 'Decided to use OAuth 2.0 with PKCE for mobile clients and standard authorization code flow for web clients.', NULL, 'tech_lead', FALSE, FALSE, '2024-03-15T14:30:00Z', '2024-03-15T14:30:00Z', NULL),
+('note-002', '{project_id}', 'feat-007', 'feature', 'decision', 'Payment Provider Selection', 'After evaluating Stripe, PayPal, and Square, decided on Stripe as primary with PayPal as secondary.', NULL, 'product_owner', FALSE, TRUE, '2024-06-10T15:20:00Z', '2024-06-10T15:20:00Z', NULL),
+('note-003', '{project_id}', 'feat-002', 'feature', 'issue', 'Performance Bottleneck Identified', 'Database queries for user dashboard are taking 2-3 seconds due to N+1 problem.', '["performance", "database"]', 'dev_team', FALSE, TRUE, '2024-07-25T10:15:00Z', '2024-07-25T10:15:00Z', NULL),
+('note-004', '{project_id}', 'task-004', 'task', 'issue', 'Payment Webhook Failures', 'Stripe webhooks are failing intermittently due to timeout issues.', '["payment", "webhook", "urgent"]', 'dev_team', FALSE, FALSE, '2024-07-28T14:30:00Z', '2024-07-28T14:30:00Z', NULL),
+('note-005', '{project_id}', 'feat-004', 'feature', 'reference', 'Progressive Web App Enhancement', 'Consider implementing advanced PWA features like background sync and push notifications.', '["pwa", "enhancement"]', 'designer', FALSE, FALSE, '2024-07-01T12:00:00Z', '2024-07-01T12:00:00Z', NULL),
+('note-006', '{project_id}', 'task-001', 'task', 'progress', 'Infrastructure Setup Complete', 'AWS infrastructure is fully configured with auto-scaling, monitoring, and backup systems operational.', '["infrastructure", "aws"]', 'devops_team', FALSE, FALSE, '2024-03-15T16:00:00Z', '2024-03-15T16:00:00Z', NULL),
+('note-007', '{project_id}', 'feat-008', 'feature', 'evidence', 'Performance Benchmarks', 'API response times: 95th percentile under 150ms, throughput 5000 requests/second with caching layer.', '["performance", "metrics"]', 'qa_team', FALSE, FALSE, '2024-07-08T14:30:00Z', '2024-07-08T14:30:00Z', NULL),
+('note-008', '{project_id}', NULL, NULL, 'architecture', 'Microservices Architecture Decision', 'Adopted microservices architecture with API gateway, service mesh, and distributed tracing for scalability.', '["architecture", "microservices"]', 'architect', TRUE, TRUE, '2024-02-15T10:00:00Z', '2024-02-15T10:00:00Z', NULL);
 
 -- Insert directives (using correct column names: rule instead of description)
 INSERT INTO directives (id, project_id, code, title, rule, category, priority, context, rationale, examples, created_at, updated_at) VALUES
@@ -6836,6 +6837,24 @@ INSERT INTO note_links (id, project_id, source_note_id, target_id, target_type, 
 ('link-006', '{project_id}', 'note-006', 'milestone-001', 'milestone', 'reference', '2024-03-15T16:15:00Z'),
 ('link-007', '{project_id}', 'note-007', 'dir-005', 'directive', 'reference', '2024-07-08T14:45:00Z'),
 ('link-008', '{project_id}', 'note-008', 'feat-006', 'feature', 'reference', '2024-05-01T09:45:00Z');
+
+-- Insert audit trail records for recent activity
+INSERT INTO entity_audit_trails (id, entity_id, entity_type, project_id, operation_type, field_changed, old_value, new_value, change_reason, triggered_by, session_id, timestamp, metadata) VALUES
+('audit-001', 'feat-001', 'feature', '{project_id}', 'create', NULL, NULL, NULL, 'Initial feature creation during project setup', 'sample-generator', 'session-001', '2024-03-15T14:00:00Z', NULL),
+('audit-002', 'feat-002', 'feature', '{project_id}', 'create', NULL, NULL, NULL, 'Dashboard feature added', 'sample-generator', 'session-001', '2024-03-15T14:05:00Z', NULL),
+('audit-003', 'feat-001', 'feature', '{project_id}', 'update', 'state', 'planned', 'implemented', 'Feature implementation completed', 'development-team', 'session-001', '2024-03-15T16:30:00Z', '{{"completion_percentage": 100}}'),
+('audit-004', 'task-001', 'task', '{project_id}', 'create', NULL, NULL, NULL, 'Infrastructure setup task created', 'sample-generator', 'session-001', '2024-03-10T09:00:00Z', NULL),
+('audit-005', 'task-001', 'task', '{project_id}', 'update', 'status', 'pending', 'in_progress', 'Started infrastructure work', 'ops-team', 'session-001', '2024-03-10T10:00:00Z', NULL),
+('audit-006', 'task-001', 'task', '{project_id}', 'update', 'status', 'in_progress', 'completed', 'Infrastructure deployment finished', 'ops-team', 'session-001', '2024-03-15T15:30:00Z', NULL),
+('audit-007', 'feat-007', 'feature', '{project_id}', 'create', NULL, NULL, NULL, 'Payment system feature created', 'sample-generator', 'session-002', '2024-06-10T10:00:00Z', NULL),
+('audit-008', 'feat-007', 'feature', '{project_id}', 'update', 'state', 'planned', 'implemented', 'Payment integration completed', 'backend-team', 'session-002', '2024-06-10T16:00:00Z', '{{"provider": "stripe"}}'),
+('audit-009', 'task-004', 'task', '{project_id}', 'create', NULL, NULL, NULL, 'Payment API integration task', 'sample-generator', 'session-002', '2024-06-01T09:00:00Z', NULL),
+('audit-010', 'task-004', 'task', '{project_id}', 'state_change', 'status', 'pending', 'blocked', 'Blocked by external API issues', 'integration-team', 'session-004', '2024-07-28T14:00:00Z', '{{"blocking_reason": "API rate limits"}}'),
+('audit-011', 'feat-008', 'feature', '{project_id}', 'create', NULL, NULL, NULL, 'Performance monitoring feature added', 'sample-generator', 'session-003', '2024-04-01T09:30:00Z', NULL),
+('audit-012', 'session-004', 'session', '{project_id}', 'create', NULL, NULL, NULL, 'New development session started', 'project-manager', NULL, '2024-07-15T09:00:00Z', '{{"sprint": "Sprint 4"}}'),
+('audit-013', 'note-001', 'note', '{project_id}', 'create', NULL, NULL, NULL, 'Architecture decision documented', 'architect', 'session-001', '2024-03-15T14:30:00Z', '{{"category": "architecture"}}'),
+('audit-014', 'feat-004', 'feature', '{project_id}', 'update', 'priority', 'medium', 'high', 'Increased priority for PWA features', 'product-manager', 'session-004', '2024-07-20T11:00:00Z', NULL),
+('audit-015', 'milestone-001', 'milestone', '{project_id}', 'update', 'status', 'in_progress', 'achieved', 'Q4 Feature Expansion milestone completed', 'project-manager', 'session-004', '2024-07-30T17:00:00Z', '{{"completion_date": "2024-07-30"}}');
 "#, project_id = project_id);
     
     // Execute the test data SQL
@@ -6908,7 +6927,7 @@ fn link_entities(from_entity: String, from_type: String, to_entity: String, to_t
     })
 }
 
-fn list_entity_relationships(entity_id: String, entity_type: String, relationship_type: Option<String>, include_resolved: bool) -> Result<()> {
+fn list_entity_relationships(entity_id: String, entity_type: String, _relationship_type: Option<String>, _include_resolved: bool) -> Result<()> {
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(async {
         let db_path = get_project_root()?.join(".ws/project.db");
@@ -7073,12 +7092,12 @@ fn run_note_command(action: NoteAction) -> Result<()> {
     Ok(())
 }
 
-fn add_entity_note(entity_type: String, entity_id: String, title: String, content: String, note_type: String, tags: Option<String>) -> Result<()> {
+fn add_entity_note(entity_type: String, entity_id: String, title: String, content: String, note_type: String, _tags: Option<String>) -> Result<()> {
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(async {
         let db_path = get_project_root()?.join(".ws/project.db");
         let pool = workspace::entities::database::initialize_database(&db_path).await?;
-        let entity_manager = workspace::entities::EntityManager::new(pool.clone());
+        let _entity_manager = workspace::entities::EntityManager::new(pool.clone());
 
         let entity_type_enum = parse_entity_type(&entity_type)?;
         let note_type_enum = parse_note_type(&note_type)?;
@@ -7100,7 +7119,7 @@ fn add_entity_note(entity_type: String, entity_id: String, title: String, conten
     })
 }
 
-fn add_project_note(title: String, content: String, note_type: String, tags: Option<String>) -> Result<()> {
+fn add_project_note(title: String, content: String, note_type: String, _tags: Option<String>) -> Result<()> {
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(async {
         let db_path = get_project_root()?.join(".ws/project.db");
@@ -7125,7 +7144,7 @@ fn add_project_note(title: String, content: String, note_type: String, tags: Opt
     })
 }
 
-fn list_notes(entity_type: Option<String>, entity_id: Option<String>, note_type: Option<String>, project_wide: bool, pinned: bool) -> Result<()> {
+fn list_notes(_entity_type: Option<String>, entity_id: Option<String>, _note_type: Option<String>, project_wide: bool, _pinned: bool) -> Result<()> {
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(async {
         let db_path = get_project_root()?.join(".ws/project.db");

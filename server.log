@@ -27,27 +27,27 @@ warning: unused variable: `t_type`
     |                 ^^^^^^ help: if this is intentional, prefix it with an underscore: `_t_type`
 
 warning: unused variable: `state`
-    --> src/mcp_server.rs:1413:11
+    --> src/mcp_server.rs:1514:11
      |
-1413 |     State(state): State<McpServerState>,
+1514 |     State(state): State<McpServerState>,
      |           ^^^^^ help: if this is intentional, prefix it with an underscore: `_state`
 
 warning: unused variable: `state`
-    --> src/mcp_server.rs:1641:11
+    --> src/mcp_server.rs:1742:11
      |
-1641 |     State(state): State<McpServerState>,
+1742 |     State(state): State<McpServerState>,
      |           ^^^^^ help: if this is intentional, prefix it with an underscore: `_state`
 
 warning: unused variable: `state`
-    --> src/mcp_server.rs:1658:11
+    --> src/mcp_server.rs:1759:11
      |
-1658 |     State(state): State<McpServerState>,
+1759 |     State(state): State<McpServerState>,
      |           ^^^^^ help: if this is intentional, prefix it with an underscore: `_state`
 
 warning: unused variable: `e`
-    --> src/mcp_server.rs:1671:13
+    --> src/mcp_server.rs:1772:13
      |
-1671 |         Err(e) => {
+1772 |         Err(e) => {
      |             ^ help: if this is intentional, prefix it with an underscore: `_e`
 
 warning: variable does not need to be mutable
@@ -162,51 +162,51 @@ warning: unused variable: `entity_manager`
      = note: `#[warn(unused_variables)]` on by default
 
 warning: unused variable: `relationship_type`
-    --> src/bin/ws.rs:6911:70
+    --> src/bin/ws.rs:6929:70
      |
-6911 | ...ity_type: String, relationship_type: Option<String>, include_resolved: bool) -> Result<()> {
+6929 | ...ity_type: String, relationship_type: Option<String>, include_resolved: bool) -> Result<()> {
      |                      ^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_relationship_type`
 
 warning: unused variable: `include_resolved`
-    --> src/bin/ws.rs:6911:105
+    --> src/bin/ws.rs:6929:105
      |
-6911 | ...e: Option<String>, include_resolved: bool) -> Result<()> {
+6929 | ...e: Option<String>, include_resolved: bool) -> Result<()> {
      |                       ^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_include_resolved`
 
 warning: unused variable: `tags`
-    --> src/bin/ws.rs:7076:111
+    --> src/bin/ws.rs:7094:111
      |
-7076 | ...nt: String, note_type: String, tags: Option<String>) -> Result<()> {
+7094 | ...nt: String, note_type: String, tags: Option<String>) -> Result<()> {
      |                                   ^^^^ help: if this is intentional, prefix it with an underscore: `_tags`
 
 warning: unused variable: `entity_manager`
-    --> src/bin/ws.rs:7081:13
+    --> src/bin/ws.rs:7099:13
      |
-7081 |         let entity_manager = workspace::entities::EntityManager::new(pool.clone());
+7099 |         let entity_manager = workspace::entities::EntityManager::new(pool.clone());
      |             ^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_entity_manager`
 
 warning: unused variable: `tags`
-    --> src/bin/ws.rs:7103:72
+    --> src/bin/ws.rs:7121:72
      |
-7103 | fn add_project_note(title: String, content: String, note_type: String, tags: Option<String>) -> Result<()> {
+7121 | fn add_project_note(title: String, content: String, note_type: String, tags: Option<String>) -> Result<()> {
      |                                                                        ^^^^ help: if this is intentional, prefix it with an underscore: `_tags`
 
 warning: unused variable: `entity_type`
-    --> src/bin/ws.rs:7128:15
+    --> src/bin/ws.rs:7146:15
      |
-7128 | fn list_notes(entity_type: Option<String>, entity_id: Option<String>, note_type: Option<String>, project_wide: bool, pinned: bool) -> Res...
+7146 | fn list_notes(entity_type: Option<String>, entity_id: Option<String>, note_type: Option<String>, project_wide: bool, pinned: bool) -> Res...
      |               ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_entity_type`
 
 warning: unused variable: `note_type`
-    --> src/bin/ws.rs:7128:71
+    --> src/bin/ws.rs:7146:71
      |
-7128 | ...ntity_id: Option<String>, note_type: Option<String>, project_wide: bool, pinned: bool) -> Result<()> {
+7146 | ...ntity_id: Option<String>, note_type: Option<String>, project_wide: bool, pinned: bool) -> Result<()> {
      |                              ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_note_type`
 
 warning: unused variable: `pinned`
-    --> src/bin/ws.rs:7128:118
+    --> src/bin/ws.rs:7146:118
      |
-7128 | ...String>, project_wide: bool, pinned: bool) -> Result<()> {
+7146 | ...String>, project_wide: bool, pinned: bool) -> Result<()> {
      |                                 ^^^^^^ help: if this is intentional, prefix it with an underscore: `_pinned`
 
 warning: function `create_sample_project` is never used
@@ -279,7 +279,7 @@ warning: function `check_context_threshold_startup` is never used
 
 warning: `workspace` (bin "ws") generated 20 warnings
     Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.40s
-     Running `target/debug/ws mcp-server --port 3004`
+     Running `target/debug/ws mcp-server --port 3003`
 # To enable ws completions for this session, run:
 fpath=("/Users/bahram/.local/share/zsh/site-functions" $fpath)
 autoload -U compinit && compinit

@@ -1,0 +1,681 @@
+<script>
+  import { onMount } from 'svelte';
+  import { sessionsStore } from '../stores.js';
+  
+  let sessions = [];
+  let selectedSession = null;
+  let currentTime = 0;
+  let isPlaying = false;
+  let playbackSpeed = 1;
+  
+  // Sample session data
+  const sampleSessions = [
+    {
+      id: 'session-001',
+      title: 'ADE Implementation Session',
+      date: '2025-08-08',
+      duration: '45m 23s',
+      filesModified: 12,
+      featuresChanged: 5,
+      timeline: [
+        { time: 0, type: 'start', description: 'Session initialized', reasoning: 'Loading project context and features analysis' },
+        { time: 30, type: 'code', description: 'Created Svelte project structure', reasoning: 'Setting up modern frontend framework for ADE interface' },
+        { time: 120, type: 'code', description: 'Implemented Header component', reasoning: 'Navigation system needed for multi-section ADE interface' },
+        { time: 180, type: 'api', description: 'Added API service layer', reasoning: 'Connecting frontend to existing backend endpoints' },
+        { time: 240, type: 'test', description: 'Built and tested components', reasoning: 'Ensuring components work correctly before proceeding' }
+      ]
+    },
+    {
+      id: 'session-002', 
+      title: 'Feature Management Implementation',
+      date: '2025-08-07',
+      duration: '32m 15s',
+      filesModified: 8,
+      featuresChanged: 3,
+      timeline: [
+        { time: 0, type: 'start', description: 'Context loaded', reasoning: 'Continuing from previous feature work' },
+        { time: 45, type: 'code', description: 'Added feature state validation', reasoning: 'Ensuring data integrity in feature transitions' },
+        { time: 120, type: 'code', description: 'Implemented filtering system', reasoning: 'Users need to find features quickly in large projects' }
+      ]
+    }
+  ];
+
+  $: sessions = $sessionsStore.length > 0 ? $sessionsStore : sampleSessions;
+  $: selectedTimeline = selectedSession?.timeline || [];
+  $: currentEvent = selectedTimeline.find(event => 
+    event.time <= currentTime && 
+    (selectedTimeline.find(e => e.time > currentTime)?.time || Infinity) > event.time
+  );
+
+  function selectSession(session) {
+    selectedSession = session;
+    currentTime = 0;
+    isPlaying = false;
+  }
+
+  function playPause() {
+    isPlaying = !isPlaying;
+    if (isPlaying) {
+      startPlayback();
+    }
+  }
+
+  function startPlayback() {
+    if (!isPlaying || !selectedSession) return;
+    
+    const interval = setInterval(() => {
+      if (!isPlaying) {
+        clearInterval(interval);
+        return;
+      }
+      
+      currentTime += playbackSpeed;
+      const maxTime = Math.max(...selectedTimeline.map(e => e.time));
+      
+      if (currentTime > maxTime + 30) {
+        isPlaying = false;
+        clearInterval(interval);
+      }
+    }, 100);
+  }
+
+  function setTime(time) {
+    currentTime = time;
+  }
+
+  function getEventIcon(type) {
+    switch (type) {
+      case 'start': return '🚀';
+      case 'code': return '💻';
+      case 'api': return '🔗';
+      case 'test': return '🧪';
+      case 'error': return '🚨';
+      default: return '📝';
+    }
+  }
+
+  function formatTime(seconds) {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  }
+
+  onMount(() => {
+    if (sessions.length > 0 && !selectedSession) {
+      selectSession(sessions[0]);
+    }
+  });
+</script>
+
+<div class="session-replay">
+  <div class="session-header">
+    <h1>Session Replay</h1>
+    
+    <div class="session-selector">
+      <label>Select Session:</label>
+      <select on:change={(e) => selectSession(sessions.find(s => s.id === e.target.value))}>
+        <option value="">Choose a session...</option>
+        {#each sessions as session}
+          <option value={session.id} selected={selectedSession?.id === session.id}>
+            {session.title} - {session.date}
+          </option>
+        {/each}
+      </select>
+    </div>
+  </div>
+
+  {#if selectedSession}
+    <div class="replay-interface">
+      <!-- Left Panel - AI Reasoning -->
+      <div class="reasoning-panel">
+        <h2>AI Reasoning</h2>
+        
+        <div class="current-reasoning">
+          {#if currentEvent}
+            <div class="reasoning-step active">
+              <div class="step-icon">{getEventIcon(currentEvent.type)}</div>
+              <div class="step-content">
+                <div class="step-title">{currentEvent.description}</div>
+                <div class="step-reasoning">{currentEvent.reasoning}</div>
+                <div class="step-time">{formatTime(currentEvent.time)}</div>
+              </div>
+            </div>
+          {/if}
+        </div>
+
+        <div class="reasoning-timeline">
+          <h3>Session Steps</h3>
+          {#each selectedTimeline as event}
+            <div 
+              class="reasoning-step" 
+              class:active={currentEvent?.time === event.time}
+              class:completed={currentTime > event.time}
+              on:click={() => setTime(event.time)}
+            >
+              <div class="step-icon">{getEventIcon(event.type)}</div>
+              <div class="step-content">
+                <div class="step-title">{event.description}</div>
+                <div class="step-time">{formatTime(event.time)}</div>
+              </div>
+            </div>
+          {/each}
+        </div>
+      </div>
+
+      <!-- Center Panel - Code Changes -->
+      <div class="code-panel">
+        <div class="panel-header">
+          <h2>Code Changes</h2>
+          <div class="file-tabs">
+            <div class="tab active">App.svelte</div>
+            <div class="tab">Header.svelte</div>
+            <div class="tab">stores.js</div>
+          </div>
+        </div>
+        
+        <div class="code-viewer">
+          <div class="code-content">
+            {#if currentEvent}
+              <div class="diff-view">
+                <div class="diff-line added">+ import Header from './components/Header.svelte';</div>
+                <div class="diff-line added">+ import Overview from './components/Overview.svelte';</div>
+                <div class="diff-line context">  import &#123;&#123; projectStore, featuresStore &#125;&#125; from './stores.js';</div>
+                <div class="diff-line removed">- &lt;div class="old-dashboard"&gt;&lt;/div&gt;</div>
+                <div class="diff-line added">+ &lt;div class="ade-app"&gt;&lt;/div&gt;</div>
+                <div class="diff-line added">+   &lt;Header bind:currentView /&gt;</div>
+                <div class="diff-line context">  </div>
+              </div>
+            {:else}
+              <div class="placeholder">
+                Select a session event to view code changes
+              </div>
+            {/if}
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Panel - Tool Usage -->
+      <div class="tools-panel">
+        <h2>Tool Usage</h2>
+        
+        <div class="tool-timeline">
+          {#each selectedTimeline as event}
+            <div 
+              class="tool-item" 
+              class:active={currentEvent?.time === event.time}
+              class:completed={currentTime > event.time}
+            >
+              <div class="tool-badge" class:used={currentTime >= event.time}>
+                {getEventIcon(event.type)}
+              </div>
+              <div class="tool-info">
+                <div class="tool-name">{event.type.toUpperCase()}</div>
+                <div class="tool-time">{formatTime(event.time)}</div>
+              </div>
+            </div>
+          {/each}
+        </div>
+
+        <div class="session-stats">
+          <h3>Session Statistics</h3>
+          <div class="stat-item">
+            <span class="stat-label">Duration:</span>
+            <span class="stat-value">{selectedSession.duration}</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Files Modified:</span>
+            <span class="stat-value">{selectedSession.filesModified}</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Features Changed:</span>
+            <span class="stat-value">{selectedSession.featuresChanged}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Playback Controls -->
+    <div class="playback-controls">
+      <div class="timeline-scrubber">
+        <input 
+          type="range" 
+          min="0" 
+          max={Math.max(...selectedTimeline.map(e => e.time)) + 30}
+          bind:value={currentTime}
+          class="timeline-slider"
+        />
+        <div class="timeline-markers">
+          {#each selectedTimeline as event}
+            <div 
+              class="timeline-marker" 
+              style="left: {(event.time / (Math.max(...selectedTimeline.map(e => e.time)) + 30)) * 100}%"
+              on:click={() => setTime(event.time)}
+            >
+              <div class="marker-tooltip">{event.description}</div>
+            </div>
+          {/each}
+        </div>
+      </div>
+      
+      <div class="control-buttons">
+        <button class="control-btn" on:click={() => setTime(0)}>⏮</button>
+        <button class="control-btn play-btn" on:click={playPause}>
+          {isPlaying ? '⏸' : '▶️'}
+        </button>
+        <button class="control-btn" on:click={() => setTime(Math.max(...selectedTimeline.map(e => e.time)))}>⏭</button>
+        
+        <div class="time-display">
+          {formatTime(currentTime)} / {formatTime(Math.max(...selectedTimeline.map(e => e.time)))}
+        </div>
+        
+        <div class="speed-control">
+          <label>Speed:</label>
+          <select bind:value={playbackSpeed}>
+            <option value={0.5}>0.5x</option>
+            <option value={1}>1x</option>
+            <option value={2}>2x</option>
+            <option value={4}>4x</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  {/if}
+</div>
+
+<style>
+  .session-replay {
+    padding: 20px;
+    min-height: 100vh;
+    background: #0a0a0b;
+  }
+
+  .session-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+  }
+
+  .session-header h1 {
+    color: #9b59d0;
+    font-size: 28px;
+    font-weight: 600;
+    margin: 0;
+  }
+
+  .session-selector {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .session-selector label {
+    color: #888;
+    font-size: 14px;
+  }
+
+  .session-selector select {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid #333;
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 14px;
+  }
+
+  .replay-interface {
+    display: grid;
+    grid-template-columns: 300px 1fr 250px;
+    gap: 20px;
+    height: 500px;
+    margin-bottom: 20px;
+  }
+
+  .reasoning-panel,
+  .code-panel,
+  .tools-panel {
+    background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+    border: 1px solid #333;
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .reasoning-panel h2,
+  .code-panel h2,
+  .tools-panel h2 {
+    color: #9b59d0;
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0;
+    padding: 16px 20px;
+    border-bottom: 1px solid #333;
+  }
+
+  .current-reasoning {
+    padding: 16px 20px;
+    border-bottom: 1px solid #333;
+  }
+
+  .reasoning-timeline {
+    padding: 16px 20px;
+    overflow-y: auto;
+    flex: 1;
+  }
+
+  .reasoning-timeline h3 {
+    color: #888;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 0 0 16px 0;
+  }
+
+  .reasoning-step {
+    display: flex;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .reasoning-step:hover {
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  .reasoning-step.active {
+    background: rgba(155, 89, 208, 0.2);
+    border: 1px solid rgba(155, 89, 208, 0.5);
+  }
+
+  .reasoning-step.completed {
+    opacity: 0.7;
+  }
+
+  .step-icon {
+    font-size: 16px;
+    min-width: 20px;
+  }
+
+  .step-content {
+    flex: 1;
+  }
+
+  .step-title {
+    color: #fff;
+    font-size: 13px;
+    font-weight: 500;
+    margin-bottom: 4px;
+    line-height: 1.3;
+  }
+
+  .step-reasoning {
+    color: #888;
+    font-size: 11px;
+    line-height: 1.4;
+    margin-bottom: 4px;
+  }
+
+  .step-time {
+    color: #9b59d0;
+    font-size: 10px;
+    font-family: monospace;
+  }
+
+  .panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid #333;
+  }
+
+  .file-tabs {
+    display: flex;
+    gap: 4px;
+  }
+
+  .tab {
+    background: rgba(255, 255, 255, 0.05);
+    color: #888;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .tab:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ccc;
+  }
+
+  .tab.active {
+    background: rgba(155, 89, 208, 0.2);
+    color: #9b59d0;
+  }
+
+  .code-viewer {
+    height: 400px;
+    overflow: auto;
+  }
+
+  .code-content {
+    padding: 20px;
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .diff-view {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .diff-line {
+    padding: 2px 8px;
+    border-radius: 3px;
+  }
+
+  .diff-line.added {
+    background: rgba(34, 197, 94, 0.2);
+    color: #4ade80;
+  }
+
+  .diff-line.removed {
+    background: rgba(239, 68, 68, 0.2);
+    color: #f87171;
+  }
+
+  .diff-line.context {
+    color: #888;
+  }
+
+  .placeholder {
+    color: #666;
+    text-align: center;
+    padding: 40px 20px;
+    font-style: italic;
+  }
+
+  .tool-timeline {
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .tool-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+  }
+
+  .tool-item.active {
+    background: rgba(155, 89, 208, 0.2);
+  }
+
+  .tool-badge {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    font-size: 12px;
+    transition: all 0.2s ease;
+  }
+
+  .tool-badge.used {
+    background: rgba(155, 89, 208, 0.3);
+  }
+
+  .tool-name {
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .tool-time {
+    color: #888;
+    font-size: 10px;
+    font-family: monospace;
+  }
+
+  .session-stats {
+    margin-top: 20px;
+    padding: 16px 20px;
+    border-top: 1px solid #333;
+  }
+
+  .session-stats h3 {
+    color: #888;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 0 0 12px 0;
+  }
+
+  .stat-item {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-size: 12px;
+  }
+
+  .stat-label {
+    color: #888;
+  }
+
+  .stat-value {
+    color: #9b59d0;
+    font-weight: 600;
+  }
+
+  .playback-controls {
+    background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+    border: 1px solid #333;
+    border-radius: 12px;
+    padding: 20px;
+  }
+
+  .timeline-scrubber {
+    position: relative;
+    margin-bottom: 16px;
+  }
+
+  .timeline-slider {
+    width: 100%;
+    height: 6px;
+    background: #333;
+    border-radius: 3px;
+    outline: none;
+    appearance: none;
+  }
+
+  .timeline-slider::-webkit-slider-thumb {
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    background: #9b59d0;
+    border-radius: 50%;
+    cursor: pointer;
+  }
+
+  .timeline-markers {
+    position: absolute;
+    top: -2px;
+    left: 0;
+    right: 0;
+    height: 10px;
+    pointer-events: none;
+  }
+
+  .timeline-marker {
+    position: absolute;
+    width: 4px;
+    height: 10px;
+    background: #f59e0b;
+    cursor: pointer;
+    pointer-events: all;
+  }
+
+  .control-buttons {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .control-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid #333;
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s ease;
+  }
+
+  .control-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  .play-btn {
+    background: rgba(155, 89, 208, 0.2);
+    border-color: #9b59d0;
+  }
+
+  .time-display {
+    color: #9b59d0;
+    font-family: monospace;
+    font-size: 14px;
+    margin-left: auto;
+  }
+
+  .speed-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .speed-control label {
+    color: #888;
+    font-size: 12px;
+  }
+
+  .speed-control select {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid #333;
+    color: #fff;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+  }
+</style>
