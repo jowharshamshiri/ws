@@ -1,6 +1,11 @@
 <script>
   import Header from './components/Header.svelte';
   import Overview from './components/Overview.svelte';
+  import SessionReplay from './components/SessionReplay.svelte';
+  import IssuesAndDiagnostics from './components/IssuesAndDiagnostics.svelte';
+  import FeatureManagement from './components/FeatureManagement.svelte';
+  import WorkspaceIDE from './components/WorkspaceIDE.svelte';
+  import TestingQuality from './components/TestingQuality.svelte';
 
   let currentView = 'overview';
 
@@ -17,6 +22,16 @@
       <div class="overview-grid">
         <Overview />
       </div>
+    {:else if currentView === 'sessions'}
+      <SessionReplay />
+    {:else if currentView === 'issues'}
+      <IssuesAndDiagnostics />
+    {:else if currentView === 'features'}
+      <FeatureManagement />
+    {:else if currentView === 'workspace'}
+      <WorkspaceIDE />
+    {:else if currentView === 'testing'}
+      <TestingQuality />
     {:else}
       <div class="other-view">
         <h1>{currentView.charAt(0).toUpperCase() + currentView.slice(1)}</h1>

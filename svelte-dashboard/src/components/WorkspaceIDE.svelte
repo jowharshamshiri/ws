@@ -1,0 +1,975 @@
+<script>
+  import { onMount } from 'svelte';
+  
+  let files = [];
+  let selectedFile = null;
+  let openFiles = [];
+  let activeFileIndex = 0;
+  let fileContent = '';
+  let searchQuery = '';
+  let gitStatus = [];
+  let terminalOutput = '';
+  let showTerminal = false;
+  let aiSuggestions = [];
+  let showAIPanel = false;
+
+  // Sample file structure
+  onMount(async () => {
+    files = [
+      {
+        name: 'src',
+        type: 'folder',
+        expanded: true,
+        children: [
+          { name: 'main.rs', type: 'file', status: 'M', language: 'rust' },
+          { name: 'lib.rs', type: 'file', status: '', language: 'rust' },
+          {
+            name: 'components',
+            type: 'folder',
+            expanded: false,
+            children: [
+              { name: 'header.rs', type: 'file', status: 'M', language: 'rust' },
+              { name: 'sidebar.rs', type: 'file', status: 'A', language: 'rust' }
+            ]
+          }
+        ]
+      },
+      {
+        name: 'tests',
+        type: 'folder',
+        expanded: false,
+        children: [
+          { name: 'integration.rs', type: 'file', status: '', language: 'rust' }
+        ]
+      },
+      { name: 'Cargo.toml', type: 'file', status: 'M', language: 'toml' },
+      { name: 'README.md', type: 'file', status: '', language: 'markdown' }
+    ];
+
+    gitStatus = [
+      { file: 'src/main.rs', status: 'M' },
+      { file: 'src/components/header.rs', status: 'M' },
+      { file: 'src/components/sidebar.rs', status: 'A' },
+      { file: 'Cargo.toml', status: 'M' }
+    ];
+
+    aiSuggestions = [
+      {
+        type: 'code_completion',
+        content: 'Consider adding error handling for this function',
+        line: 42,
+        confidence: 0.85
+      },
+      {
+        type: 'refactor',
+        content: 'This function could be simplified using iterator combinators',
+        line: 28,
+        confidence: 0.72
+      }
+    ];
+  });
+
+  function toggleFolder(folder) {
+    folder.expanded = !folder.expanded;
+    files = [...files];
+  }
+
+  function openFile(file) {
+    if (file.type === 'folder') {
+      toggleFolder(file);
+      return;
+    }
+
+    selectedFile = file;
+    
+    if (!openFiles.find(f => f.name === file.name)) {
+      openFiles = [...openFiles, file];
+    }
+    
+    activeFileIndex = openFiles.findIndex(f => f.name === file.name);
+    loadFileContent(file);
+  }
+
+  function closeFile(index) {
+    openFiles.splice(index, 1);
+    openFiles = [...openFiles];
+    
+    if (activeFileIndex >= openFiles.length) {
+      activeFileIndex = openFiles.length - 1;
+    }
+    
+    if (openFiles.length > 0 && activeFileIndex >= 0) {
+      selectedFile = openFiles[activeFileIndex];
+      loadFileContent(selectedFile);
+    } else {
+      selectedFile = null;
+      fileContent = '';
+    }
+  }
+
+  function switchTab(index) {
+    activeFileIndex = index;
+    selectedFile = openFiles[index];
+    loadFileContent(selectedFile);
+  }
+
+  function loadFileContent(file) {
+    // Simulate loading file content based on type
+    switch (file.name) {
+      case 'main.rs':
+        fileContent = `use std::collections::HashMap;
+
+fn main() {
+    println!("Hello, workspace!");
+    
+    let mut config = HashMap::new();
+    config.insert("version", "1.0.0");
+    config.insert("name", "workspace");
+    
+    process_config(&config);
+}
+
+fn process_config(config: &HashMap<&str, &str>) {
+    for (key, value) in config {
+        println!("{}: {}", key, value);
+    }
+}`;
+        break;
+      case 'Cargo.toml':
+        fileContent = `[package]
+name = "workspace"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+tokio = { version = "1.0", features = ["full"] }
+clap = { version = "4.0", features = ["derive"] }`;
+        break;
+      default:
+        fileContent = `// ${file.name}
+// File content would be loaded here
+`;
+    }
+  }
+
+  function runCode() {
+    terminalOutput = 'Running cargo run...\n   Compiling workspace v0.1.0\n    Finished dev [unoptimized + debuginfo] target(s) in 1.23s\n     Running `target/debug/workspace`\nHello, workspace!\nversion: 1.0.0\nname: workspace';
+    showTerminal = true;
+  }
+
+  function debugCode() {
+    terminalOutput = 'Starting debugger...\nBreakpoint set at src/main.rs:4\nDebugger ready - use step/continue controls';
+    showTerminal = true;
+  }
+
+  function runTests() {
+    terminalOutput = 'Running cargo test...\n   Compiling workspace v0.1.0\nrunning 3 tests\ntest test_config ... ok\ntest test_process ... ok\ntest test_main ... ok\n\ntest result: ok. 3 passed; 0 failed; 0 ignored; 0 measured';
+    showTerminal = true;
+  }
+
+  function toggleAIPanel() {
+    showAIPanel = !showAIPanel;
+  }
+
+  function getFileIcon(file) {
+    if (file.type === 'folder') {
+      return file.expanded ? '📂' : '📁';
+    }
+    
+    switch (file.language) {
+      case 'rust': return '🦀';
+      case 'javascript': return '📜';
+      case 'html': return '🌐';
+      case 'css': return '🎨';
+      case 'markdown': return '📝';
+      case 'toml': return '⚙️';
+      default: return '📄';
+    }
+  }
+
+  function getStatusColor(status) {
+    switch (status) {
+      case 'M': return '#f59e0b'; // Modified - orange
+      case 'A': return '#10b981'; // Added - green
+      case 'D': return '#ef4444'; // Deleted - red
+      default: return 'transparent';
+    }
+  }
+</script>
+
+<div class="workspace-ide">
+  <!-- File Explorer Sidebar -->
+  <div class="file-explorer">
+    <div class="explorer-header">
+      <h3>Explorer</h3>
+      <div class="explorer-actions">
+        <button class="action-btn" title="New File">+</button>
+        <button class="action-btn" title="New Folder">📁</button>
+        <button class="action-btn" title="Refresh">🔄</button>
+      </div>
+    </div>
+    
+    <div class="search-box">
+      <input 
+        type="text" 
+        placeholder="Search files..."
+        bind:value={searchQuery}
+        class="search-input"
+      >
+    </div>
+
+    <div class="file-tree">
+      {#each files as file}
+        <div class="file-item" class:folder={file.type === 'folder'}>
+          <button 
+            class="file-button"
+            on:click={() => openFile(file)}
+            class:selected={selectedFile === file}
+          >
+            <span class="file-icon">{getFileIcon(file)}</span>
+            <span class="file-name">{file.name}</span>
+            {#if file.status}
+              <span 
+                class="status-indicator"
+                style="background: {getStatusColor(file.status)}"
+                title="Modified"
+              ></span>
+            {/if}
+          </button>
+          
+          {#if file.type === 'folder' && file.expanded && file.children}
+            <div class="folder-children">
+              {#each file.children as child}
+                <button 
+                  class="file-button child"
+                  on:click={() => openFile(child)}
+                  class:selected={selectedFile === child}
+                >
+                  <span class="file-icon">{getFileIcon(child)}</span>
+                  <span class="file-name">{child.name}</span>
+                  {#if child.status}
+                    <span 
+                      class="status-indicator"
+                      style="background: {getStatusColor(child.status)}"
+                      title="Modified"
+                    ></span>
+                  {/if}
+                </button>
+              {/each}
+            </div>
+          {/if}
+        </div>
+      {/each}
+    </div>
+  </div>
+
+  <!-- Main Editor Area -->
+  <div class="editor-area">
+    <!-- Action Toolbar -->
+    <div class="toolbar">
+      <div class="toolbar-group">
+        <button class="toolbar-btn primary" on:click={runCode}>
+          ▶️ Run
+        </button>
+        <button class="toolbar-btn" on:click={debugCode}>
+          🐛 Debug
+        </button>
+        <button class="toolbar-btn" on:click={runTests}>
+          🧪 Test
+        </button>
+      </div>
+      
+      <div class="toolbar-group">
+        <button class="toolbar-btn" on:click={toggleAIPanel} class:active={showAIPanel}>
+          🤖 AI Assist
+        </button>
+        <button class="toolbar-btn" title="Format Code">
+          📐 Format
+        </button>
+        <button class="toolbar-btn" title="Find in Files">
+          🔍 Search
+        </button>
+      </div>
+    </div>
+
+    <!-- File Tabs -->
+    {#if openFiles.length > 0}
+      <div class="file-tabs">
+        {#each openFiles as file, index}
+          <div 
+            class="file-tab"
+            class:active={index === activeFileIndex}
+            on:click={() => switchTab(index)}
+          >
+            <span class="tab-icon">{getFileIcon(file)}</span>
+            <span class="tab-name">{file.name}</span>
+            {#if file.status}
+              <span class="tab-status" style="color: {getStatusColor(file.status)}">●</span>
+            {/if}
+            <button class="tab-close" on:click|stopPropagation={() => closeFile(index)}>×</button>
+          </div>
+        {/each}
+      </div>
+    {/if}
+
+    <!-- Code Editor -->
+    <div class="editor-container">
+      {#if selectedFile}
+        <div class="code-editor">
+          <div class="line-numbers">
+            {#each fileContent.split('\n') as line, index}
+              <div class="line-number">{index + 1}</div>
+            {/each}
+          </div>
+          <textarea
+            class="code-textarea"
+            bind:value={fileContent}
+            spellcheck="false"
+            placeholder="Select a file to edit..."
+          ></textarea>
+        </div>
+      {:else}
+        <div class="empty-editor">
+          <div class="empty-state">
+            <h3>Welcome to Workspace IDE</h3>
+            <p>Select a file from the explorer to start editing</p>
+            <div class="quick-actions">
+              <button class="quick-btn">📄 New File</button>
+              <button class="quick-btn">📁 Open Folder</button>
+              <button class="quick-btn">🔍 Quick Open</button>
+            </div>
+          </div>
+        </div>
+      {/if}
+    </div>
+
+    <!-- Terminal Panel -->
+    {#if showTerminal}
+      <div class="terminal-panel">
+        <div class="terminal-header">
+          <div class="terminal-tabs">
+            <div class="terminal-tab active">Terminal</div>
+            <div class="terminal-tab">Output</div>
+            <div class="terminal-tab">Debug Console</div>
+          </div>
+          <button class="terminal-close" on:click={() => showTerminal = false}>×</button>
+        </div>
+        <div class="terminal-content">
+          <pre>{terminalOutput}</pre>
+          <div class="terminal-input">
+            <span class="prompt">$ </span>
+            <input type="text" class="command-input" placeholder="Type a command...">
+          </div>
+        </div>
+      </div>
+    {/if}
+  </div>
+
+  <!-- AI Assistant Panel -->
+  {#if showAIPanel}
+    <div class="ai-panel">
+      <div class="ai-header">
+        <h3>🤖 AI Assistant</h3>
+        <button class="ai-close" on:click={toggleAIPanel}>×</button>
+      </div>
+      
+      <div class="ai-suggestions">
+        <h4>Suggestions</h4>
+        {#each aiSuggestions as suggestion}
+          <div class="suggestion-item">
+            <div class="suggestion-type">{suggestion.type}</div>
+            <div class="suggestion-content">{suggestion.content}</div>
+            <div class="suggestion-meta">
+              Line {suggestion.line} • {Math.round(suggestion.confidence * 100)}% confidence
+            </div>
+            <div class="suggestion-actions">
+              <button class="suggestion-btn">Apply</button>
+              <button class="suggestion-btn secondary">Dismiss</button>
+            </div>
+          </div>
+        {/each}
+      </div>
+
+      <div class="ai-chat">
+        <h4>Ask AI</h4>
+        <div class="chat-input">
+          <textarea 
+            placeholder="Ask about your code, request refactoring suggestions, or get help with implementation..."
+            rows="3"
+          ></textarea>
+          <button class="send-btn">Send</button>
+        </div>
+      </div>
+    </div>
+  {/if}
+</div>
+
+<style>
+  .workspace-ide {
+    display: flex;
+    height: calc(100vh - 140px);
+    background: #1e1e1e;
+    color: #d4d4d4;
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+  }
+
+  /* File Explorer */
+  .file-explorer {
+    width: 280px;
+    background: #252526;
+    border-right: 1px solid #3c3c3c;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .explorer-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid #3c3c3c;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .explorer-header h3 {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: #cccccc;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .explorer-actions {
+    display: flex;
+    gap: 4px;
+  }
+
+  .action-btn {
+    background: none;
+    border: none;
+    color: #cccccc;
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: 3px;
+    font-size: 12px;
+  }
+
+  .action-btn:hover {
+    background: #37373d;
+  }
+
+  .search-box {
+    padding: 8px 16px;
+    border-bottom: 1px solid #3c3c3c;
+  }
+
+  .search-input {
+    width: 100%;
+    padding: 6px 8px;
+    background: #3c3c3c;
+    border: 1px solid #464647;
+    border-radius: 3px;
+    color: #cccccc;
+    font-size: 13px;
+  }
+
+  .search-input:focus {
+    outline: none;
+    border-color: #007acc;
+  }
+
+  .file-tree {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 0;
+  }
+
+  .file-button {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding: 4px 16px;
+    background: none;
+    border: none;
+    color: #cccccc;
+    cursor: pointer;
+    font-size: 13px;
+    text-align: left;
+    position: relative;
+  }
+
+  .file-button:hover {
+    background: #37373d;
+  }
+
+  .file-button.selected {
+    background: #37373d;
+    color: #ffffff;
+  }
+
+  .file-button.child {
+    padding-left: 32px;
+  }
+
+  .file-icon {
+    margin-right: 6px;
+    font-size: 14px;
+  }
+
+  .file-name {
+    flex: 1;
+  }
+
+  .status-indicator {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    margin-left: 6px;
+  }
+
+  .folder-children {
+    margin-left: 0;
+  }
+
+  /* Editor Area */
+  .editor-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 16px;
+    background: #2d2d30;
+    border-bottom: 1px solid #3c3c3c;
+  }
+
+  .toolbar-group {
+    display: flex;
+    gap: 8px;
+  }
+
+  .toolbar-btn {
+    padding: 6px 12px;
+    background: #3c3c3c;
+    border: 1px solid #464647;
+    border-radius: 3px;
+    color: #cccccc;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  .toolbar-btn:hover {
+    background: #464647;
+  }
+
+  .toolbar-btn.primary {
+    background: #0e639c;
+    border-color: #0e639c;
+    color: #ffffff;
+  }
+
+  .toolbar-btn.primary:hover {
+    background: #1177bb;
+  }
+
+  .toolbar-btn.active {
+    background: #007acc;
+    border-color: #007acc;
+    color: #ffffff;
+  }
+
+  .file-tabs {
+    display: flex;
+    background: #2d2d30;
+    border-bottom: 1px solid #3c3c3c;
+    overflow-x: auto;
+  }
+
+  .file-tab {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    background: #2d2d30;
+    border-right: 1px solid #3c3c3c;
+    cursor: pointer;
+    min-width: 120px;
+    font-size: 13px;
+  }
+
+  .file-tab:hover {
+    background: #37373d;
+  }
+
+  .file-tab.active {
+    background: #1e1e1e;
+    color: #ffffff;
+  }
+
+  .tab-icon {
+    margin-right: 6px;
+  }
+
+  .tab-name {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .tab-status {
+    margin: 0 4px;
+    font-size: 16px;
+  }
+
+  .tab-close {
+    background: none;
+    border: none;
+    color: #cccccc;
+    cursor: pointer;
+    padding: 0 4px;
+    margin-left: 4px;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .file-tab:hover .tab-close {
+    opacity: 1;
+  }
+
+  .tab-close:hover {
+    background: #464647;
+    border-radius: 3px;
+  }
+
+  .editor-container {
+    flex: 1;
+    display: flex;
+    position: relative;
+  }
+
+  .code-editor {
+    flex: 1;
+    display: flex;
+    background: #1e1e1e;
+  }
+
+  .line-numbers {
+    background: #1e1e1e;
+    padding: 16px 8px;
+    border-right: 1px solid #3c3c3c;
+    min-width: 50px;
+    text-align: right;
+    color: #858585;
+    font-size: 13px;
+    line-height: 19px;
+    user-select: none;
+  }
+
+  .line-number {
+    height: 19px;
+  }
+
+  .code-textarea {
+    flex: 1;
+    background: #1e1e1e;
+    border: none;
+    color: #d4d4d4;
+    padding: 16px;
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+    font-size: 13px;
+    line-height: 19px;
+    resize: none;
+    outline: none;
+    white-space: pre;
+    overflow-wrap: normal;
+    overflow-x: auto;
+  }
+
+  .empty-editor {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #1e1e1e;
+  }
+
+  .empty-state {
+    text-align: center;
+    color: #858585;
+  }
+
+  .empty-state h3 {
+    color: #cccccc;
+    margin-bottom: 8px;
+  }
+
+  .empty-state p {
+    margin-bottom: 24px;
+  }
+
+  .quick-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+  }
+
+  .quick-btn {
+    padding: 8px 16px;
+    background: #37373d;
+    border: 1px solid #464647;
+    border-radius: 3px;
+    color: #cccccc;
+    cursor: pointer;
+    font-size: 13px;
+  }
+
+  .quick-btn:hover {
+    background: #464647;
+  }
+
+  /* Terminal Panel */
+  .terminal-panel {
+    height: 200px;
+    border-top: 1px solid #3c3c3c;
+    background: #1e1e1e;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .terminal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #2d2d30;
+    border-bottom: 1px solid #3c3c3c;
+    padding: 0 16px;
+  }
+
+  .terminal-tabs {
+    display: flex;
+  }
+
+  .terminal-tab {
+    padding: 8px 16px;
+    cursor: pointer;
+    font-size: 13px;
+    color: #cccccc;
+  }
+
+  .terminal-tab.active {
+    color: #ffffff;
+    border-bottom: 2px solid #007acc;
+  }
+
+  .terminal-close {
+    background: none;
+    border: none;
+    color: #cccccc;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 4px;
+  }
+
+  .terminal-content {
+    flex: 1;
+    padding: 12px;
+    overflow-y: auto;
+  }
+
+  .terminal-content pre {
+    margin: 0;
+    color: #d4d4d4;
+    font-family: 'SF Mono', Monaco, monospace;
+    font-size: 13px;
+    white-space: pre-wrap;
+  }
+
+  .terminal-input {
+    display: flex;
+    align-items: center;
+    margin-top: 8px;
+  }
+
+  .prompt {
+    color: #00ff00;
+    margin-right: 8px;
+  }
+
+  .command-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: #d4d4d4;
+    outline: none;
+    font-family: 'SF Mono', Monaco, monospace;
+    font-size: 13px;
+  }
+
+  /* AI Panel */
+  .ai-panel {
+    width: 320px;
+    background: #252526;
+    border-left: 1px solid #3c3c3c;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .ai-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid #3c3c3c;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .ai-header h3 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #cccccc;
+  }
+
+  .ai-close {
+    background: none;
+    border: none;
+    color: #cccccc;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 4px;
+  }
+
+  .ai-suggestions {
+    padding: 16px;
+    border-bottom: 1px solid #3c3c3c;
+  }
+
+  .ai-suggestions h4 {
+    margin: 0 0 12px 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: #cccccc;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .suggestion-item {
+    background: #2d2d30;
+    border: 1px solid #3c3c3c;
+    border-radius: 4px;
+    padding: 12px;
+    margin-bottom: 8px;
+  }
+
+  .suggestion-type {
+    font-size: 11px;
+    color: #569cd6;
+    text-transform: uppercase;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  .suggestion-content {
+    font-size: 13px;
+    color: #d4d4d4;
+    margin-bottom: 8px;
+    line-height: 1.4;
+  }
+
+  .suggestion-meta {
+    font-size: 11px;
+    color: #858585;
+    margin-bottom: 8px;
+  }
+
+  .suggestion-actions {
+    display: flex;
+    gap: 6px;
+  }
+
+  .suggestion-btn {
+    padding: 4px 8px;
+    background: #0e639c;
+    border: 1px solid #0e639c;
+    border-radius: 3px;
+    color: #ffffff;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 500;
+  }
+
+  .suggestion-btn:hover {
+    background: #1177bb;
+  }
+
+  .suggestion-btn.secondary {
+    background: #3c3c3c;
+    border-color: #464647;
+    color: #cccccc;
+  }
+
+  .suggestion-btn.secondary:hover {
+    background: #464647;
+  }
+
+  .ai-chat {
+    flex: 1;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .ai-chat h4 {
+    margin: 0 0 12px 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: #cccccc;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .chat-input {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .chat-input textarea {
+    background: #3c3c3c;
+    border: 1px solid #464647;
+    border-radius: 3px;
+    color: #d4d4d4;
+    padding: 8px;
+    font-size: 13px;
+    font-family: inherit;
+    resize: vertical;
+    min-height: 60px;
+  }
+
+  .chat-input textarea:focus {
+    outline: none;
+    border-color: #007acc;
+  }
+
+  .send-btn {
+    align-self: flex-end;
+    padding: 6px 16px;
+    background: #0e639c;
+    border: 1px solid #0e639c;
+    border-radius: 3px;
+    color: #ffffff;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  .send-btn:hover {
+    background: #1177bb;
+  }
+</style>

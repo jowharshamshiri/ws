@@ -2,6 +2,7 @@
   import { websocketConnected, agentActivity } from '../stores.js';
   
   export let currentView;
+  export let switchView;
 
   const navItems = [
     { id: 'overview', label: 'Overview' },
@@ -16,7 +17,7 @@
   ];
 
   function setView(viewId) {
-    currentView = viewId;
+    switchView(viewId);
   }
 </script>
 

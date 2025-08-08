@@ -1,0 +1,697 @@
+<script>
+  import { onMount } from 'svelte';
+  import { issuesStore } from '../stores.js';
+  
+  let issues = [];
+  let selectedIssue = null;
+  let filterEnvironment = 'all';
+  let filterSeverity = 'all';
+  let sortBy = 'timestamp';
+  
+  // Sample issue data
+  const sampleIssues = [
+    {
+      id: 'issue-001',
+      title: 'Feature validation timeout in F0210 implementation',
+      severity: 'critical',
+      environment: 'development',
+      timestamp: '2025-08-08T23:15:32Z',
+      description: 'SessionReplay component validation failing with timeout after 30 seconds',
+      stackTrace: 'Error: Timeout waiting for session data\n  at SessionReplay.loadSession (line 42)\n  at SessionReplay.selectSession (line 51)',
+      aiAnalysis: {
+        rootCause: 'API endpoint /api/sessions is not responding within expected timeout',
+        suggestions: [
+          'Check if backend MCP server is running',
+          'Increase timeout threshold for session loading',
+          'Add retry logic with exponential backoff',
+          'Implement graceful fallback to sample data'
+        ],
+        confidence: 0.85
+      },
+      responseTime: 3200,
+      tags: ['timeout', 'api', 'session-replay'],
+      resolved: false
+    },
+    {
+      id: 'issue-002', 
+      title: 'Memory leak in WebSocket connection handling',
+      severity: 'high',
+      environment: 'production',
+      timestamp: '2025-08-08T22:45:18Z',
+      description: 'WebSocket connections not being properly closed causing memory usage to increase over time',
+      stackTrace: 'Warning: WebSocket connection not cleaned up\n  at WebSocketService.disconnect (line 78)\n  at component cleanup',
+      aiAnalysis: {
+        rootCause: 'WebSocket cleanup not triggered in component unmount lifecycle',
+        suggestions: [
+          'Add onDestroy cleanup for WebSocket connections',
+          'Implement connection pooling with automatic cleanup',
+          'Add memory monitoring and alerting',
+          'Review component lifecycle management'
+        ],
+        confidence: 0.92
+      },
+      responseTime: 1800,
+      tags: ['memory-leak', 'websocket', 'performance'],
+      resolved: false
+    },
+    {
+      id: 'issue-003',
+      title: 'CSS loading race condition on page refresh',
+      severity: 'medium',
+      environment: 'development',
+      timestamp: '2025-08-08T21:30:45Z',
+      description: 'Styles not loading correctly on hard refresh causing layout issues',
+      stackTrace: 'Error: Failed to load resource: ade-main.css\n  at HTMLLinkElement.onError (line 7)',
+      aiAnalysis: {
+        rootCause: 'CSS file not embedded correctly in Rust binary static assets',
+        suggestions: [
+          'Verify CSS file path in include_str! macro',
+          'Add fallback CSS loading mechanism',
+          'Implement CSS-in-JS for critical styles',
+          'Check build process for asset embedding'
+        ],
+        confidence: 0.78
+      },
+      responseTime: 950,
+      tags: ['css', 'assets', 'loading'],
+      resolved: true
+    }
+  ];
+
+  $: filteredIssues = issues
+    .filter(issue => filterEnvironment === 'all' || issue.environment === filterEnvironment)
+    .filter(issue => filterSeverity === 'all' || issue.severity === filterSeverity)
+    .sort((a, b) => {
+      switch (sortBy) {
+        case 'severity':
+          const severityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
+          return severityOrder[a.severity] - severityOrder[b.severity];
+        case 'timestamp':
+          return new Date(b.timestamp) - new Date(a.timestamp);
+        case 'responseTime':
+          return b.responseTime - a.responseTime;
+        default:
+          return 0;
+      }
+    });
+
+  $: issueStats = {
+    total: issues.length,
+    critical: issues.filter(i => i.severity === 'critical').length,
+    high: issues.filter(i => i.severity === 'high').length,
+    medium: issues.filter(i => i.severity === 'medium').length,
+    low: issues.filter(i => i.severity === 'low').length,
+    resolved: issues.filter(i => i.resolved).length,
+    avgResponseTime: Math.round(issues.reduce((sum, i) => sum + i.responseTime, 0) / issues.length || 0)
+  };
+
+  function selectIssue(issue) {
+    selectedIssue = issue;
+  }
+
+  function getSeverityColor(severity) {
+    switch (severity) {
+      case 'critical': return '#dc2626';
+      case 'high': return '#ea580c';
+      case 'medium': return '#d97706';
+      case 'low': return '#65a30d';
+      default: return '#6b7280';
+    }
+  }
+
+  function getEnvironmentColor(env) {
+    switch (env) {
+      case 'production': return '#dc2626';
+      case 'test': return '#d97706';
+      case 'development': return '#059669';
+      default: return '#6b7280';
+    }
+  }
+
+  function formatTimestamp(timestamp) {
+    return new Date(timestamp).toLocaleString();
+  }
+
+  function markResolved(issueId) {
+    const issue = issues.find(i => i.id === issueId);
+    if (issue) {
+      issue.resolved = true;
+      issues = [...issues]; // Trigger reactivity
+    }
+  }
+
+  function createTask(issueId) {
+    const issue = issues.find(i => i.id === issueId);
+    if (issue) {
+      console.log('Creating task for issue:', issue.title);
+      // Integration with task management would go here
+    }
+  }
+
+  onMount(() => {
+    issues = $issuesStore.length > 0 ? $issuesStore : sampleIssues;
+    if (issues.length > 0 && !selectedIssue) {
+      selectIssue(issues[0]);
+    }
+  });
+</script>
+
+<div class="issues-diagnostics">
+  <div class="issues-header">
+    <h1>Issues & Diagnostics</h1>
+    
+    <div class="issue-stats">
+      <div class="stat-card critical">
+        <div class="stat-number">{issueStats.critical}</div>
+        <div class="stat-label">Critical</div>
+      </div>
+      <div class="stat-card high">
+        <div class="stat-number">{issueStats.high}</div>
+        <div class="stat-label">High</div>
+      </div>
+      <div class="stat-card medium">
+        <div class="stat-number">{issueStats.medium}</div>
+        <div class="stat-label">Medium</div>
+      </div>
+      <div class="stat-card resolved">
+        <div class="stat-number">{issueStats.resolved}</div>
+        <div class="stat-label">Resolved</div>
+      </div>
+      <div class="stat-card performance">
+        <div class="stat-number">{issueStats.avgResponseTime}ms</div>
+        <div class="stat-label">Avg Response</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="issues-interface">
+    <!-- Left Panel - Issues List -->
+    <div class="issues-panel">
+      <div class="panel-header">
+        <h2>Active Issues</h2>
+        
+        <div class="filters">
+          <select bind:value={filterEnvironment} class="filter-select">
+            <option value="all">All Environments</option>
+            <option value="production">Production</option>
+            <option value="test">Test</option>
+            <option value="development">Development</option>
+          </select>
+          
+          <select bind:value={filterSeverity} class="filter-select">
+            <option value="all">All Severities</option>
+            <option value="critical">Critical</option>
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+          </select>
+          
+          <select bind:value={sortBy} class="filter-select">
+            <option value="timestamp">Sort by Time</option>
+            <option value="severity">Sort by Severity</option>
+            <option value="responseTime">Sort by Performance</option>
+          </select>
+        </div>
+      </div>
+      
+      <div class="issues-list">
+        {#each filteredIssues as issue}
+          <div 
+            class="issue-card" 
+            class:selected={selectedIssue?.id === issue.id}
+            class:resolved={issue.resolved}
+            on:click={() => selectIssue(issue)}
+          >
+            <div class="issue-header">
+              <div 
+                class="severity-badge" 
+                style="background-color: {getSeverityColor(issue.severity)}"
+              >
+                {issue.severity.toUpperCase()}
+              </div>
+              <div 
+                class="environment-badge"
+                style="color: {getEnvironmentColor(issue.environment)}"
+              >
+                {issue.environment}
+              </div>
+            </div>
+            
+            <div class="issue-title">{issue.title}</div>
+            <div class="issue-meta">
+              <span class="issue-time">{formatTimestamp(issue.timestamp)}</span>
+              <span class="issue-response">{issue.responseTime}ms</span>
+            </div>
+            
+            <div class="issue-tags">
+              {#each issue.tags as tag}
+                <span class="tag">{tag}</span>
+              {/each}
+            </div>
+          </div>
+        {/each}
+      </div>
+    </div>
+
+    <!-- Right Panel - Issue Details -->
+    <div class="details-panel">
+      {#if selectedIssue}
+        <div class="detail-header">
+          <div class="detail-title">{selectedIssue.title}</div>
+          <div class="detail-actions">
+            <button 
+              class="action-btn resolve" 
+              class:disabled={selectedIssue.resolved}
+              on:click={() => markResolved(selectedIssue.id)}
+            >
+              {selectedIssue.resolved ? 'Resolved' : 'Mark Resolved'}
+            </button>
+            <button class="action-btn task" on:click={() => createTask(selectedIssue.id)}>
+              Create Task
+            </button>
+          </div>
+        </div>
+
+        <div class="detail-content">
+          <div class="detail-section">
+            <h3>Description</h3>
+            <p class="description">{selectedIssue.description}</p>
+          </div>
+
+          <div class="detail-section">
+            <h3>Stack Trace</h3>
+            <pre class="stack-trace">{selectedIssue.stackTrace}</pre>
+          </div>
+
+          <div class="detail-section">
+            <h3>AI Root Cause Analysis</h3>
+            <div class="ai-analysis">
+              <div class="analysis-confidence">
+                Confidence: {Math.round(selectedIssue.aiAnalysis.confidence * 100)}%
+              </div>
+              <div class="root-cause">
+                <strong>Root Cause:</strong> {selectedIssue.aiAnalysis.rootCause}
+              </div>
+              <div class="suggestions">
+                <strong>Suggested Fixes:</strong>
+                <ul>
+                  {#each selectedIssue.aiAnalysis.suggestions as suggestion}
+                    <li>{suggestion}</li>
+                  {/each}
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <div class="detail-section">
+            <h3>Performance Impact</h3>
+            <div class="performance-metrics">
+              <div class="metric">
+                <span class="metric-label">Response Time:</span>
+                <span class="metric-value">{selectedIssue.responseTime}ms</span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">Environment:</span>
+                <span class="metric-value" style="color: {getEnvironmentColor(selectedIssue.environment)}">
+                  {selectedIssue.environment}
+                </span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">Severity:</span>
+                <span class="metric-value" style="color: {getSeverityColor(selectedIssue.severity)}">
+                  {selectedIssue.severity}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      {:else}
+        <div class="no-selection">
+          <p>Select an issue to view details and AI analysis</p>
+        </div>
+      {/if}
+    </div>
+  </div>
+</div>
+
+<style>
+  .issues-diagnostics {
+    padding: 20px;
+    min-height: 100vh;
+    background: #0a0a0b;
+    color: #fff;
+  }
+
+  .issues-header {
+    margin-bottom: 24px;
+  }
+
+  .issues-header h1 {
+    color: #9b59d0;
+    font-size: 28px;
+    font-weight: 600;
+    margin: 0 0 16px 0;
+  }
+
+  .issue-stats {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .stat-card {
+    background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 16px;
+    min-width: 100px;
+    text-align: center;
+  }
+
+  .stat-card.critical {
+    border-color: #dc2626;
+  }
+
+  .stat-card.high {
+    border-color: #ea580c;
+  }
+
+  .stat-card.medium {
+    border-color: #d97706;
+  }
+
+  .stat-card.resolved {
+    border-color: #059669;
+  }
+
+  .stat-card.performance {
+    border-color: #9b59d0;
+  }
+
+  .stat-number {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  .stat-card.critical .stat-number { color: #dc2626; }
+  .stat-card.high .stat-number { color: #ea580c; }
+  .stat-card.medium .stat-number { color: #d97706; }
+  .stat-card.resolved .stat-number { color: #059669; }
+  .stat-card.performance .stat-number { color: #9b59d0; }
+
+  .stat-label {
+    color: #888;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .issues-interface {
+    display: grid;
+    grid-template-columns: 400px 1fr;
+    gap: 20px;
+    height: 600px;
+  }
+
+  .issues-panel,
+  .details-panel {
+    background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+    border: 1px solid #333;
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .panel-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid #333;
+  }
+
+  .panel-header h2 {
+    color: #9b59d0;
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0 0 12px 0;
+  }
+
+  .filters {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .filter-select {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid #333;
+    color: #fff;
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+  }
+
+  .issues-list {
+    padding: 16px;
+    overflow-y: auto;
+    height: calc(100% - 120px);
+  }
+
+  .issue-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .issue-card:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: #555;
+  }
+
+  .issue-card.selected {
+    background: rgba(155, 89, 208, 0.1);
+    border-color: #9b59d0;
+  }
+
+  .issue-card.resolved {
+    opacity: 0.6;
+  }
+
+  .issue-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+
+  .severity-badge {
+    color: #fff;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .environment-badge {
+    font-size: 10px;
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+
+  .issue-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: #fff;
+    margin-bottom: 8px;
+    line-height: 1.3;
+  }
+
+  .issue-meta {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-size: 11px;
+    color: #888;
+  }
+
+  .issue-tags {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+
+  .tag {
+    background: rgba(155, 89, 208, 0.2);
+    color: #9b59d0;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-size: 10px;
+  }
+
+  .details-panel {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .detail-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid #333;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .detail-title {
+    color: #9b59d0;
+    font-size: 16px;
+    font-weight: 600;
+    flex: 1;
+  }
+
+  .detail-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .action-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid #333;
+    color: #fff;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .action-btn:hover:not(.disabled) {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  .action-btn.resolve {
+    background: rgba(5, 150, 105, 0.2);
+    border-color: #059669;
+    color: #10b981;
+  }
+
+  .action-btn.task {
+    background: rgba(155, 89, 208, 0.2);
+    border-color: #9b59d0;
+    color: #9b59d0;
+  }
+
+  .action-btn.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .detail-content {
+    padding: 20px;
+    overflow-y: auto;
+    flex: 1;
+  }
+
+  .detail-section {
+    margin-bottom: 24px;
+  }
+
+  .detail-section h3 {
+    color: #9b59d0;
+    font-size: 14px;
+    font-weight: 600;
+    margin: 0 0 12px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .description {
+    color: #ccc;
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  .stack-trace {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid #333;
+    border-radius: 4px;
+    padding: 12px;
+    color: #f87171;
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 12px;
+    line-height: 1.4;
+    overflow-x: auto;
+    margin: 0;
+  }
+
+  .ai-analysis {
+    background: rgba(155, 89, 208, 0.05);
+    border: 1px solid rgba(155, 89, 208, 0.2);
+    border-radius: 8px;
+    padding: 16px;
+  }
+
+  .analysis-confidence {
+    color: #9b59d0;
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+
+  .root-cause {
+    color: #ccc;
+    line-height: 1.5;
+    margin-bottom: 12px;
+  }
+
+  .suggestions {
+    color: #ccc;
+  }
+
+  .suggestions ul {
+    margin: 8px 0 0 0;
+    padding-left: 20px;
+  }
+
+  .suggestions li {
+    margin-bottom: 4px;
+    line-height: 1.4;
+  }
+
+  .performance-metrics {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .metric {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #333;
+  }
+
+  .metric:last-child {
+    border-bottom: none;
+  }
+
+  .metric-label {
+    color: #888;
+    font-size: 13px;
+  }
+
+  .metric-value {
+    color: #fff;
+    font-weight: 600;
+    font-size: 13px;
+  }
+
+  .no-selection {
+    padding: 40px;
+    text-align: center;
+    color: #666;
+    font-style: italic;
+  }
+</style>

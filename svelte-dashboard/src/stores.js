@@ -10,6 +10,7 @@ export const projectStore = writable({
 export const featuresStore = writable([]);
 export const tasksStore = writable([]);
 export const sessionsStore = writable([]);
+export const issuesStore = writable([]);
 export const milestonesStore = writable([]);
 export const notesStore = writable([]);
 export const directivesStore = writable([]);
