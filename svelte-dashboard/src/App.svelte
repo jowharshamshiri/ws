@@ -63,9 +63,9 @@
   }
 
   .content {
-    max-width: 1400px;
+    max-width: 1800px;
     margin: 0 auto;
-    padding: var(--spacing-xl);
+    padding: var(--spacing-md);
   }
 
   .other-view {

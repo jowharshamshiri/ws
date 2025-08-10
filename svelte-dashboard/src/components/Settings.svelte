@@ -835,6 +835,7 @@
   .nav-item {
     display: flex;
     align-items: center;
+    justify-content: flex-start;
     gap: var(--spacing-sm);
     width: 100%;
     padding: var(--spacing-sm);
