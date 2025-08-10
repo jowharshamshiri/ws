@@ -174,17 +174,17 @@ clap = { version = "4.0", features = ["derive"] }`;
 
   function getFileIcon(file) {
     if (file.type === 'folder') {
-      return file.expanded ? '=¬' : '=¡';
+      return file.expanded ? 'üìÇ' : 'üìÅ';
     }
     
     switch (file.language) {
-      case 'rust': return '>Ä';
-      case 'javascript': return '=‹';
-      case 'html': return '<';
-      case 'css': return '<®';
-      case 'markdown': return '=›';
-      case 'toml': return 'ô';
-      default: return '=ƒ';
+      case 'rust': return 'ü¶Ä';
+      case 'javascript': return 'üìú';
+      case 'html': return 'üåê';
+      case 'css': return 'üé®';
+      case 'markdown': return 'üìù';
+      case 'toml': return '‚öôÔ∏è';
+      default: return 'üìÑ';
     }
   }
 
@@ -205,8 +205,8 @@ clap = { version = "4.0", features = ["derive"] }`;
       <h3>Explorer</h3>
       <div class="explorer-actions">
         <button class="action-btn" title="New File">+</button>
-        <button class="action-btn" title="New Folder">=¡</button>
-        <button class="action-btn" title="Refresh">=</button>
+        <button class="action-btn" title="New Folder">üìÅ</button>
+        <button class="action-btn" title="Refresh">üîÑ</button>
       </div>
     </div>
     
@@ -270,25 +270,25 @@ clap = { version = "4.0", features = ["derive"] }`;
     <div class="toolbar">
       <div class="toolbar-group">
         <button class="toolbar-btn primary" on:click={runCode}>
-          ∂ Run
+          ‚ñ∂Ô∏è Run
         </button>
         <button class="toolbar-btn" on:click={debugCode}>
-          = Debug
+          üêõ Debug
         </button>
         <button class="toolbar-btn" on:click={runTests}>
-          >Í Test
+          üß™ Test
         </button>
       </div>
       
       <div class="toolbar-group">
         <button class="toolbar-btn" on:click={toggleAIPanel} class:active={showAIPanel}>
-          > AI Assist
+          ü§ñ AI Assist
         </button>
         <button class="toolbar-btn" title="Format Code">
-          =– Format
+          üìê Format
         </button>
         <button class="toolbar-btn" title="Find in Files">
-          = Search
+          üîç Search
         </button>
       </div>
     </div>
@@ -305,9 +305,9 @@ clap = { version = "4.0", features = ["derive"] }`;
             <span class="tab-icon">{getFileIcon(file)}</span>
             <span class="tab-name">{file.name}</span>
             {#if file.status}
-              <span class="tab-status" style="color: {getStatusColor(file.status)}">œ</span>
+              <span class="tab-status" style="color: {getStatusColor(file.status)}">‚óè</span>
             {/if}
-            <button class="tab-close" on:click|stopPropagation={() => closeFile(index)}>◊</button>
+            <button class="tab-close" on:click|stopPropagation={() => closeFile(index)}>√ó</button>
           </div>
         {/each}
       </div>
@@ -335,9 +335,9 @@ clap = { version = "4.0", features = ["derive"] }`;
             <h3>Welcome to Workspace IDE</h3>
             <p>Select a file from the explorer to start editing</p>
             <div class="quick-actions">
-              <button class="quick-btn">=ƒ New File</button>
-              <button class="quick-btn">=¡ Open Folder</button>
-              <button class="quick-btn">= Quick Open</button>
+              <button class="quick-btn">üìÑ New File</button>
+              <button class="quick-btn">üìÅ Open Folder</button>
+              <button class="quick-btn">üîç Quick Open</button>
             </div>
           </div>
         </div>
@@ -353,7 +353,7 @@ clap = { version = "4.0", features = ["derive"] }`;
             <div class="terminal-tab">Output</div>
             <div class="terminal-tab">Debug Console</div>
           </div>
-          <button class="terminal-close" on:click={() => showTerminal = false}>◊</button>
+          <button class="terminal-close" on:click={() => showTerminal = false}>√ó</button>
         </div>
         <div class="terminal-content">
           <pre>{terminalOutput}</pre>
@@ -370,8 +370,8 @@ clap = { version = "4.0", features = ["derive"] }`;
   {#if showAIPanel}
     <div class="ai-panel">
       <div class="ai-header">
-        <h3>> AI Assistant</h3>
-        <button class="ai-close" on:click={toggleAIPanel}>◊</button>
+        <h3>ü§ñ AI Assistant</h3>
+        <button class="ai-close" on:click={toggleAIPanel}>√ó</button>
       </div>
       
       <div class="ai-suggestions">
@@ -381,7 +381,7 @@ clap = { version = "4.0", features = ["derive"] }`;
             <div class="suggestion-type">{suggestion.type}</div>
             <div class="suggestion-content">{suggestion.content}</div>
             <div class="suggestion-meta">
-              Line {suggestion.line} " {Math.round(suggestion.confidence * 100)}% confidence
+              Line {suggestion.line} ‚Ä¢ {Math.round(suggestion.confidence * 100)}% confidence
             </div>
             <div class="suggestion-actions">
               <button class="suggestion-btn">Apply</button>
@@ -415,16 +415,14 @@ clap = { version = "4.0", features = ["derive"] }`;
   /* File Explorer */
   .file-explorer {
     width: 280px;
-    border-right: 1px solid var(--border-color, #e5e7eb);
+    border-right: 1px solid;
     display: flex;
     flex-direction: column;
-    background: var(--bg-secondary, Canvas);
-    color: var(--text-primary, CanvasText);
   }
 
   .explorer-header {
     padding: 12px 16px;
-    border-bottom: 1px solid var(--border-color, #e5e7eb);
+    border-bottom: 1px solid;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -436,7 +434,6 @@ clap = { version = "4.0", features = ["derive"] }`;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    color: var(--text-secondary, #6b7280);
   }
 
   .explorer-actions {
@@ -447,7 +444,6 @@ clap = { version = "4.0", features = ["derive"] }`;
   .action-btn {
     background: none;
     border: none;
-    color: var(--text-secondary, #6b7280);
     cursor: pointer;
     padding: 4px 6px;
     border-radius: 3px;
@@ -455,27 +451,23 @@ clap = { version = "4.0", features = ["derive"] }`;
   }
 
   .action-btn:hover {
-    background: var(--hover-bg, #f3f4f6);
   }
 
   .search-box {
     padding: 8px 16px;
-    border-bottom: 1px solid var(--border-color, #e5e7eb);
+    border-bottom: 1px solid;
   }
 
   .search-input {
     width: 100%;
     padding: 6px 8px;
-    border: 1px solid var(--border-color, #e5e7eb);
+    border: 1px solid;
     border-radius: 3px;
     font-size: 13px;
-    background: var(--bg-primary, Canvas);
-    color: var(--text-primary, CanvasText);
   }
 
   .search-input:focus {
     outline: none;
-    border-color: var(--accent-color, #3b82f6);
   }
 
   .file-tree {
@@ -491,7 +483,6 @@ clap = { version = "4.0", features = ["derive"] }`;
     padding: 4px 16px;
     background: none;
     border: none;
-    color: var(--text-primary, CanvasText);
     cursor: pointer;
     font-size: 13px;
     text-align: left;
@@ -499,12 +490,12 @@ clap = { version = "4.0", features = ["derive"] }`;
   }
 
   .file-button:hover {
-    background: var(--hover-bg, #f3f4f6);
+    
   }
 
   .file-button.selected {
-    background: var(--accent-bg, #dbeafe);
-    color: var(--accent-color, #3b82f6);
+    
+    
   }
 
   .file-button.child {
@@ -544,8 +535,8 @@ clap = { version = "4.0", features = ["derive"] }`;
     justify-content: space-between;
     align-items: center;
     padding: 8px 16px;
-    border-bottom: 1px solid var(--border-color, #e5e7eb);
-    background: var(--bg-secondary, Canvas);
+    background: Canvas;
+    border-bottom: 1px solid #3c3c3c;
   }
 
   .toolbar-group {
@@ -555,39 +546,39 @@ clap = { version = "4.0", features = ["derive"] }`;
 
   .toolbar-btn {
     padding: 6px 12px;
-    background: var(--bg-primary, Canvas);
-    border: 1px solid var(--border-color, #e5e7eb);
+    
+    
     border-radius: 3px;
-    color: var(--text-primary, CanvasText);
+    
     cursor: pointer;
     font-size: 12px;
     font-weight: 500;
   }
 
   .toolbar-btn:hover {
-    background: var(--hover-bg, #f3f4f6);
+    
   }
 
   .toolbar-btn.primary {
-    background: var(--accent-color, #3b82f6);
-    border-color: var(--accent-color, #3b82f6);
-    color: white;
+    
+    border-
+    
   }
 
   .toolbar-btn.primary:hover {
-    background: var(--accent-hover, #2563eb);
+    
   }
 
   .toolbar-btn.active {
-    background: var(--accent-bg, #dbeafe);
-    border-color: var(--accent-color, #3b82f6);
-    color: var(--accent-color, #3b82f6);
+    
+    border-
+    
   }
 
   .file-tabs {
     display: flex;
-    background: var(--bg-secondary, Canvas);
-    border-bottom: 1px solid var(--border-color, #e5e7eb);
+    background: Canvas;
+    border-bottom: 1px solid #3c3c3c;
     overflow-x: auto;
   }
 
@@ -595,21 +586,20 @@ clap = { version = "4.0", features = ["derive"] }`;
     display: flex;
     align-items: center;
     padding: 8px 12px;
-    border-right: 1px solid var(--border-color, #e5e7eb);
-    background: var(--bg-tertiary, #f9fafb);
+    background: Canvas;
+    border-right: 1px solid #3c3c3c;
     cursor: pointer;
     min-width: 120px;
     font-size: 13px;
-    color: var(--text-secondary, #6b7280);
   }
 
   .file-tab:hover {
-    background: var(--hover-bg, #f3f4f6);
+    
   }
 
   .file-tab.active {
-    background: var(--bg-primary, Canvas);
-    color: var(--text-primary, CanvasText);
+    background: Canvas;
+    
   }
 
   .tab-icon {
@@ -631,7 +621,7 @@ clap = { version = "4.0", features = ["derive"] }`;
   .tab-close {
     background: none;
     border: none;
-    color: var(--text-secondary, #6b7280);
+    
     cursor: pointer;
     padding: 0 4px;
     margin-left: 4px;
@@ -644,7 +634,7 @@ clap = { version = "4.0", features = ["derive"] }`;
   }
 
   .tab-close:hover {
-    background: var(--hover-bg, #f3f4f6);
+    
     border-radius: 3px;
   }
 
@@ -657,16 +647,16 @@ clap = { version = "4.0", features = ["derive"] }`;
   .code-editor {
     flex: 1;
     display: flex;
-    background: var(--bg-primary, Canvas);
+    background: Canvas;
   }
 
   .line-numbers {
-    background: var(--bg-secondary, Canvas);
+    background: Canvas;
     padding: 16px 8px;
-    border-right: 1px solid var(--border-color, #e5e7eb);
+    border-right: 1px solid #3c3c3c;
     min-width: 50px;
     text-align: right;
-    color: var(--text-tertiary, #9ca3af);
+    
     font-size: 13px;
     line-height: 19px;
     user-select: none;
@@ -678,9 +668,9 @@ clap = { version = "4.0", features = ["derive"] }`;
 
   .code-textarea {
     flex: 1;
-    background: var(--bg-primary, Canvas);
+    background: Canvas;
     border: none;
-    color: var(--text-primary, CanvasText);
+    
     padding: 16px;
     font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
     font-size: 13px;
@@ -697,16 +687,16 @@ clap = { version = "4.0", features = ["derive"] }`;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--bg-primary, Canvas);
+    background: Canvas;
   }
 
   .empty-state {
     text-align: center;
-    color: var(--text-secondary, #6b7280);
+    
   }
 
   .empty-state h3 {
-    color: var(--text-primary, CanvasText);
+    
     margin-bottom: 8px;
   }
 
@@ -722,23 +712,23 @@ clap = { version = "4.0", features = ["derive"] }`;
 
   .quick-btn {
     padding: 8px 16px;
-    background: var(--bg-secondary, Canvas);
-    border: 1px solid var(--border-color, #e5e7eb);
+    
+    
     border-radius: 3px;
-    color: var(--text-primary, CanvasText);
+    
     cursor: pointer;
     font-size: 13px;
   }
 
   .quick-btn:hover {
-    background: var(--hover-bg, #f3f4f6);
+    
   }
 
   /* Terminal Panel */
   .terminal-panel {
     height: 200px;
-    border-top: 1px solid var(--border-color, #e5e7eb);
-    background: var(--bg-primary, Canvas);
+    border-top: 1px solid #3c3c3c;
+    background: Canvas;
     display: flex;
     flex-direction: column;
   }
@@ -747,8 +737,8 @@ clap = { version = "4.0", features = ["derive"] }`;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 1px solid var(--border-color, #e5e7eb);
-    background: var(--bg-secondary, Canvas);
+    background: Canvas;
+    border-bottom: 1px solid #3c3c3c;
     padding: 0 16px;
   }
 
@@ -760,18 +750,18 @@ clap = { version = "4.0", features = ["derive"] }`;
     padding: 8px 16px;
     cursor: pointer;
     font-size: 13px;
-    color: var(--text-secondary, #6b7280);
+    
   }
 
   .terminal-tab.active {
-    color: var(--accent-color, #3b82f6);
-    border-bottom: 2px solid var(--accent-color, #3b82f6);
+    
+    border-bottom: 2px solid #007acc;
   }
 
   .terminal-close {
     background: none;
     border: none;
-    color: var(--text-secondary, #6b7280);
+    
     cursor: pointer;
     font-size: 16px;
     padding: 4px;
@@ -785,7 +775,7 @@ clap = { version = "4.0", features = ["derive"] }`;
 
   .terminal-content pre {
     margin: 0;
-    color: var(--text-primary, CanvasText);
+    
     font-family: 'SF Mono', Monaco, monospace;
     font-size: 13px;
     white-space: pre-wrap;
@@ -798,7 +788,7 @@ clap = { version = "4.0", features = ["derive"] }`;
   }
 
   .prompt {
-    color: var(--accent-color, #3b82f6);
+    
     margin-right: 8px;
   }
 
@@ -806,7 +796,7 @@ clap = { version = "4.0", features = ["derive"] }`;
     flex: 1;
     background: transparent;
     border: none;
-    color: var(--text-primary, CanvasText);
+    
     outline: none;
     font-family: 'SF Mono', Monaco, monospace;
     font-size: 13px;
@@ -815,15 +805,15 @@ clap = { version = "4.0", features = ["derive"] }`;
   /* AI Panel */
   .ai-panel {
     width: 320px;
-    border-left: 1px solid var(--border-color, #e5e7eb);
-    background: var(--bg-secondary, Canvas);
+    background: Canvas;
+    border-left: 1px solid #3c3c3c;
     display: flex;
     flex-direction: column;
   }
 
   .ai-header {
     padding: 12px 16px;
-    border-bottom: 1px solid var(--border-color, #e5e7eb);
+    border-bottom: 1px solid #3c3c3c;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -833,13 +823,13 @@ clap = { version = "4.0", features = ["derive"] }`;
     margin: 0;
     font-size: 14px;
     font-weight: 600;
-    color: var(--text-primary, CanvasText);
+    
   }
 
   .ai-close {
     background: none;
     border: none;
-    color: var(--text-secondary, #6b7280);
+    
     cursor: pointer;
     font-size: 16px;
     padding: 4px;
@@ -847,21 +837,21 @@ clap = { version = "4.0", features = ["derive"] }`;
 
   .ai-suggestions {
     padding: 16px;
-    border-bottom: 1px solid var(--border-color, #e5e7eb);
+    border-bottom: 1px solid #3c3c3c;
   }
 
   .ai-suggestions h4 {
     margin: 0 0 12px 0;
     font-size: 13px;
     font-weight: 600;
-    color: var(--text-secondary, #6b7280);
+    
     text-transform: uppercase;
     letter-spacing: 0.5px;
   }
 
   .suggestion-item {
-    background: var(--bg-primary, Canvas);
-    border: 1px solid var(--border-color, #e5e7eb);
+    background: Canvas;
+    
     border-radius: 4px;
     padding: 12px;
     margin-bottom: 8px;
@@ -869,7 +859,7 @@ clap = { version = "4.0", features = ["derive"] }`;
 
   .suggestion-type {
     font-size: 11px;
-    color: var(--accent-color, #3b82f6);
+    
     text-transform: uppercase;
     font-weight: 600;
     margin-bottom: 4px;
@@ -877,14 +867,14 @@ clap = { version = "4.0", features = ["derive"] }`;
 
   .suggestion-content {
     font-size: 13px;
-    color: var(--text-primary, CanvasText);
+    
     margin-bottom: 8px;
     line-height: 1.4;
   }
 
   .suggestion-meta {
     font-size: 11px;
-    color: var(--text-tertiary, #9ca3af);
+    
     margin-bottom: 8px;
   }
 
@@ -895,27 +885,27 @@ clap = { version = "4.0", features = ["derive"] }`;
 
   .suggestion-btn {
     padding: 4px 8px;
-    background: var(--accent-color, #3b82f6);
-    border: 1px solid var(--accent-color, #3b82f6);
+    
+    
     border-radius: 3px;
-    color: white;
+    
     cursor: pointer;
     font-size: 11px;
     font-weight: 500;
   }
 
   .suggestion-btn:hover {
-    background: var(--accent-hover, #2563eb);
+    
   }
 
   .suggestion-btn.secondary {
-    background: transparent;
-    border-color: var(--border-color, #e5e7eb);
-    color: var(--text-secondary, #6b7280);
+    
+    border-
+    
   }
 
   .suggestion-btn.secondary:hover {
-    background: var(--hover-bg, #f3f4f6);
+    
   }
 
   .ai-chat {
@@ -929,7 +919,7 @@ clap = { version = "4.0", features = ["derive"] }`;
     margin: 0 0 12px 0;
     font-size: 13px;
     font-weight: 600;
-    color: var(--text-secondary, #6b7280);
+    
     text-transform: uppercase;
     letter-spacing: 0.5px;
   }
@@ -941,10 +931,10 @@ clap = { version = "4.0", features = ["derive"] }`;
   }
 
   .chat-input textarea {
-    border: 1px solid var(--border-color, #e5e7eb);
-    background: var(--bg-primary, Canvas);
+    
+    
     border-radius: 3px;
-    color: var(--text-primary, CanvasText);
+    
     padding: 8px;
     font-size: 13px;
     font-family: inherit;
@@ -954,22 +944,22 @@ clap = { version = "4.0", features = ["derive"] }`;
 
   .chat-input textarea:focus {
     outline: none;
-    border-color: var(--accent-color, #3b82f6);
+    border-
   }
 
   .send-btn {
     align-self: flex-end;
     padding: 6px 16px;
-    background: var(--accent-color, #3b82f6);
-    border: 1px solid var(--accent-color, #3b82f6);
+    
+    
     border-radius: 3px;
-    color: white;
+    
     cursor: pointer;
     font-size: 12px;
     font-weight: 500;
   }
 
   .send-btn:hover {
-    background: var(--accent-hover, #2563eb);
+    
   }
 </style>

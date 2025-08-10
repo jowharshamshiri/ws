@@ -502,8 +502,7 @@ fn create_router(_state: McpServerState) -> Router<McpServerState> {
         .route("/ws", get(websocket_handler))
         
         // Serve static dashboard files
-        .route("/", get(serve_dashboard))
-        .route("/ade", get(serve_ade))
+        .route("/", get(serve_ade))
         .route("/dashboard/*path", get(serve_static))
         
         .layer(CorsLayer::permissive())
@@ -1365,9 +1364,6 @@ async fn get_dashboard_data(State(state): State<McpServerState>) -> Result<Json<
     Ok(Json(response))
 }
 
-async fn serve_dashboard() -> Result<axum::response::Html<&'static str>, StatusCode> {
-    Ok(axum::response::Html(include_str!("static/dashboard.html")))
-}
 
 async fn serve_ade() -> Result<axum::response::Html<&'static str>, StatusCode> {
     Ok(axum::response::Html(include_str!("static/ade.html")))
@@ -1376,8 +1372,6 @@ async fn serve_ade() -> Result<axum::response::Html<&'static str>, StatusCode> {
 async fn serve_static(Path(path): Path<String>) -> Result<(axum::http::HeaderMap, String), StatusCode> {
     // Basic static file serving - in production, use proper static file server
     let (content, content_type) = match path.as_str() {
-        "app.js" => (include_str!("static/app.js"), "application/javascript"),
-        "style.css" => (include_str!("static/style.css"), "text/css"),
         "ade-app.js" => (include_str!("static/ade-app.js"), "application/javascript"),
         "ade-main.css" => (include_str!("static/ade-main.css"), "text/css"),
         "chart.min.js" => (include_str!("static/chart.min.js"), "application/javascript"),

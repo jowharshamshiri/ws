@@ -6,22 +6,23 @@
   import FeatureManagement from './components/FeatureManagement.svelte';
   import WorkspaceIDE from './components/WorkspaceIDE.svelte';
   import TestingQuality from './components/TestingQuality.svelte';
-
+  import EntityExplorer from './components/EntityExplorer.svelte';
+  import AnalyticsInsights from './components/AnalyticsInsights.svelte';
+  import Settings from './components/Settings.svelte';
+  
   let currentView = 'overview';
-
+  
   function switchView(view) {
     currentView = view;
   }
 </script>
 
-<div class="ade-app">
+<main>
   <Header {currentView} {switchView} />
   
-  <div class="ade-content">
+  <div class="content">
     {#if currentView === 'overview'}
-      <div class="overview-grid">
-        <Overview />
-      </div>
+      <Overview />
     {:else if currentView === 'sessions'}
       <SessionReplay />
     {:else if currentView === 'issues'}
@@ -32,6 +33,12 @@
       <WorkspaceIDE />
     {:else if currentView === 'testing'}
       <TestingQuality />
+    {:else if currentView === 'entities'}
+      <EntityExplorer />
+    {:else if currentView === 'analytics'}
+      <AnalyticsInsights />
+    {:else if currentView === 'settings'}
+      <Settings />
     {:else}
       <div class="other-view">
         <h1>{currentView.charAt(0).toUpperCase() + currentView.slice(1)}</h1>
@@ -39,40 +46,30 @@
       </div>
     {/if}
   </div>
-</div>
+</main>
 
 <style>
-  .ade-app {
-    min-height: 100vh;
-    background: #0a0a0b;
-    color: #ffffff;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  :global(html) {
+    color-scheme: light dark;
   }
 
-  .ade-content {
+  :global(body) {
+    margin: 0;
+    font-family: system-ui, sans-serif;
+  }
+
+  main {
+    min-height: 100vh;
+  }
+
+  .content {
     max-width: 1400px;
     margin: 0 auto;
-    padding: 20px;
-  }
-
-  .overview-grid {
-    margin-top: 20px;
+    padding: var(--spacing-xl);
   }
 
   .other-view {
-    padding: 32px;
+    padding: 2rem;
     text-align: center;
-  }
-
-  .other-view h1 {
-    font-size: 24px;
-    font-weight: 600;
-    color: #111827;
-    margin-bottom: 8px;
-  }
-
-  .other-view p {
-    color: #6b7280;
-    font-size: 16px;
   }
 </style>

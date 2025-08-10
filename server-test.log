@@ -1,6 +1,0 @@
-# To enable ws completions for this session, run:
-fpath=("/Users/bahram/.local/share/zsh/site-functions" $fpath)
-autoload -U compinit && compinit
-# To enable permanently, add the above lines to your ~/.zshrc
-DEBUG: EntityManager::list_notes called
-DEBUG: notes::list_all returned 8 notes

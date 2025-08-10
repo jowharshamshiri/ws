@@ -1,4 +1,4 @@
-   Compiling workspace v0.44.68455 (/Users/bahram/ws/prj/workspace)
+   Compiling workspace v0.46.79711 (/Users/bahram/ws/prj/workspace)
 warning: methods `generate_features_md`, `generate_template_features`, `generate_directives_md`, and `generate_progress_md` are never used
     --> src/mcp_protocol.rs:1527:8
      |
@@ -89,8 +89,8 @@ warning: function `check_context_threshold_startup` is never used
      |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 warning: `workspace` (bin "ws") generated 11 warnings
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 5.17s
-     Running `/Users/bahram/ws/prj/workspace/target/debug/ws mcp-server`
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 23.92s
+     Running `/Users/bahram/ws/prj/workspace/target/debug/ws mcp-server --port 3001`
 # To enable ws completions for this session, run:
 fpath=("/Users/bahram/.local/share/zsh/site-functions" $fpath)
 autoload -U compinit && compinit

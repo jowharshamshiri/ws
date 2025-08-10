@@ -1,0 +1,1025 @@
+<script>
+  import { onMount } from 'svelte';
+
+  let activeSection = 'general';
+  let settings = {
+    general: {
+      projectName: 'Workspace Development Suite',
+      rootDirectory: '/Users/bahram/ws/prj/workspace',
+      version: '0.46.79711',
+      autoSave: true,
+      theme: 'dark',
+      language: 'en'
+    },
+    project: {
+      defaultFeatureState: 'pending',
+      autoGenerateIds: true,
+      enableValidation: true,
+      backupFrequency: 'daily',
+      retentionDays: 30
+    },
+    session: {
+      autoEndThreshold: 95,
+      archiveCompletedSessions: true,
+      sessionTimeout: 8,
+      maxHistoryItems: 100,
+      enableAutoConsolidation: true
+    },
+    ai: {
+      model: 'claude-sonnet-4',
+      temperature: 0.7,
+      enableCodeSuggestions: true,
+      enableAutoCompletion: true,
+      contextWindow: 8000,
+      enableReasoningDisplay: true
+    },
+    notifications: {
+      enableToasts: true,
+      enableSounds: false,
+      enableBadges: true,
+      criticalIssuesOnly: false,
+      sessionEndNotification: true,
+      milestoneNotification: true
+    },
+    privacy: {
+      enableDataCollection: false,
+      enableErrorReporting: true,
+      enablePerformanceMetrics: true,
+      anonymizeData: true,
+      exportPrivateData: false
+    }
+  };
+
+  const sections = [
+    { id: 'general', name: 'General', icon: '⚙️' },
+    { id: 'project', name: 'Project', icon: '📁' },
+    { id: 'session', name: 'Session Management', icon: '💬' },
+    { id: 'ai', name: 'AI Assistant', icon: '🤖' },
+    { id: 'notifications', name: 'Notifications', icon: '🔔' },
+    { id: 'privacy', name: 'Privacy & Security', icon: '🔒' }
+  ];
+
+  let unsavedChanges = false;
+  let saveStatus = 'saved'; // saved, saving, error
+
+  onMount(() => {
+    loadSettings();
+  });
+
+  function loadSettings() {
+    // Load settings from storage
+    console.log('Loading settings...');
+  }
+
+  function selectSection(sectionId) {
+    if (unsavedChanges) {
+      if (!confirm('You have unsaved changes. Continue without saving?')) {
+        return;
+      }
+    }
+    activeSection = sectionId;
+    unsavedChanges = false;
+  }
+
+  function handleSettingChange() {
+    unsavedChanges = true;
+    saveStatus = 'unsaved';
+  }
+
+  async function saveSettings() {
+    saveStatus = 'saving';
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      saveStatus = 'saved';
+      unsavedChanges = false;
+    } catch (error) {
+      saveStatus = 'error';
+    }
+  }
+
+  function resetToDefaults() {
+    if (confirm('Reset all settings to defaults? This cannot be undone.')) {
+      // Reset logic here
+      handleSettingChange();
+    }
+  }
+
+  function exportSettings() {
+    const dataStr = JSON.stringify(settings, null, 2);
+    const dataBlob = new Blob([dataStr], {type: 'application/json'});
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'workspace-settings.json';
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function importSettings(event) {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const importedSettings = JSON.parse(e.target.result);
+          settings = { ...settings, ...importedSettings };
+          handleSettingChange();
+        } catch (error) {
+          alert('Invalid settings file format');
+        }
+      };
+      reader.readAsText(file);
+    }
+  }
+
+  function getSaveStatusColor() {
+    const colors = {
+      saved: '#10b981',
+      saving: '#f59e0b',
+      unsaved: '#ef4444',
+      error: '#ef4444'
+    };
+    return colors[saveStatus] || '#6b7280';
+  }
+
+  function getSaveStatusText() {
+    const texts = {
+      saved: 'All changes saved',
+      saving: 'Saving changes...',
+      unsaved: 'Unsaved changes',
+      error: 'Save failed'
+    };
+    return texts[saveStatus] || 'Unknown status';
+  }
+</script>
+
+<div class="settings">
+  <!-- Header -->
+  <div class="settings-header">
+    <div class="header-left">
+      <h2>Settings & Configuration</h2>
+      <p class="subtitle">Workspace preferences, AI assistant, and privacy settings</p>
+    </div>
+    <div class="header-actions">
+      <div class="save-status" style="color: {getSaveStatusColor()}">
+        <span class="status-indicator"></span>
+        {getSaveStatusText()}
+      </div>
+      <button class="btn-secondary" on:click={exportSettings}>Export Settings</button>
+      <button 
+        class="btn-primary" 
+        on:click={saveSettings}
+        disabled={saveStatus === 'saving' || !unsavedChanges}
+      >
+        {saveStatus === 'saving' ? 'Saving...' : 'Save Changes'}
+      </button>
+    </div>
+  </div>
+
+  <!-- Settings Layout -->
+  <div class="settings-content">
+    <!-- Navigation Sidebar -->
+    <div class="settings-nav">
+      {#each sections as section}
+        <button 
+          class="nav-item {activeSection === section.id ? 'active' : ''}"
+          on:click={() => selectSection(section.id)}
+        >
+          <span class="nav-icon">{section.icon}</span>
+          <span class="nav-name">{section.name}</span>
+          {#if section.id === activeSection && unsavedChanges}
+            <span class="unsaved-indicator">●</span>
+          {/if}
+        </button>
+      {/each}
+    </div>
+
+    <!-- Settings Panels -->
+    <div class="settings-panel">
+      {#if activeSection === 'general'}
+        <div class="panel-content">
+          <h3>General Settings</h3>
+          <p class="panel-description">Workspace configuration and basic preferences</p>
+          
+          <div class="settings-group">
+            <h4>Workspace Configuration</h4>
+            <div class="setting-item">
+              <label for="projectName">Project Name</label>
+              <input 
+                type="text" 
+                id="projectName"
+                bind:value={settings.general.projectName}
+                on:input={handleSettingChange}
+              />
+            </div>
+            
+            <div class="setting-item">
+              <label for="rootDirectory">Root Directory</label>
+              <div class="input-with-button">
+                <input 
+                  type="text" 
+                  id="rootDirectory"
+                  bind:value={settings.general.rootDirectory}
+                  on:input={handleSettingChange}
+                  readonly
+                />
+                <button class="btn-browse">Browse</button>
+              </div>
+            </div>
+            
+            <div class="setting-item">
+              <label for="version">Version</label>
+              <input 
+                type="text" 
+                id="version"
+                bind:value={settings.general.version}
+                readonly
+              />
+            </div>
+          </div>
+
+          <div class="settings-group">
+            <h4>Preferences</h4>
+            <div class="setting-item">
+              <label class="checkbox-label">
+                <input 
+                  type="checkbox" 
+                  bind:checked={settings.general.autoSave}
+                  on:change={handleSettingChange}
+                />
+                Auto-save changes
+              </label>
+              <p class="setting-description">Automatically save changes every few seconds</p>
+            </div>
+            
+            <div class="setting-item">
+              <label for="theme">Theme</label>
+              <select 
+                id="theme"
+                bind:value={settings.general.theme}
+                on:change={handleSettingChange}
+              >
+                <option value="dark">Dark</option>
+                <option value="light">Light</option>
+                <option value="auto">Auto (System)</option>
+              </select>
+            </div>
+            
+            <div class="setting-item">
+              <label for="language">Language</label>
+              <select 
+                id="language"
+                bind:value={settings.general.language}
+                on:change={handleSettingChange}
+              >
+                <option value="en">English</option>
+                <option value="es">Spanish</option>
+                <option value="fr">French</option>
+                <option value="de">German</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+      {:else if activeSection === 'project'}
+        <div class="panel-content">
+          <h3>Project Settings</h3>
+          <p class="panel-description">Feature management and project-specific configuration</p>
+          
+          <div class="settings-group">
+            <h4>Feature Management</h4>
+            <div class="setting-item">
+              <label for="defaultFeatureState">Default Feature State</label>
+              <select 
+                id="defaultFeatureState"
+                bind:value={settings.project.defaultFeatureState}
+                on:change={handleSettingChange}
+              >
+                <option value="pending">Pending</option>
+                <option value="in_progress">In Progress</option>
+                <option value="completed">Completed</option>
+              </select>
+            </div>
+            
+            <div class="setting-item">
+              <label class="checkbox-label">
+                <input 
+                  type="checkbox" 
+                  bind:checked={settings.project.autoGenerateIds}
+                  on:change={handleSettingChange}
+                />
+                Auto-generate feature IDs
+              </label>
+              <p class="setting-description">Automatically assign F#### IDs to new features</p>
+            </div>
+            
+            <div class="setting-item">
+              <label class="checkbox-label">
+                <input 
+                  type="checkbox" 
+                  bind:checked={settings.project.enableValidation}
+                  on:change={handleSettingChange}
+                />
+                Enable validation rules
+              </label>
+              <p class="setting-description">Enforce methodology constraints and validation</p>
+            </div>
+          </div>
+
+          <div class="settings-group">
+            <h4>Data Management</h4>
+            <div class="setting-item">
+              <label for="backupFrequency">Backup Frequency</label>
+              <select 
+                id="backupFrequency"
+                bind:value={settings.project.backupFrequency}
+                on:change={handleSettingChange}
+              >
+                <option value="never">Never</option>
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+              </select>
+            </div>
+            
+            <div class="setting-item">
+              <label for="retentionDays">Data Retention (Days)</label>
+              <input 
+                type="number" 
+                id="retentionDays"
+                bind:value={settings.project.retentionDays}
+                on:input={handleSettingChange}
+                min="1"
+                max="365"
+              />
+            </div>
+          </div>
+        </div>
+
+      {:else if activeSection === 'session'}
+        <div class="panel-content">
+          <h3>Session Management</h3>
+          <p class="panel-description">Session lifecycle and archiving preferences</p>
+          
+          <div class="settings-group">
+            <h4>Session Lifecycle</h4>
+            <div class="setting-item">
+              <label for="autoEndThreshold">Auto-end Threshold (%)</label>
+              <input 
+                type="range" 
+                id="autoEndThreshold"
+                bind:value={settings.session.autoEndThreshold}
+                on:input={handleSettingChange}
+                min="80"
+                max="99"
+              />
+              <span class="range-value">{settings.session.autoEndThreshold}%</span>
+              <p class="setting-description">End session when context usage reaches this threshold</p>
+            </div>
+            
+            <div class="setting-item">
+              <label for="sessionTimeout">Session Timeout (Hours)</label>
+              <input 
+                type="number" 
+                id="sessionTimeout"
+                bind:value={settings.session.sessionTimeout}
+                on:input={handleSettingChange}
+                min="1"
+                max="24"
+              />
+            </div>
+            
+            <div class="setting-item">
+              <label class="checkbox-label">
+                <input 
+                  type="checkbox" 
+                  bind:checked={settings.session.enableAutoConsolidation}
+                  on:change={handleSettingChange}
+                />
+                Enable auto-consolidation
+              </label>
+              <p class="setting-description">Automatically consolidate documentation when sessions end</p>
+            </div>
+          </div>
+
+          <div class="settings-group">
+            <h4>History and Archiving</h4>
+            <div class="setting-item">
+              <label class="checkbox-label">
+                <input 
+                  type="checkbox" 
+                  bind:checked={settings.session.archiveCompletedSessions}
+                  on:change={handleSettingChange}
+                />
+                Archive completed sessions
+              </label>
+              <p class="setting-description">Move completed sessions to archive for better performance</p>
+            </div>
+            
+            <div class="setting-item">
+              <label for="maxHistoryItems">Max History Items</label>
+              <input 
+                type="number" 
+                id="maxHistoryItems"
+                bind:value={settings.session.maxHistoryItems}
+                on:input={handleSettingChange}
+                min="10"
+                max="1000"
+              />
+            </div>
+          </div>
+        </div>
+
+      {:else if activeSection === 'ai'}
+        <div class="panel-content">
+          <h3>AI Assistant Configuration</h3>
+          <p class="panel-description">Model selection, behavior, and capability settings</p>
+          
+          <div class="settings-group">
+            <h4>Model Configuration</h4>
+            <div class="setting-item">
+              <label for="model">AI Model</label>
+              <select 
+                id="model"
+                bind:value={settings.ai.model}
+                on:change={handleSettingChange}
+              >
+                <option value="claude-sonnet-4">Claude Sonnet 4</option>
+                <option value="claude-opus-3">Claude Opus 3</option>
+                <option value="claude-haiku-3">Claude Haiku 3</option>
+              </select>
+            </div>
+            
+            <div class="setting-item">
+              <label for="temperature">Temperature</label>
+              <input 
+                type="range" 
+                id="temperature"
+                bind:value={settings.ai.temperature}
+                on:input={handleSettingChange}
+                min="0"
+                max="1"
+                step="0.1"
+              />
+              <span class="range-value">{settings.ai.temperature}</span>
+              <p class="setting-description">Controls randomness in AI responses (0 = deterministic, 1 = creative)</p>
+            </div>
+            
+            <div class="setting-item">
+              <label for="contextWindow">Context Window Size</label>
+              <input 
+                type="number" 
+                id="contextWindow"
+                bind:value={settings.ai.contextWindow}
+                on:input={handleSettingChange}
+                min="1000"
+                max="200000"
+                step="1000"
+              />
+            </div>
+          </div>
+
+          <div class="settings-group">
+            <h4>AI Features</h4>
+            <div class="setting-item">
+              <label class="checkbox-label">
+                <input 
+                  type="checkbox" 
+                  bind:checked={settings.ai.enableCodeSuggestions}
+                  on:change={handleSettingChange}
+                />
+                Enable code suggestions
+              </label>
+              <p class="setting-description">Show AI-powered code suggestions and completions</p>
+            </div>
+            
+            <div class="setting-item">
+              <label class="checkbox-label">
+                <input 
+                  type="checkbox" 
+                  bind:checked={settings.ai.enableAutoCompletion}
+                  on:change={handleSettingChange}
+                />
+                Enable auto-completion
+              </label>
+              <p class="setting-description">Automatically complete code as you type</p>
+            </div>
+            
+            <div class="setting-item">
+              <label class="checkbox-label">
+                <input 
+                  type="checkbox" 
+                  bind:checked={settings.ai.enableReasoningDisplay}
+                  on:change={handleSettingChange}
+                />
+                Show reasoning steps
+              </label>
+              <p class="setting-description">Display AI reasoning process in session replay</p>
+            </div>
+          </div>
+        </div>
+
+      {:else if activeSection === 'notifications'}
+        <div class="panel-content">
+          <h3>Notification Preferences</h3>
+          <p class="panel-description">Alert types, styles, and delivery preferences</p>
+          
+          <div class="settings-group">
+            <h4>Alert Types</h4>
+            <div class="setting-item">
+              <label class="checkbox-label">
+                <input 
+                  type="checkbox" 
+                  bind:checked={settings.notifications.enableToasts}
+                  on:change={handleSettingChange}
+                />
+                Toast notifications
+              </label>
+              <p class="setting-description">Show popup notifications for important events</p>
+            </div>
+            
+            <div class="setting-item">
+              <label class="checkbox-label">
+                <input 
+                  type="checkbox" 
+                  bind:checked={settings.notifications.enableSounds}
+                  on:change={handleSettingChange}
+                />
+                Sound alerts
+              </label>
+              <p class="setting-description">Play notification sounds</p>
+            </div>
+            
+            <div class="setting-item">
+              <label class="checkbox-label">
+                <input 
+                  type="checkbox" 
+                  bind:checked={settings.notifications.enableBadges}
+                  on:change={handleSettingChange}
+                />
+                Badge indicators
+              </label>
+              <p class="setting-description">Show notification badges on navigation items</p>
+            </div>
+          </div>
+
+          <div class="settings-group">
+            <h4>Notification Events</h4>
+            <div class="setting-item">
+              <label class="checkbox-label">
+                <input 
+                  type="checkbox" 
+                  bind:checked={settings.notifications.criticalIssuesOnly}
+                  on:change={handleSettingChange}
+                />
+                Critical issues only
+              </label>
+              <p class="setting-description">Only notify for critical and high-priority issues</p>
+            </div>
+            
+            <div class="setting-item">
+              <label class="checkbox-label">
+                <input 
+                  type="checkbox" 
+                  bind:checked={settings.notifications.sessionEndNotification}
+                  on:change={handleSettingChange}
+                />
+                Session end notifications
+              </label>
+              <p class="setting-description">Notify when sessions end automatically</p>
+            </div>
+            
+            <div class="setting-item">
+              <label class="checkbox-label">
+                <input 
+                  type="checkbox" 
+                  bind:checked={settings.notifications.milestoneNotification}
+                  on:change={handleSettingChange}
+                />
+                Milestone notifications
+              </label>
+              <p class="setting-description">Notify when milestones are achieved</p>
+            </div>
+          </div>
+        </div>
+
+      {:else if activeSection === 'privacy'}
+        <div class="panel-content">
+          <h3>Privacy & Security Settings</h3>
+          <p class="panel-description">Data handling, encryption, and retention policies</p>
+          
+          <div class="settings-group">
+            <h4>Data Collection</h4>
+            <div class="setting-item">
+              <label class="checkbox-label">
+                <input 
+                  type="checkbox" 
+                  bind:checked={settings.privacy.enableDataCollection}
+                  on:change={handleSettingChange}
+                />
+                Enable usage analytics
+              </label>
+              <p class="setting-description">Allow collection of anonymous usage data for improvements</p>
+            </div>
+            
+            <div class="setting-item">
+              <label class="checkbox-label">
+                <input 
+                  type="checkbox" 
+                  bind:checked={settings.privacy.enableErrorReporting}
+                  on:change={handleSettingChange}
+                />
+                Error reporting
+              </label>
+              <p class="setting-description">Send error reports to help improve stability</p>
+            </div>
+            
+            <div class="setting-item">
+              <label class="checkbox-label">
+                <input 
+                  type="checkbox" 
+                  bind:checked={settings.privacy.enablePerformanceMetrics}
+                  on:change={handleSettingChange}
+                />
+                Performance metrics
+              </label>
+              <p class="setting-description">Share performance data for optimization</p>
+            </div>
+          </div>
+
+          <div class="settings-group">
+            <h4>Data Protection</h4>
+            <div class="setting-item">
+              <label class="checkbox-label">
+                <input 
+                  type="checkbox" 
+                  bind:checked={settings.privacy.anonymizeData}
+                  on:change={handleSettingChange}
+                />
+                Anonymize personal data
+              </label>
+              <p class="setting-description">Remove personally identifiable information from reports</p>
+            </div>
+            
+            <div class="setting-item">
+              <label class="checkbox-label">
+                <input 
+                  type="checkbox" 
+                  bind:checked={settings.privacy.exportPrivateData}
+                  on:change={handleSettingChange}
+                />
+                Include private data in exports
+              </label>
+              <p class="setting-description">Include sensitive data when exporting settings</p>
+            </div>
+          </div>
+
+          <div class="settings-group">
+            <h4>Data Management</h4>
+            <div class="action-buttons">
+              <button class="btn-secondary">Clear All Data</button>
+              <button class="btn-secondary">Export My Data</button>
+              <button class="btn-danger">Delete Account Data</button>
+            </div>
+          </div>
+        </div>
+      {/if}
+    </div>
+  </div>
+
+  <!-- Footer Actions -->
+  <div class="settings-footer">
+    <div class="footer-left">
+      <label for="importFile" class="btn-secondary">Import Settings</label>
+      <input 
+        type="file" 
+        id="importFile" 
+        accept=".json"
+        on:change={importSettings}
+        style="display: none;"
+      />
+      <button class="btn-secondary" on:click={resetToDefaults}>Reset to Defaults</button>
+    </div>
+    <div class="footer-right">
+      <p class="auto-save-note">
+        {#if settings.general.autoSave}
+          Auto-save is enabled. Changes are saved automatically.
+        {:else}
+          Remember to save your changes manually.
+        {/if}
+      </p>
+    </div>
+  </div>
+</div>
+
+<style>
+  .settings {
+    color: #e2e8f0;
+    min-height: 100vh;
+    padding: 1.5rem;
+  }
+
+  .settings-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 2rem;
+  }
+
+  .header-left h2 {
+    color: #f8fafc;
+    font-size: 1.875rem;
+    font-weight: 700;
+    margin: 0 0 0.5rem 0;
+  }
+
+  .subtitle {
+    color: #94a3b8;
+    font-size: 0.875rem;
+    margin: 0;
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .save-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+  }
+
+  .status-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  .btn-primary {
+    background: #8b5cf6;
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    background: #7c3aed;
+  }
+
+  .btn-primary:disabled {
+    background: #6b7280;
+    cursor: not-allowed;
+  }
+
+  .btn-secondary {
+    background: #334155;
+    border: 1px solid #475569;
+    color: #e2e8f0;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background 0.2s;
+  }
+
+  .btn-secondary:hover {
+    background: #475569;
+  }
+
+  .btn-danger {
+    background: #dc2626;
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .btn-danger:hover {
+    background: #b91c1c;
+  }
+
+  .settings-content {
+    display: grid;
+    grid-template-columns: 250px 1fr;
+    gap: 2rem;
+    min-height: 600px;
+  }
+
+  .settings-nav {
+    background: Canvas;
+    border: 1px solid #334155;
+    border-radius: 0.75rem;
+    padding: 1rem;
+    height: fit-content;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    padding: 0.75rem;
+    background: transparent;
+    border: none;
+    border-radius: 0.5rem;
+    color: #e2e8f0;
+    cursor: pointer;
+    transition: background 0.2s;
+    margin-bottom: 0.25rem;
+    text-align: left;
+  }
+
+  .nav-item:hover {
+    background: #334155;
+  }
+
+  .nav-item.active {
+    background: #8b5cf6;
+    color: white;
+  }
+
+  .nav-icon {
+    font-size: 1.125rem;
+  }
+
+  .nav-name {
+    font-weight: 500;
+  }
+
+  .unsaved-indicator {
+    margin-left: auto;
+    color: #fbbf24;
+    font-size: 1.5rem;
+  }
+
+  .settings-panel {
+    background: Canvas;
+    border: 1px solid #334155;
+    border-radius: 0.75rem;
+    overflow: hidden;
+  }
+
+  .panel-content {
+    padding: 2rem;
+  }
+
+  .panel-content h3 {
+    color: #f8fafc;
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0 0 0.5rem 0;
+  }
+
+  .panel-description {
+    color: #94a3b8;
+    font-size: 0.875rem;
+    margin: 0 0 2rem 0;
+  }
+
+  .settings-group {
+    margin-bottom: 2rem;
+  }
+
+  .settings-group:last-child {
+    margin-bottom: 0;
+  }
+
+  .settings-group h4 {
+    color: #f8fafc;
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin: 0 0 1rem 0;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #334155;
+  }
+
+  .setting-item {
+    margin-bottom: 1.5rem;
+  }
+
+  .setting-item:last-child {
+    margin-bottom: 0;
+  }
+
+  .setting-item label {
+    display: block;
+    color: #f8fafc;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+  }
+
+  .checkbox-label {
+    display: flex !important;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+  }
+
+  .checkbox-label input[type="checkbox"] {
+    margin: 0;
+  }
+
+  .setting-item input[type="text"],
+  .setting-item input[type="number"],
+  .setting-item select {
+    width: 100%;
+    padding: 0.75rem;
+    background: #334155;
+    border: 1px solid #475569;
+    border-radius: 0.5rem;
+    color: #e2e8f0;
+    font-size: 0.875rem;
+  }
+
+  .setting-item input[type="text"]:focus,
+  .setting-item input[type="number"]:focus,
+  .setting-item select:focus {
+    outline: none;
+    border-color: #8b5cf6;
+  }
+
+  .setting-item input[type="text"]:read-only {
+    background: Canvas;
+    color: #94a3b8;
+  }
+
+  .input-with-button {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .input-with-button input {
+    flex: 1;
+  }
+
+  .btn-browse {
+    background: #475569;
+    border: 1px solid #64748b;
+    color: #e2e8f0;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    font-size: 0.875rem;
+  }
+
+  .btn-browse:hover {
+    background: #64748b;
+  }
+
+  .setting-item input[type="range"] {
+    width: calc(100% - 50px);
+    margin-right: 0.5rem;
+  }
+
+  .range-value {
+    color: #8b5cf6;
+    font-weight: 600;
+    font-size: 0.875rem;
+    min-width: 40px;
+  }
+
+  .setting-description {
+    color: #94a3b8;
+    font-size: 0.75rem;
+    margin: 0.25rem 0 0 0;
+    line-height: 1.4;
+  }
+
+  .action-buttons {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .settings-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid #334155;
+  }
+
+  .footer-left {
+    display: flex;
+    gap: 1rem;
+  }
+
+  .auto-save-note {
+    color: #94a3b8;
+    font-size: 0.875rem;
+    margin: 0;
+  }
+</style>

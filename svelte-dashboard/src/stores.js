@@ -51,8 +51,8 @@ export function updateFeatureMetrics(features) {
     return; // Keep default values
   }
 
-  const implemented = features.filter(f => f.state === '🟢' || f.state === '🟠').length;
-  const tested = features.filter(f => f.state === '🟢').length;
+  const implemented = features.filter(f => f.state === 'complete' || f.state === 'implemented').length;
+  const tested = features.filter(f => f.state === 'complete').length;
   
   featureMetrics.set({
     total: features.length,
