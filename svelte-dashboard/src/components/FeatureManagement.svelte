@@ -651,7 +651,7 @@
 
 <style>
   .feature-management-container {
-    padding: var(--spacing-xl);
+    padding: var(--spacing-sm);
     min-height: 100vh;
     background: var(--color-background);
   }
@@ -718,10 +718,10 @@
 
   .feature-stats {
     display: flex;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
     flex-wrap: wrap;
-    padding: 1rem;
+    padding: 0.5rem;
   }
 
   .stat-card {
@@ -746,9 +746,9 @@
   .kanban-board {
     display: grid;
     grid-template-columns: repeat(6, 1fr);
-    gap: var(--spacing-lg);
+    gap: var(--spacing-sm);
     min-height: 600px;
-    padding: var(--spacing-xl);
+    padding: var(--spacing-sm);
     background: var(--color-surface-2);
     border-radius: var(--radius-xl);
     border: 1px solid var(--color-border);
@@ -760,7 +760,7 @@
   }
 
   .column-header {
-    padding: 0.75rem 1rem;
+    padding: 0.5rem 0.75rem;
     border-bottom: 2px solid var(--border-color);
     display: flex;
     justify-content: space-between;
@@ -793,10 +793,10 @@
   }
 
   .column-content {
-    padding: var(--spacing-md);
+    padding: var(--spacing-xs);
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-md);
+    gap: var(--spacing-xs);
     max-height: 500px;
     overflow-y: auto;
   }
