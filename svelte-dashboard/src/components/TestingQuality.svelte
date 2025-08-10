@@ -222,8 +222,13 @@
   }
 
   function getStatusColor(status) {
-    // Colors removed - using default styling
-    return '';
+    switch (status) {
+      case 'passed': return 'var(--color-success)';
+      case 'failed': return 'var(--color-error)';
+      case 'skipped': return 'var(--color-warning)';
+      case 'running': return 'var(--color-info)';
+      default: return 'var(--color-text-secondary)';
+    }
   }
 
   function getPassRate(suite) {
@@ -231,8 +236,9 @@
   }
 
   function getCoverageColor(coverage) {
-    // Colors removed - using default styling
-    return '';
+    if (coverage >= 80) return 'var(--color-success)';
+    if (coverage >= 60) return 'var(--color-warning)';
+    return 'var(--color-error)';
   }
 
   function getPerformanceStatus(metric) {
@@ -256,12 +262,12 @@
   }
 </script>
 
-<div class="testing-quality">
+<div class="testing-quality-container card bg-surface">
   <!-- Header -->
   <div class="testing-header">
-    <h1>Testing & Quality</h1>
+    <h1 class="text-primary">Testing & Quality</h1>
     <div class="header-controls">
-      <button class="run-all-btn" on:click={runAllTests} disabled={runningTests}>
+      <button class="btn-primary run-all-btn" on:click={runAllTests} disabled={runningTests}>
         {#if runningTests}
           Running Tests...
         {:else}
@@ -275,15 +281,15 @@
   <div class="suite-overview">
     <div class="overview-stats">
       {#each testSuites as suite}
-        <div class="suite-card" class:running={suite.status === 'running'}>
+        <div class="suite-card card bg-surface-2" class:running={suite.status === 'running'}>
           <div class="suite-header">
             <div class="suite-info">
-              <h3>{suite.name}</h3>
-              <div class="suite-meta">
+              <h3 class="text-primary">{suite.name}</h3>
+              <div class="suite-meta text-secondary">
                 {suite.total} tests • {formatDuration(suite.duration)} • {formatDate(suite.lastRun)}
               </div>
             </div>
-            <button class="run-suite-btn" on:click={() => runTestSuite(suite)} disabled={runningTests}>
+            <button class="btn-secondary run-suite-btn" on:click={() => runTestSuite(suite)} disabled={runningTests}>
               {#if suite.status === 'running'}
                 Running
               {:else}
@@ -296,38 +302,38 @@
             <div class="result-stats">
               <div class="stat passed">
                 <div class="stat-value">{suite.passed}</div>
-                <div class="stat-label">Passed</div>
+                <div class="stat-label text-secondary">Passed</div>
               </div>
               <div class="stat failed">
                 <div class="stat-value">{suite.failed}</div>
-                <div class="stat-label">Failed</div>
+                <div class="stat-label text-secondary">Failed</div>
               </div>
               {#if suite.skipped > 0}
                 <div class="stat skipped">
                   <div class="stat-value">{suite.skipped}</div>
-                  <div class="stat-label">Skipped</div>
+                  <div class="stat-label text-secondary">Skipped</div>
                 </div>
               {/if}
             </div>
             
             <div class="pass-rate">
-              <div class="rate-value" style="color: {getStatusColor(suite.failed === 0 ? 'passed' : 'failed')}">
+              <div class="rate-value status-{suite.failed === 0 ? 'passed' : 'failed'}">
                 {getPassRate(suite)}%
               </div>
-              <div class="rate-label">Pass Rate</div>
+              <div class="rate-label text-secondary">Pass Rate</div>
             </div>
           </div>
 
           {#if suite.coverage > 0}
             <div class="coverage-info">
-              <div class="coverage-label">Code Coverage</div>
+              <div class="coverage-label text-secondary">Code Coverage</div>
               <div class="coverage-bar">
                 <div 
-                  class="coverage-fill" 
-                  style="width: {suite.coverage}%; background: {getCoverageColor(suite.coverage)}"
+                  class="coverage-fill coverage-{suite.coverage >= 80 ? 'good' : suite.coverage >= 60 ? 'medium' : 'poor'}" 
+                  style:width="{suite.coverage}%"
                 ></div>
               </div>
-              <div class="coverage-value" style="color: {getCoverageColor(suite.coverage)}">
+              <div class="coverage-value coverage-{suite.coverage >= 80 ? 'good' : suite.coverage >= 60 ? 'medium' : 'poor'}">
                 {suite.coverage}%
               </div>
             </div>
@@ -342,16 +348,16 @@
     <!-- Test Results Panel -->
     <div class="test-results-panel">
       <div class="panel-header">
-        <h2>Recent Test Results</h2>
+        <h2 class="text-primary">Recent Test Results</h2>
         <div class="result-filters">
-          <select class="filter-select">
+          <select class="filter-select bg-surface border rounded-md">
             <option value="all">All Suites</option>
             <option value="unit">Unit Tests</option>
             <option value="integration">Integration</option>
             <option value="visual">Visual</option>
             <option value="performance">Performance</option>
           </select>
-          <select class="filter-select">
+          <select class="filter-select bg-surface border rounded-md">
             <option value="all">All Results</option>
             <option value="failed">Failed Only</option>
             <option value="passed">Passed Only</option>
@@ -361,14 +367,14 @@
       
       <div class="results-list">
         {#each testResults as result}
-          <div class="result-item" class:failed={result.status === 'failed'}>
+          <div class="result-item card bg-surface border" class:failed={result.status === 'failed'}>
             <div class="result-header">
               <div class="result-info">
-                <div class="result-name">{result.name}</div>
-                <div class="result-file">{result.file}</div>
+                <div class="result-name text-primary">{result.name}</div>
+                <div class="result-file text-secondary">{result.file}</div>
               </div>
               <div class="result-meta">
-                <div class="result-status" style="color: {getStatusColor(result.status)}">
+                <div class="result-status status-{result.status}">
                   {result.status}
                 </div>
                 <div class="result-duration">{result.duration}s</div>
@@ -388,12 +394,12 @@
     <!-- Coverage Panel -->
     <div class="coverage-panel">
       <div class="panel-header">
-        <h2>Code Coverage</h2>
+        <h2 class="text-primary">Code Coverage</h2>
         <div class="coverage-overall">
-          <span class="overall-value" style="color: {getCoverageColor(coverageData.overall)}">
+          <span class="overall-value coverage-{coverageData.overall >= 80 ? 'good' : coverageData.overall >= 60 ? 'medium' : 'poor'}">
             {coverageData.overall}%
           </span>
-          <span class="overall-label">Overall</span>
+          <span class="overall-label text-secondary">Overall</span>
         </div>
       </div>
       
@@ -401,20 +407,20 @@
         {#each coverageData.modules as module}
           <div class="module-item">
             <div class="module-header">
-              <div class="module-name">{module.name}</div>
-              <div class="module-coverage" style="color: {getCoverageColor(module.coverage)}">
+              <div class="module-name text-primary">{module.name}</div>
+              <div class="module-coverage coverage-{module.coverage >= 80 ? 'good' : module.coverage >= 60 ? 'medium' : 'poor'}">
                 {module.coverage}%
               </div>
             </div>
             <div class="module-bar">
               <div 
-                class="module-fill" 
-                style="width: {module.coverage}%; background: {getCoverageColor(module.coverage)}"
+                class="module-fill coverage-bar coverage-{module.coverage >= 80 ? 'good' : module.coverage >= 60 ? 'medium' : 'poor'}" 
+                style:width="{module.coverage}%"
               ></div>
             </div>
             <div class="module-details">
-              <span>{module.lines - module.uncovered}/{module.lines} lines covered</span>
-              <span class="uncovered-count">{module.uncovered} uncovered</span>
+              <span class="text-secondary">{module.lines - module.uncovered}/{module.lines} lines covered</span>
+              <span class="uncovered-count text-tertiary">{module.uncovered} uncovered</span>
             </div>
           </div>
         {/each}
@@ -427,19 +433,19 @@
     <!-- Performance Benchmarks -->
     <div class="performance-panel">
       <div class="panel-header">
-        <h2>Performance Benchmarks</h2>
+        <h2 class="text-primary">Performance Benchmarks</h2>
         <div class="performance-summary">
-          <span class="perf-passed">{performanceMetrics.filter(m => getPerformanceStatus(m) === 'passed').length} passed</span>
-          <span class="perf-failed">{performanceMetrics.filter(m => getPerformanceStatus(m) === 'failed').length} failed</span>
+          <span class="perf-passed text-success">{performanceMetrics.filter(m => getPerformanceStatus(m) === 'passed').length} passed</span>
+          <span class="perf-failed text-error">{performanceMetrics.filter(m => getPerformanceStatus(m) === 'failed').length} failed</span>
         </div>
       </div>
       
       <div class="performance-metrics">
         {#each performanceMetrics as metric}
-          <div class="metric-item" class:failed={getPerformanceStatus(metric) === 'failed'}>
+          <div class="metric-item card bg-surface border" class:failed={getPerformanceStatus(metric) === 'failed'}>
             <div class="metric-header">
-              <div class="metric-name">{metric.test}</div>
-              <div class="metric-status" style="color: {getStatusColor(getPerformanceStatus(metric))}">
+              <div class="metric-name text-primary">{metric.test}</div>
+              <div class="metric-status status-{getPerformanceStatus(metric)}">
                 {getPerformanceStatus(metric)}
               </div>
             </div>
@@ -462,7 +468,7 @@
     <!-- Visual Regression -->
     <div class="visual-panel">
       <div class="panel-header">
-        <h2>Visual Regression Tests</h2>
+        <h2 class="text-primary">Visual Regression Tests</h2>
         <div class="visual-controls">
           <button class="visual-btn">📷 Capture Baselines</button>
           <button class="visual-btn">🔍 Run Visual Tests</button>
@@ -471,13 +477,13 @@
       
       <div class="visual-tests">
         {#each visualTests as test}
-          <div class="visual-item" class:failed={test.status === 'failed'}>
+          <div class="visual-item card bg-surface border" class:failed={test.status === 'failed'}>
             <div class="visual-header">
               <div class="visual-info">
-                <div class="visual-name">{test.name}</div>
-                <div class="visual-meta">{test.browser} • {test.viewport}</div>
+                <div class="visual-name text-primary">{test.name}</div>
+                <div class="visual-meta text-secondary">{test.browser} • {test.viewport}</div>
               </div>
-              <div class="visual-status" style="color: {getStatusColor(test.status)}">
+              <div class="visual-status status-{test.status}">
                 {test.status}
               </div>
             </div>
@@ -501,7 +507,7 @@
     <div class="panel-header">
       <h2>Test History (Last 7 Days)</h2>
       <div class="history-stats">
-        <span class="trend-info">Pass rate trending up 📈</span>
+        <span class="trend-info text-success">Pass rate trending up 📈</span>
       </div>
     </div>
     
@@ -512,12 +518,12 @@
             <div class="bar-container">
               <div 
                 class="bar-passed" 
-                style="height: {(day.passed / day.total) * 100}%"
+                style:height="{(day.passed / day.total) * 100}%"
                 title="{day.passed} passed"
               ></div>
               <div 
                 class="bar-failed" 
-                style="height: {(day.failed / day.total) * 100}%"
+                style:height="{(day.failed / day.total) * 100}%"
                 title="{day.failed} failed"
               ></div>
             </div>
@@ -536,7 +542,7 @@
   {#if showOutput}
     <div class="output-panel">
       <div class="output-header">
-        <h3>Test Output</h3>
+        <h3 class="text-primary">Test Output</h3>
         <button class="close-output" on:click={() => showOutput = false}>×</button>
       </div>
       <div class="output-content">
@@ -553,40 +559,41 @@
 </div>
 
 <style>
-  .testing-quality {
-    padding: 20px;
+  .testing-quality-container {
+    padding: var(--spacing-xl);
     min-height: 100vh;
+    background: var(--color-background);
   }
 
   .testing-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 24px;
+    margin-bottom: var(--spacing-xl);
+    padding: var(--spacing-lg);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
   }
 
   .testing-header h1 {
-    font-size: 28px;
+    font-size: 1.75rem;
     font-weight: 600;
     margin: 0;
   }
 
   .header-controls {
     display: flex;
-    gap: 12px;
+    gap: 0.75rem;
   }
 
   .run-all-btn {
-    border: 1px solid;
-    padding: 8px 16px;
-    border-radius: 6px;
-    font-size: 14px;
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s ease;
-  }
-
-  .run-all-btn:hover:not(:disabled) {
   }
 
   .run-all-btn:disabled {
@@ -596,63 +603,61 @@
 
   /* Suite Overview */
   .suite-overview {
-    margin-bottom: 24px;
+    margin-bottom: var(--spacing-xl);
   }
 
   .overview-stats {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 16px;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: var(--spacing-lg);
   }
 
   .suite-card {
-    border: 1px solid;
-    border-radius: 12px;
-    padding: 20px;
-    transition: all 0.2s ease;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+    transition: all var(--transition-base);
   }
 
   .suite-card.running {
+    border-color: var(--accent-color);
   }
 
   .suite-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 16px;
+    margin-bottom: 1rem;
   }
 
   .suite-info h3 {
-    margin: 0 0 4px 0;
-    font-size: 16px;
+    margin: 0 0 0.25rem 0;
+    font-size: 1rem;
     font-weight: 600;
   }
 
   .suite-meta {
-    font-size: 12px;
+    font-size: 0.75rem;
   }
 
   .run-suite-btn {
-    border: 1px solid;
-    padding: 6px 10px;
-    border-radius: 4px;
+    padding: 0.375rem 0.625rem;
+    border-radius: 0.25rem;
     cursor: pointer;
-    font-size: 12px;
-  }
-
-  .run-suite-btn:hover:not(:disabled) {
+    font-size: 0.75rem;
   }
 
   .suite-results {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 16px;
+    margin-bottom: 1rem;
   }
 
   .result-stats {
     display: flex;
-    gap: 16px;
+    gap: 1rem;
   }
 
   .stat {
@@ -660,24 +665,27 @@
   }
 
   .stat-value {
-    font-size: 18px;
+    font-size: 1.125rem;
     font-weight: 700;
-    margin-bottom: 2px;
+    margin-bottom: 0.125rem;
   }
 
   .stat-label {
-    font-size: 10px;
+    font-size: 0.625rem;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.03em;
   }
 
   .stat.passed .stat-value {
+    color: var(--success-color);
   }
 
   .stat.failed .stat-value {
+    color: var(--error-color);
   }
 
   .stat.skipped .stat-value {
+    color: var(--warning-color);
   }
 
   .pass-rate {
@@ -685,62 +693,65 @@
   }
 
   .rate-value {
-    font-size: 18px;
+    font-size: 1.125rem;
     font-weight: 700;
-    font-family: monospace;
+    font-family: var(--font-mono);
   }
 
   .rate-label {
-    font-size: 10px;
+    font-size: 0.625rem;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.03em;
   }
 
   .coverage-info {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding-top: 12px;
-    border-top: 1px solid;
+    gap: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border-color);
   }
 
   .coverage-label {
-    font-size: 12px;
-    min-width: 80px;
+    font-size: 0.75rem;
+    min-width: 5rem;
   }
 
   .coverage-bar {
     flex: 1;
     height: 6px;
-    border-radius: 3px;
+    border-radius: 0.1875rem;
     overflow: hidden;
+    background-color: var(--bg-surface-3);
   }
 
   .coverage-fill {
     height: 100%;
     transition: width 0.3s ease;
+    background-color: var(--success-color);
   }
 
   .coverage-value {
-    font-size: 12px;
+    font-size: 0.75rem;
     font-weight: 600;
-    font-family: monospace;
-    min-width: 40px;
+    font-family: var(--font-mono);
+    min-width: 2.5rem;
     text-align: right;
   }
 
   /* Main Content */
   .testing-content {
     display: grid;
-    grid-template-columns: 1fr 400px;
-    gap: 20px;
-    margin-bottom: 24px;
+    grid-template-columns: 1fr 420px;
+    gap: var(--spacing-xl);
+    margin-bottom: var(--spacing-xl);
   }
 
   .test-results-panel,
   .coverage-panel {
-    border: 1px solid;
-    border-radius: 12px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
     overflow: hidden;
   }
 
@@ -748,46 +759,46 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 16px 20px;
-    border-bottom: 1px solid;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--border-color);
   }
 
   .panel-header h2 {
     margin: 0;
-    font-size: 16px;
+    font-size: 1rem;
     font-weight: 600;
   }
 
   .result-filters {
     display: flex;
-    gap: 8px;
+    gap: 0.5rem;
   }
 
   .filter-select {
-    border: 1px solid;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 12px;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
   }
 
   .results-list {
     max-height: 400px;
     overflow-y: auto;
-    padding: 16px;
+    padding: 1rem;
   }
 
   .result-item {
-    border: 1px solid;
-    border-radius: 6px;
-    padding: 12px;
-    margin-bottom: 8px;
+    border-radius: 0.375rem;
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
     transition: all 0.2s ease;
   }
 
   .result-item:hover {
+    background-color: var(--hover-bg);
   }
 
   .result-item.failed {
+    border-color: var(--error-color);
   }
 
   .result-header {
@@ -797,129 +808,132 @@
   }
 
   .result-name {
-    font-size: 13px;
+    font-size: 0.8125rem;
     font-weight: 500;
-    margin-bottom: 4px;
+    margin-bottom: 0.25rem;
   }
 
   .result-file {
-    font-size: 11px;
-    font-family: monospace;
+    font-size: 0.6875rem;
+    font-family: var(--font-mono);
   }
 
   .result-meta {
     display: flex;
     flex-direction: column;
     align-items: flex-end;
-    gap: 2px;
+    gap: 0.125rem;
   }
 
   .result-status {
-    font-size: 11px;
+    font-size: 0.6875rem;
     font-weight: 600;
     text-transform: uppercase;
   }
 
   .result-duration {
-    font-size: 10px;
-    font-family: monospace;
+    font-size: 0.625rem;
+    font-family: var(--font-mono);
   }
 
   .result-error {
-    margin-top: 8px;
-    padding: 8px;
-    border-radius: 4px;
+    margin-top: 0.5rem;
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+    background-color: var(--error-bg);
+    border: 1px solid var(--error-color);
   }
 
   .error-message {
-    font-size: 11px;
-    font-family: monospace;
+    font-size: 0.6875rem;
+    font-family: var(--font-mono);
     line-height: 1.4;
+    color: var(--error-color);
   }
 
   .coverage-overall {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 0.5rem;
   }
 
   .overall-value {
-    font-size: 20px;
+    font-size: 1.25rem;
     font-weight: 700;
-    font-family: monospace;
+    font-family: var(--font-mono);
   }
 
   .overall-label {
-    font-size: 12px;
+    font-size: 0.75rem;
   }
 
   .coverage-modules {
-    padding: 16px;
+    padding: 1rem;
   }
 
   .module-item {
-    margin-bottom: 16px;
+    margin-bottom: 1rem;
   }
 
   .module-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 6px;
+    margin-bottom: 0.375rem;
   }
 
   .module-name {
-    font-size: 13px;
+    font-size: 0.8125rem;
     font-weight: 500;
   }
 
   .module-coverage {
-    font-size: 13px;
+    font-size: 0.8125rem;
     font-weight: 600;
-    font-family: monospace;
+    font-family: var(--font-mono);
   }
 
   .module-bar {
     width: 100%;
     height: 6px;
-    border-radius: 3px;
+    border-radius: 0.1875rem;
     overflow: hidden;
-    margin-bottom: 6px;
+    margin-bottom: 0.375rem;
+    background-color: var(--bg-surface-3);
   }
 
   .module-fill {
     height: 100%;
     transition: width 0.3s ease;
+    background-color: var(--success-color);
   }
 
   .module-details {
     display: flex;
     justify-content: space-between;
-    font-size: 11px;
-  }
-
-  .uncovered-count {
+    font-size: 0.6875rem;
   }
 
   /* Performance & Visual */
   .testing-panels {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 20px;
-    margin-bottom: 24px;
+    gap: var(--spacing-xl);
+    margin-bottom: var(--spacing-xl);
   }
 
   .performance-panel,
   .visual-panel {
-    border: 1px solid;
-    border-radius: 12px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
     overflow: hidden;
   }
 
   .performance-summary {
     display: flex;
-    gap: 12px;
-    font-size: 12px;
+    gap: 0.75rem;
+    font-size: 0.75rem;
   }
 
   .perf-passed {
@@ -1052,10 +1066,11 @@
 
   /* History Chart */
   .history-panel {
-    border: 1px solid;
-    border-radius: 12px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl);
     overflow: hidden;
-    margin-bottom: 24px;
+    margin-bottom: var(--spacing-xl);
   }
 
   .history-stats {
@@ -1193,4 +1208,25 @@
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
   }
+
+  /* Test Status Colors */
+  .status-passed { color: var(--color-success); }
+  .status-failed { color: var(--color-error); }
+  .status-skipped { color: var(--color-warning); }
+  .status-running { color: var(--color-info); }
+
+  /* Coverage Colors */
+  .coverage-good { color: var(--color-success); }
+  .coverage-medium { color: var(--color-warning); }
+  .coverage-poor { color: var(--color-error); }
+
+  /* Coverage Fill Colors */
+  .coverage-fill.coverage-good { background-color: var(--color-success); }
+  .coverage-fill.coverage-medium { background-color: var(--color-warning); }
+  .coverage-fill.coverage-poor { background-color: var(--color-error); }
+
+  /* Coverage Bar Colors */
+  .coverage-bar.coverage-good { background-color: var(--color-success); }
+  .coverage-bar.coverage-medium { background-color: var(--color-warning); }
+  .coverage-bar.coverage-poor { background-color: var(--color-error); }
 </style>

@@ -118,13 +118,24 @@
   }
 
   function getStateColor(state) {
-    // Colors removed - using default styling
-    return '';
+    switch (state) {
+      case 'pending': return 'var(--color-text-secondary)';
+      case 'implemented': return 'var(--color-info)';
+      case 'tested': return 'var(--color-warning)';
+      case 'complete': return 'var(--color-success)';
+      case 'issues': return 'var(--color-error)';
+      case 'blocked': return 'var(--color-error)';
+      default: return 'var(--color-text-secondary)';
+    }
   }
 
   function getPriorityColor(priority) {
-    // Colors removed - using default styling
-    return '';
+    switch (priority) {
+      case 'high': return 'var(--color-error)';
+      case 'medium': return 'var(--color-warning)';
+      case 'low': return 'var(--color-success)';
+      default: return 'var(--color-text-secondary)';
+    }
   }
 
   function selectFeature(feature) {
@@ -187,28 +198,28 @@
   });
 </script>
 
-<div class="feature-management">
+<div class="feature-management-container">
   <div class="feature-header">
-    <h1>Feature Management</h1>
+    <h1 class="text-primary">Feature Management</h1>
     
     <div class="header-controls">
       <div class="view-toggle">
         <button 
-          class="toggle-btn" 
+          class="btn-secondary toggle-btn" 
           class:active={viewMode === 'kanban'}
           on:click={() => viewMode = 'kanban'}
         >
           Kanban
         </button>
         <button 
-          class="toggle-btn" 
+          class="btn-secondary toggle-btn" 
           class:active={viewMode === 'timeline'}
           on:click={() => viewMode = 'timeline'}
         >
           Timeline
         </button>
         <button 
-          class="toggle-btn" 
+          class="btn-secondary toggle-btn" 
           class:active={viewMode === 'dependencies'}
           on:click={() => viewMode = 'dependencies'}
         >
@@ -217,103 +228,103 @@
       </div>
       
       <div class="header-filters">
-        <select bind:value={filterCategory} class="category-filter">
+        <select bind:value={filterCategory} class="category-filter bg-surface border rounded-md">
           <option value="all">All Categories</option>
           {#each categories as category}
             <option value={category}>{category}</option>
           {/each}
         </select>
         
-        <button class="create-btn" on:click={createFeature}>
+        <button class="btn-primary create-btn" on:click={createFeature}>
           + Add Feature
         </button>
       </div>
     </div>
   </div>
 
-  <div class="feature-stats">
-    <div class="stat-card">
-      <div class="stat-number">{filteredFeatures.length}</div>
-      <div class="stat-label">Total Features</div>
+  <div class="feature-stats bg-surface-2 rounded-lg">
+    <div class="stat-card card bg-surface">
+      <div class="stat-number text-primary">{filteredFeatures.length}</div>
+      <div class="stat-label text-secondary">Total Features</div>
     </div>
-    <div class="stat-card complete">
-      <div class="stat-number">{featuresByState['complete'].length}</div>
-      <div class="stat-label">Complete</div>
+    <div class="stat-card card bg-surface complete">
+      <div class="stat-number text-success">{featuresByState['complete'].length}</div>
+      <div class="stat-label text-secondary">Complete</div>
     </div>
-    <div class="stat-card progress">
-      <div class="stat-number">{featuresByState['implemented'].length + featuresByState['tested'].length}</div>
-      <div class="stat-label">In Progress</div>
+    <div class="stat-card card bg-surface progress">
+      <div class="stat-number text-info">{featuresByState['implemented'].length + featuresByState['tested'].length}</div>
+      <div class="stat-label text-secondary">In Progress</div>
     </div>
-    <div class="stat-card blocked">
-      <div class="stat-number">{featuresByState['issues'].length + featuresByState['blocked'].length}</div>
-      <div class="stat-label">Issues</div>
+    <div class="stat-card card bg-surface blocked">
+      <div class="stat-number text-error">{featuresByState['issues'].length + featuresByState['blocked'].length}</div>
+      <div class="stat-label text-secondary">Issues</div>
     </div>
-    <div class="stat-card velocity">
-      <div class="stat-number">17.2</div>
-      <div class="stat-label">Features/Week</div>
+    <div class="stat-card card bg-surface velocity">
+      <div class="stat-number text-primary">17.2</div>
+      <div class="stat-label text-secondary">Features/Week</div>
     </div>
   </div>
 
   <!-- F0229: Feature State Legend -->
-  <div class="feature-legend">
-    <h3>Feature State Legend</h3>
+  <div class="feature-legend card bg-surface-2 rounded-lg">
+    <h3 class="text-primary">Feature State Legend</h3>
     <div class="legend-items">
       <div class="legend-item">
-        <div class="legend-icon" style="background-color: {getStateColor('pending')}"></div>
+        <div class="legend-icon state-pending"></div>
         <div class="legend-info">
-          <div class="legend-title">Not Started</div>
-          <div class="legend-desc">Feature not yet implemented</div>
+          <div class="legend-title text-primary">Not Started</div>
+          <div class="legend-desc text-secondary">Feature not yet implemented</div>
         </div>
       </div>
       <div class="legend-item">
-        <div class="legend-icon" style="background-color: {getStateColor('implemented')}"></div>
+        <div class="legend-icon state-implemented"></div>
         <div class="legend-info">
-          <div class="legend-title">In Progress</div>
-          <div class="legend-desc">Implementation in code but lacks dedicated tests</div>
+          <div class="legend-title text-primary">In Progress</div>
+          <div class="legend-desc text-secondary">Implementation in code but lacks dedicated tests</div>
         </div>
       </div>
       <div class="legend-item">
-        <div class="legend-icon" style="background-color: {getStateColor('tested')}"></div>
+        <div class="legend-icon state-tested"></div>
         <div class="legend-info">
-          <div class="legend-title">Testing</div>
-          <div class="legend-desc">Implemented with dedicated FAILING tests</div>
+          <div class="legend-title text-primary">Testing</div>
+          <div class="legend-desc text-secondary">Implemented with dedicated FAILING tests</div>
         </div>
       </div>
       <div class="legend-item">
-        <div class="legend-icon" style="background-color: {getStateColor('complete')}"></div>
+        <div class="legend-icon state-complete"></div>
         <div class="legend-info">
-          <div class="legend-title">Complete</div>
-          <div class="legend-desc">Implemented with dedicated PASSING tests</div>
+          <div class="legend-title text-primary">Complete</div>
+          <div class="legend-desc text-secondary">Implemented with dedicated PASSING tests</div>
         </div>
       </div>
       <div class="legend-item">
-        <div class="legend-icon" style="background-color: {getStateColor('issues')}"></div>
+        <div class="legend-icon state-issues"></div>
         <div class="legend-info">
-          <div class="legend-title">Issues</div>
-          <div class="legend-desc">Has tests but they are fake/tautological/broken</div>
+          <div class="legend-title text-primary">Issues</div>
+          <div class="legend-desc text-secondary">Has tests but they are fake/tautological/broken</div>
         </div>
       </div>
       <div class="legend-item">
-        <div class="legend-icon" style="background-color: {getStateColor('blocked')}"></div>
+        <div class="legend-icon state-blocked"></div>
         <div class="legend-info">
-          <div class="legend-title">Critical Issue</div>
-          <div class="legend-desc">Critical issue requiring immediate attention</div>
+          <div class="legend-title text-primary">Critical Issue</div>
+          <div class="legend-desc text-secondary">Critical issue requiring immediate attention</div>
         </div>
       </div>
     </div>
   </div>
 
   {#if viewMode === 'kanban'}
-    <div class="kanban-board">
+    <div class="kanban-board bg-surface-3 rounded-lg">
       {#each Object.entries(featuresByState) as [state, stateFeatures]}
         <div 
-          class="kanban-column"
+          class="kanban-column card bg-surface"
           on:dragover={handleDragOver}
           on:drop={(e) => handleDrop(e, state)}
         >
-          <div class="column-header" style="border-color: {getStateColor(state)}">
+          <div class="column-header state-{state}">
             <div class="column-title">
-              <div class="state-indicator" style="background-color: {getStateColor(state)}"></div>
+              <div class="state-indicator state-{state}"></div>
               {getStateLabel(state)}
             </div>
             <div class="column-count">{stateFeatures.length}</div>
@@ -322,31 +333,30 @@
           <div class="column-content">
             {#each stateFeatures as feature}
               <div 
-                class="feature-card"
+                class="feature-card card bg-surface-2 border"
                 class:selected={selectedFeature?.id === feature.id}
                 draggable="true"
                 on:dragstart={(e) => handleDragStart(e, feature)}
                 on:click={() => selectFeature(feature)}
               >
                 <div class="card-header">
-                  <div class="feature-id">{feature.id}</div>
+                  <div class="feature-id text-secondary">{feature.id}</div>
                   <div 
-                    class="priority-badge"
-                    style="background-color: {getPriorityColor(feature.priority)}"
+                    class="priority-badge priority-{feature.priority}"
                   >
                     {feature.priority.toUpperCase()}
                   </div>
                 </div>
                 
-                <div class="feature-title">{feature.title}</div>
-                <div class="feature-description">{feature.description}</div>
+                <div class="feature-title text-primary">{feature.title}</div>
+                <div class="feature-description text-secondary">{feature.description}</div>
                 
                 <div class="feature-meta">
                   <div class="feature-progress">
                     <div class="progress-bar">
                       <div 
-                        class="progress-fill" 
-                        style="width: {getCompletionPercentage(feature)}%; background-color: {getStateColor(feature.state)}"
+                        class="progress-fill state-{feature.state}" 
+                        style:width="{getCompletionPercentage(feature)}%"
                       ></div>
                     </div>
                     <span class="progress-text">{getCompletionPercentage(feature)}%</span>
@@ -356,19 +366,19 @@
                   <div class="feature-details">
                     <div class="detail-row">
                       <div class="detail-item">
-                        <span class="detail-label">Effort:</span>
-                        <span class="detail-value">{feature.completedHours}h / {feature.estimatedHours}h</span>
+                        <span class="detail-label text-secondary">Effort:</span>
+                        <span class="detail-value text-primary">{feature.completedHours}h / {feature.estimatedHours}h</span>
                       </div>
                       {#if feature.assignee}
                         <div class="detail-item">
-                          <span class="detail-label">Assignee:</span>
-                          <span class="detail-value">{feature.assignee}</span>
+                          <span class="detail-label text-secondary">Assignee:</span>
+                          <span class="detail-value text-primary">{feature.assignee}</span>
                         </div>
                       {/if}
                     </div>
                     {#if feature.category}
                       <div class="detail-row">
-                        <div class="category-badge">{feature.category}</div>
+                        <div class="category-badge bg-surface-3 text-secondary rounded-md">{feature.category}</div>
                       </div>
                     {/if}
                   </div>
@@ -401,13 +411,13 @@
       {/each}
     </div>
   {:else if viewMode === 'dependencies'}
-    <div class="dependencies-view">
+    <div class="dependencies-view card bg-surface rounded-lg">
       <div class="graph-container">
         <div class="graph-header">
           <h3>Feature Dependencies Graph</h3>
           <div class="graph-controls">
-            <button class="graph-btn">Reset View</button>
-            <button class="graph-btn">Auto Layout</button>
+            <button class="btn-secondary graph-btn">Reset View</button>
+            <button class="btn-secondary graph-btn">Auto Layout</button>
           </div>
         </div>
         
@@ -426,10 +436,9 @@
                   cx="0"
                   cy="0" 
                   r="30"
-                  fill={getStateColor(feature.state)}
-                  stroke={selectedFeature?.id === feature.id ? '#9b59d0' : '#333'}
-                  stroke-width={selectedFeature?.id === feature.id ? '3' : '2'}
-                  class="node-circle"
+                  fill="var(--color-text-secondary)" 
+                  class="node-circle state-{feature.state}" 
+                  class:selected={selectedFeature?.id === feature.id}
                 />
                 
                 <!-- Feature ID -->
@@ -437,7 +446,7 @@
                   x="0"
                   y="-5"
                   text-anchor="middle"
-                  fill="#fff"
+                  fill="var(--color-text-inverse)"
                   font-size="8"
                   font-weight="700"
                   font-family="monospace"
@@ -450,8 +459,9 @@
                   cx="18"
                   cy="-18"
                   r="6"
-                  fill={getPriorityColor(feature.priority)}
-                  stroke="#000"
+                  fill="var(--color-text-secondary)" 
+                  class="priority-fill priority-{feature.priority}"
+                  stroke="var(--color-border)"
                   stroke-width="1"
                 />
                 
@@ -460,7 +470,7 @@
                   x="0"
                   y="50"
                   text-anchor="middle"
-                  fill="#aaa"
+                  fill="var(--color-text-tertiary)"
                   font-size="10"
                   font-weight="500"
                 >
@@ -473,7 +483,7 @@
                   y="20"
                   width="50"
                   height="4"
-                  fill="rgba(255, 255, 255, 0.1)"
+                  fill="var(--color-bg-surface-3)"
                   rx="2"
                 />
                 <rect
@@ -481,7 +491,8 @@
                   y="20"
                   width="{getCompletionPercentage(feature) / 2}"
                   height="4"
-                  fill={getStateColor(feature.state)}
+                  fill="var(--color-text-secondary)" 
+                  class="progress-fill state-{feature.state}"
                   rx="2"
                 />
               </g>
@@ -497,7 +508,7 @@
                       y1={100 + Math.floor(j / 5) * 120}
                       x2={120 + (i % 5) * 160}
                       y2={100 + Math.floor(i / 5) * 120}
-                      stroke="#666"
+                      stroke="var(--color-border)"
                       stroke-width="2"
                       stroke-dasharray="5,5"
                       marker-end="url(#arrowhead)"
@@ -509,8 +520,8 @@
                       cx={(120 + (j % 5) * 160 + 120 + (i % 5) * 160) / 2}
                       cy={(100 + Math.floor(j / 5) * 120 + 100 + Math.floor(i / 5) * 120) / 2}
                       r="3"
-                      fill="#f59e0b"
-                      stroke="#333"
+                      fill="var(--color-warning)"
+                      stroke="var(--color-border)"
                       stroke-width="1"
                     />
                   {/if}
@@ -520,7 +531,7 @@
             
             <defs>
               <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-                <polygon points="0 0, 10 3.5, 0 7" fill="#666" />
+                <polygon points="0 0, 10 3.5, 0 7" fill="var(--color-border)" />
               </marker>
             </defs>
           </svg>
@@ -556,9 +567,9 @@
       </div>
     </div>
   {:else if viewMode === 'timeline'}
-    <div class="timeline-view">
+    <div class="timeline-view card bg-surface rounded-lg">
       <div class="velocity-chart">
-        <h3>Implementation Velocity</h3>
+        <h3 class="text-primary">Implementation Velocity</h3>
         <div class="chart-container">
           {#each velocityData as week}
             <div class="velocity-bar">
@@ -574,9 +585,9 @@
         
         <div class="completion-prediction">
           <div class="prediction-card">
-            <div class="prediction-title">Estimated Completion</div>
-            <div class="prediction-date">2 weeks</div>
-            <div class="prediction-confidence">85% confidence</div>
+            <div class="prediction-title text-secondary">Estimated Completion</div>
+            <div class="prediction-date text-primary">2 weeks</div>
+            <div class="prediction-confidence text-secondary">85% confidence</div>
           </div>
         </div>
       </div>
@@ -586,28 +597,28 @@
 
 <!-- Feature Creation Dialog -->
 {#if showCreateDialog}
-  <div class="dialog-overlay" on:click={closeCreateDialog}>
-    <div class="dialog" on:click|stopPropagation>
+  <div class="dialog-overlay bg-surface-3" on:click={closeCreateDialog}>
+    <div class="dialog card bg-surface rounded-lg" on:click|stopPropagation>
       <div class="dialog-header">
-        <h3>Add New Feature</h3>
-        <button class="close-btn" on:click={closeCreateDialog}>×</button>
+        <h3 class="text-primary">Add New Feature</h3>
+        <button class="close-btn text-secondary" on:click={closeCreateDialog}>×</button>
       </div>
       
       <div class="dialog-content">
         <div class="form-group">
-          <label>Feature Title</label>
-          <input type="text" placeholder="Enter feature title..." />
+          <label class="text-secondary">Feature Title</label>
+          <input type="text" class="bg-surface border rounded-md" placeholder="Enter feature title..." />
         </div>
         
         <div class="form-group">
-          <label>Description</label>
-          <textarea placeholder="Describe the feature..."></textarea>
+          <label class="text-secondary">Description</label>
+          <textarea class="bg-surface border rounded-md" placeholder="Describe the feature..."></textarea>
         </div>
         
         <div class="form-row">
           <div class="form-group">
-            <label>Category</label>
-            <select>
+            <label class="text-secondary">Category</label>
+            <select class="bg-surface border rounded-md">
               <option value="ADE Interface">ADE Interface</option>
               <option value="Core">Core</option>
               <option value="Analytics">Analytics</option>
@@ -615,8 +626,8 @@
           </div>
           
           <div class="form-group">
-            <label>Priority</label>
-            <select>
+            <label class="text-secondary">Priority</label>
+            <select class="bg-surface border rounded-md">
               <option value="high">High</option>
               <option value="medium">Medium</option>
               <option value="low">Low</option>
@@ -625,238 +636,233 @@
         </div>
         
         <div class="form-group">
-          <label>Estimated Hours</label>
-          <input type="number" min="1" max="100" value="8" />
+          <label class="text-secondary">Estimated Hours</label>
+          <input type="number" class="bg-surface border rounded-md" min="1" max="100" value="8" />
         </div>
       </div>
       
       <div class="dialog-actions">
-        <button class="cancel-btn" on:click={closeCreateDialog}>Cancel</button>
-        <button class="create-btn">Create Feature</button>
+        <button class="btn-secondary cancel-btn" on:click={closeCreateDialog}>Cancel</button>
+        <button class="btn-primary create-btn">Create Feature</button>
       </div>
     </div>
   </div>
 {/if}
 
 <style>
-  .feature-management {
-    padding: 20px;
+  .feature-management-container {
+    padding: var(--spacing-xl);
     min-height: 100vh;
+    background: var(--color-background);
   }
 
   .feature-header {
-    margin-bottom: 24px;
+    margin-bottom: var(--space-6);
   }
 
   .feature-header h1 {
-    font-size: 28px;
-    font-weight: 600;
-    margin: 0 0 16px 0;
+    font-size: var(--text-xl);
+    font-weight: var(--weight-semibold);
+    margin: 0 0 var(--space-4) 0;
   }
 
   .header-controls {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 20px;
+    gap: 1.25rem;
   }
 
   .view-toggle {
     display: flex;
-    border-radius: 6px;
-    padding: 2px;
+    border-radius: 0.375rem;
+    padding: 0.125rem;
+    background-color: var(--bg-surface-2);
+    border: 1px solid var(--border-color);
   }
 
   .toggle-btn {
-    padding: 6px 12px;
+    padding: 0.375rem 0.75rem;
     background: none;
     border: none;
-    border-radius: 4px;
-    font-size: 12px;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
     cursor: pointer;
     transition: all 0.2s ease;
   }
 
   .toggle-btn.active {
+    background-color: var(--accent-color);
+    color: white;
   }
 
   .header-filters {
     display: flex;
-    gap: 12px;
+    gap: 0.75rem;
     align-items: center;
   }
 
   .category-filter {
-    border: 1px solid;
-    padding: 6px 10px;
-    border-radius: 4px;
-    font-size: 12px;
+    padding: 0.375rem 0.625rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
   }
 
   .create-btn {
-    border: 1px solid;
-    padding: 6px 12px;
-    border-radius: 4px;
-    font-size: 12px;
+    padding: 0.375rem 0.75rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
     cursor: pointer;
     transition: all 0.2s ease;
   }
 
-  .create-btn:hover {
-  }
-
   .feature-stats {
     display: flex;
-    gap: 16px;
-    margin-bottom: 24px;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
     flex-wrap: wrap;
+    padding: 1rem;
   }
 
   .stat-card {
-    border: 1px solid;
-    border-radius: 8px;
-    padding: 16px;
-    min-width: 100px;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    min-width: 6.25rem;
     text-align: center;
   }
 
-  .stat-card.complete {
-  }
-
-  .stat-card.progress {
-  }
-
-  .stat-card.blocked {
-  }
-
-  .stat-card.velocity {
-  }
-
   .stat-number {
-    font-size: 20px;
+    font-size: 1.25rem;
     font-weight: 700;
-    margin-bottom: 4px;
+    margin-bottom: 0.25rem;
   }
-
-  .stat-card.complete .stat-number { }
-  .stat-card.progress .stat-number { }
-  .stat-card.blocked .stat-number { }
-  .stat-card.velocity .stat-number { }
 
   .stat-label {
-    font-size: 11px;
+    font-size: 0.6875rem;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.03em;
   }
 
   .kanban-board {
     display: grid;
     grid-template-columns: repeat(6, 1fr);
-    gap: 16px;
+    gap: var(--spacing-lg);
     min-height: 600px;
+    padding: var(--spacing-xl);
+    background: var(--color-surface-2);
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--color-border);
   }
 
   .kanban-column {
-    border: 1px solid;
-    border-radius: 12px;
+    border-radius: 0.75rem;
     overflow: hidden;
   }
 
   .column-header {
-    padding: 12px 16px;
-    border-bottom: 2px solid;
+    padding: 0.75rem 1rem;
+    border-bottom: 2px solid var(--border-color);
     display: flex;
     justify-content: space-between;
     align-items: center;
+    background-color: var(--bg-surface-2);
   }
 
   .column-title {
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: 13px;
+    gap: 0.5rem;
+    font-size: 0.8125rem;
     font-weight: 600;
   }
 
   .state-indicator {
-    width: 8px;
-    height: 8px;
+    width: 0.5rem;
+    height: 0.5rem;
     border-radius: 50%;
-    min-width: 8px;
+    min-width: 0.5rem;
   }
 
   .column-count {
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 11px;
+    padding: 0.125rem 0.5rem;
+    border-radius: 0.75rem;
+    font-size: 0.6875rem;
     font-weight: 600;
+    background-color: var(--bg-surface-3);
+    color: var(--text-secondary);
   }
 
   .column-content {
-    padding: 12px;
+    padding: var(--spacing-md);
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: var(--spacing-md);
     max-height: 500px;
     overflow-y: auto;
   }
 
   .feature-card {
-    border: 1px solid;
-    border-radius: 8px;
-    padding: 12px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all var(--transition-base);
   }
 
   .feature-card:hover {
+    background-color: var(--hover-bg);
   }
 
   .feature-card.selected {
+    border-color: var(--accent-color);
+    background-color: var(--accent-bg);
   }
 
   .card-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 8px;
+    margin-bottom: 0.5rem;
   }
 
   .feature-id {
-    font-size: 11px;
+    font-size: 0.6875rem;
     font-weight: 600;
-    font-family: monospace;
+    font-family: var(--font-mono);
   }
 
   .priority-badge {
-    padding: 1px 6px;
-    border-radius: 8px;
-    font-size: 9px;
+    padding: 0.0625rem 0.375rem;
+    border-radius: 0.5rem;
+    font-size: 0.5625rem;
     font-weight: 600;
+    background-color: var(--bg-surface-3);
+    color: var(--text-secondary);
   }
 
   .feature-title {
-    font-size: 13px;
+    font-size: 0.8125rem;
     font-weight: 600;
-    margin-bottom: 4px;
+    margin-bottom: 0.25rem;
     line-height: 1.3;
   }
 
   .feature-description {
-    font-size: 11px;
+    font-size: 0.6875rem;
     line-height: 1.4;
-    margin-bottom: 8px;
+    margin-bottom: 0.5rem;
   }
 
   .feature-meta {
-    margin-bottom: 8px;
+    margin-bottom: 0.5rem;
   }
 
   .feature-progress {
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin-bottom: 6px;
+    gap: 0.5rem;
+    margin-bottom: 0.375rem;
   }
 
   .progress-bar {
@@ -864,58 +870,68 @@
     height: 4px;
     border-radius: 2px;
     overflow: hidden;
+    background-color: var(--bg-surface-3);
   }
 
   .progress-fill {
     height: 100%;
     transition: width 0.3s ease;
+    background-color: var(--success-color);
   }
 
   .progress-text {
-    font-size: 10px;
+    font-size: 0.625rem;
     font-weight: 600;
-    min-width: 30px;
+    min-width: 1.875rem;
   }
 
   .feature-tags {
     display: flex;
-    gap: 4px;
+    gap: 0.25rem;
     flex-wrap: wrap;
   }
 
   .tag {
-    padding: 1px 4px;
-    border-radius: 8px;
-    font-size: 9px;
+    padding: 0.0625rem 0.25rem;
+    border-radius: 0.5rem;
+    font-size: 0.5625rem;
     font-weight: 500;
+    background-color: var(--bg-surface-3);
+    color: var(--text-secondary);
   }
 
   .tag-more {
-    font-size: 9px;
+    font-size: 0.5625rem;
+    color: var(--text-tertiary);
   }
 
   .dependencies {
-    font-size: 10px;
-    border-top: 1px solid;
-    padding-top: 6px;
-    margin-top: 6px;
+    font-size: 0.625rem;
+    border-top: 1px solid var(--border-color);
+    padding-top: 0.375rem;
+    margin-top: 0.375rem;
   }
 
   .dep-label {
-    margin-right: 4px;
+    margin-right: 0.25rem;
+    color: var(--text-secondary);
   }
 
   .dependency {
-    margin-right: 4px;
+    margin-right: 0.25rem;
+    color: var(--text-primary);
+    font-family: var(--font-mono);
   }
 
   .dep-more {
+    color: var(--text-tertiary);
   }
 
   .dependencies-view {
-    border: 1px solid;
-    border-radius: 12px;
-    padding: 20px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    padding: var(--spacing-xl);
   }
 
   .graph-container {
@@ -953,9 +969,10 @@
   }
 
   .timeline-view {
-    border: 1px solid;
-    border-radius: 12px;
-    padding: 20px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    padding: var(--spacing-xl);
   }
 
   .velocity-chart h3 {
@@ -1120,41 +1137,42 @@
 
   /* F0229: Feature State Legend Styles */
   .feature-legend {
-    border: 1px solid;
-    border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 24px;
+    border-radius: 0.75rem;
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
   }
 
   .feature-legend h3 {
-    margin: 0 0 16px 0;
-    font-size: 18px;
+    margin: 0 0 1rem 0;
+    font-size: 1.125rem;
     font-weight: 600;
   }
 
   .legend-items {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 12px;
+    gap: 0.75rem;
   }
 
   .legend-item {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 8px;
-    border-radius: 6px;
+    gap: 0.75rem;
+    padding: 0.5rem;
+    border-radius: 0.375rem;
     transition: background 0.2s ease;
   }
 
   .legend-item:hover {
+    background-color: var(--hover-bg);
   }
 
   .legend-icon {
-    width: 12px;
-    height: 12px;
+    width: 0.75rem;
+    height: 0.75rem;
     border-radius: 50%;
-    min-width: 12px;
+    min-width: 0.75rem;
+    background-color: var(--accent-color);
   }
 
   .legend-info {
@@ -1162,13 +1180,13 @@
   }
 
   .legend-title {
-    font-size: 12px;
+    font-size: 0.75rem;
     font-weight: 600;
-    margin-bottom: 2px;
+    margin-bottom: 0.125rem;
   }
 
   .legend-desc {
-    font-size: 11px;
+    font-size: 0.6875rem;
     line-height: 1.3;
   }
 
@@ -1280,7 +1298,58 @@
 
   .dependency-graph {
     position: relative;
-    border-radius: 8px;
+    border-radius: var(--radius-lg);
     overflow: hidden;
   }
+
+  /* State-specific colors for legend icons */
+  .legend-icon.state-pending { background-color: var(--color-text-secondary); }
+  .legend-icon.state-implemented { background-color: var(--color-info); }
+  .legend-icon.state-tested { background-color: var(--color-warning); }
+  .legend-icon.state-complete { background-color: var(--color-success); }
+  .legend-icon.state-issues { background-color: var(--color-error); }
+  .legend-icon.state-blocked { background-color: var(--color-error); }
+
+  /* State-specific colors for indicators */
+  .state-indicator.state-pending { background-color: var(--color-text-secondary); }
+  .state-indicator.state-implemented { background-color: var(--color-info); }
+  .state-indicator.state-tested { background-color: var(--color-warning); }
+  .state-indicator.state-complete { background-color: var(--color-success); }
+  .state-indicator.state-issues { background-color: var(--color-error); }
+  .state-indicator.state-blocked { background-color: var(--color-error); }
+
+  /* Priority-specific colors */
+  .priority-badge.priority-high { background-color: var(--color-error); color: var(--color-text-inverse); }
+  .priority-badge.priority-medium { background-color: var(--color-warning); color: var(--color-text-inverse); }
+  .priority-badge.priority-low { background-color: var(--color-success); color: var(--color-text-inverse); }
+
+  /* Progress fill state colors */
+  .progress-fill.state-pending { background-color: var(--color-text-secondary); }
+  .progress-fill.state-implemented { background-color: var(--color-info); }
+  .progress-fill.state-tested { background-color: var(--color-warning); }
+  .progress-fill.state-complete { background-color: var(--color-success); }
+  .progress-fill.state-issues { background-color: var(--color-error); }
+  .progress-fill.state-blocked { background-color: var(--color-error); }
+
+  /* SVG Node colors */
+  .node-circle.state-pending { fill: var(--color-text-secondary); }
+  .node-circle.state-implemented { fill: var(--color-info); }
+  .node-circle.state-tested { fill: var(--color-warning); }
+  .node-circle.state-complete { fill: var(--color-success); }
+  .node-circle.state-issues { fill: var(--color-error); }
+  .node-circle.state-blocked { fill: var(--color-error); }
+  .node-circle.selected { stroke: var(--color-accent); stroke-width: 3; }
+
+  /* SVG Priority colors */
+  .priority-fill.priority-high { fill: var(--color-error); }
+  .priority-fill.priority-medium { fill: var(--color-warning); }
+  .priority-fill.priority-low { fill: var(--color-success); }
+
+  /* Column header state borders */
+  .column-header.state-pending { border-color: var(--color-text-secondary); }
+  .column-header.state-implemented { border-color: var(--color-info); }
+  .column-header.state-tested { border-color: var(--color-warning); }
+  .column-header.state-complete { border-color: var(--color-success); }
+  .column-header.state-issues { border-color: var(--color-error); }
+  .column-header.state-blocked { border-color: var(--color-error); }
 </style>

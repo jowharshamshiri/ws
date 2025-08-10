@@ -13,11 +13,11 @@
   ];
 
   const metrics = [
-    { id: 'velocity', name: 'Development Velocity', icon: '🚀' },
-    { id: 'quality', name: 'Code Quality', icon: '⭐' },
-    { id: 'ai_effectiveness', name: 'AI Effectiveness', icon: '🤖' },
-    { id: 'completion_time', name: 'Completion Time', icon: '⏱️' },
-    { id: 'resource_usage', name: 'Resource Usage', icon: '📊' }
+    { id: 'velocity', name: 'Development Velocity', icon: 'V' },
+    { id: 'quality', name: 'Code Quality', icon: 'Q' },
+    { id: 'ai_effectiveness', name: 'AI Effectiveness', icon: 'A' },
+    { id: 'completion_time', name: 'Completion Time', icon: 'T' },
+    { id: 'resource_usage', name: 'Resource Usage', icon: 'R' }
   ];
 
   // Mock analytics data
@@ -137,32 +137,32 @@
   }
 
   function getTrendColor(trend) {
-    return trend === 'up' ? 'var(--success-color, #10b981)' : trend === 'down' ? 'var(--error-color, #ef4444)' : 'var(--text-secondary, #6b7280)';
+    return trend === 'up' ? 'var(--color-success)' : trend === 'down' ? 'var(--color-error)' : 'var(--color-text-secondary)';
   }
 
   function getStatusColor(status) {
     const colors = {
-      excellent: 'var(--success-color, #10b981)',
-      good: 'var(--warning-color, #f59e0b)',
-      fair: 'var(--error-color, #ef4444)',
-      poor: 'var(--error-color, #ef4444)'
+      excellent: 'var(--color-success)',
+      good: 'var(--color-warning)',
+      fair: 'var(--color-error)',
+      poor: 'var(--color-error)'
     };
-    return colors[status] || 'var(--text-secondary, #6b7280)';
+    return colors[status] || 'var(--color-text-secondary)';
   }
 </script>
 
-<div class="analytics-insights">
+<div class="analytics-insights-container card bg-surface">
   <!-- Header -->
   <div class="analytics-header">
     <div class="header-left">
-      <h2>Analytics & Insights</h2>
-      <p class="subtitle">Development metrics, AI effectiveness, and performance predictions</p>
+      <h2 class="text-primary">Analytics & Insights</h2>
+      <p class="subtitle text-secondary">Development metrics, AI effectiveness, and performance predictions</p>
     </div>
     <div class="header-controls">
       <div class="timeframe-selector">
         {#each timeframes as timeframe}
           <button 
-            class="timeframe-btn {selectedTimeframe === timeframe.id ? 'active' : ''}"
+            class="btn-secondary timeframe-btn {selectedTimeframe === timeframe.id ? 'active' : ''}"
             on:click={() => selectTimeframe(timeframe.id)}
           >
             {timeframe.name}
@@ -176,7 +176,7 @@
   <div class="metric-navigation">
     {#each metrics as metric}
       <button 
-        class="metric-btn {selectedMetric === metric.id ? 'active' : ''}"
+        class="btn-secondary metric-btn {selectedMetric === metric.id ? 'active' : ''}"
         on:click={() => selectMetric(metric.id)}
       >
         <span class="metric-icon">{metric.icon}</span>
@@ -189,18 +189,18 @@
   <div class="analytics-content">
     <!-- Primary Metrics Dashboard -->
     <div class="metrics-overview">
-      <div class="primary-metric">
+      <div class="primary-metric card bg-surface-2">
         <div class="metric-header">
-          <h3>{metrics.find(m => m.id === selectedMetric)?.name}</h3>
-          <button class="chart-toggle" on:click={toggleChartMode}>
+          <h3 class="text-primary">{metrics.find(m => m.id === selectedMetric)?.name}</h3>
+          <button class="btn-secondary chart-toggle" on:click={toggleChartMode}>
             {chartMode === 'overview' ? 'Detailed' : 'Overview'}
           </button>
         </div>
         
         <div class="metric-value">
-          <span class="current-value">{currentData.current}</span>
-          <span class="metric-unit">{currentData.unit}</span>
-          <div class="trend-indicator" style="color: {getTrendColor(currentData.trend)}">
+          <span class="current-value text-primary">{currentData.current}</span>
+          <span class="metric-unit text-secondary">{currentData.unit}</span>
+          <div class="trend-indicator trend-{currentData.trend}">
             <span class="trend-icon">{getTrendIcon(currentData.trend)}</span>
             <span class="trend-change">
               {Math.abs(((currentData.current - currentData.previous) / currentData.previous) * 100).toFixed(1)}%
@@ -227,15 +227,15 @@
       </div>
 
       <!-- Secondary Metrics Grid -->
-      <div class="secondary-metrics">
+      <div class="secondary-metrics card bg-surface-2">
         {#if selectedMetric === 'velocity'}
           <div class="metric-breakdown">
-            <h4>Feature Breakdown</h4>
+            <h4 class="text-primary">Feature Breakdown</h4>
             {#each currentData.breakdown as item}
               <div class="breakdown-item">
-                <span class="breakdown-label">{item.category}</span>
-                <span class="breakdown-count">{item.count}</span>
-                <span class="breakdown-change" style="color: {item.change > 0 ? 'var(--success-color, #10b981)' : 'var(--error-color, #ef4444)'}">
+                <span class="breakdown-label text-secondary">{item.category}</span>
+                <span class="breakdown-count text-primary">{item.count}</span>
+                <span class="breakdown-change change-{item.change > 0 ? 'positive' : 'negative'}">
                   {item.change > 0 ? '+' : ''}{item.change}%
                 </span>
               </div>
@@ -243,12 +243,12 @@
           </div>
         {:else if selectedMetric === 'quality'}
           <div class="metric-breakdown">
-            <h4>Quality Metrics</h4>
+            <h4 class="text-primary">Quality Metrics</h4>
             {#each currentData.breakdown as item}
               <div class="breakdown-item">
-                <span class="breakdown-label">{item.category}</span>
-                <span class="breakdown-score">{item.score}/100</span>
-                <div class="status-badge" style="background: {getStatusColor(item.status)}">
+                <span class="breakdown-label text-secondary">{item.category}</span>
+                <span class="breakdown-score text-primary">{item.score}/100</span>
+                <div class="status-badge status-{item.status}">
                   {item.status}
                 </div>
               </div>
@@ -256,12 +256,12 @@
           </div>
         {:else if selectedMetric === 'ai_effectiveness'}
           <div class="metric-breakdown">
-            <h4>AI Performance</h4>
+            <h4 class="text-primary">AI Performance</h4>
             {#each currentData.breakdown as item}
               <div class="breakdown-item">
-                <span class="breakdown-label">{item.metric}</span>
-                <span class="breakdown-value">{item.value}%</span>
-                <span class="breakdown-change" style="color: {item.change > 0 ? 'var(--success-color, #10b981)' : 'var(--error-color, #ef4444)'}">
+                <span class="breakdown-label text-secondary">{item.metric}</span>
+                <span class="breakdown-value text-primary">{item.value}%</span>
+                <span class="breakdown-change change-{item.change > 0 ? 'positive' : 'negative'}">
                   {item.change > 0 ? '+' : ''}{item.change}%
                 </span>
               </div>
@@ -269,30 +269,30 @@
           </div>
         {:else if selectedMetric === 'completion_time'}
           <div class="metric-breakdown">
-            <h4>Time by Feature Type</h4>
+            <h4 class="text-primary">Time by Feature Type</h4>
             {#each currentData.breakdown as item}
               <div class="breakdown-item">
-                <span class="breakdown-label">{item.type}</span>
-                <span class="breakdown-time">{item.time}h</span>
+                <span class="breakdown-label text-secondary">{item.type}</span>
+                <span class="breakdown-time text-primary">{item.time}h</span>
                 <div class="target-comparison">
-                  Target: {item.target}h
+                  <span class="text-tertiary">Target: {item.target}h</span>
                 </div>
               </div>
             {/each}
           </div>
         {:else if selectedMetric === 'resource_usage'}
           <div class="metric-breakdown">
-            <h4>Resource Utilization</h4>
+            <h4 class="text-primary">Resource Utilization</h4>
             {#each currentData.breakdown as item}
               <div class="breakdown-item">
-                <span class="breakdown-label">{item.resource}</span>
+                <span class="breakdown-label text-secondary">{item.resource}</span>
                 <div class="usage-bar">
                   <div 
                     class="usage-fill" 
-                    style="width: {(item.usage / item.limit) * 100}%"
+                    style:width="{(item.usage / item.limit) * 100}%"
                   ></div>
                 </div>
-                <span class="usage-text">{item.usage}/{item.limit}</span>
+                <span class="usage-text text-secondary">{item.usage}/{item.limit}</span>
               </div>
             {/each}
           </div>
@@ -301,62 +301,62 @@
     </div>
 
     <!-- Predictions Panel -->
-    <div class="predictions-panel">
+    <div class="predictions-panel card bg-surface-2">
       <div class="panel-header">
-        <h3>Completion Predictions</h3>
-        <div class="prediction-note">Based on current velocity and trends</div>
+        <h3 class="text-primary">Completion Predictions</h3>
+        <div class="prediction-note text-secondary">Based on current velocity and trends</div>
       </div>
       
       <div class="predictions-grid">
         <div class="prediction-card">
-          <h4>Features Complete</h4>
-          <div class="prediction-date">{predictions.features_completion.date}</div>
+          <h4 class="text-secondary">Features Complete</h4>
+          <div class="prediction-date text-primary">{predictions.features_completion.date}</div>
           <div class="prediction-details">
-            <span class="remaining">{predictions.features_completion.remaining} remaining</span>
-            <span class="confidence">{predictions.features_completion.confidence}% confidence</span>
+            <span class="remaining text-secondary">{predictions.features_completion.remaining} remaining</span>
+            <span class="confidence text-tertiary">{predictions.features_completion.confidence}% confidence</span>
           </div>
         </div>
 
         <div class="prediction-card">
-          <h4>Quality Target</h4>
-          <div class="prediction-score">{predictions.quality_target.score}/100</div>
+          <h4 class="text-secondary">Quality Target</h4>
+          <div class="prediction-score text-primary">{predictions.quality_target.score}/100</div>
           <div class="prediction-details">
-            <span class="timeline">{predictions.quality_target.timeline}</span>
-            <span class="confidence">{predictions.quality_target.confidence}% confidence</span>
+            <span class="timeline text-secondary">{predictions.quality_target.timeline}</span>
+            <span class="confidence text-tertiary">{predictions.quality_target.confidence}% confidence</span>
           </div>
         </div>
 
         <div class="prediction-card">
-          <h4>Next Milestone</h4>
-          <div class="prediction-milestone">{predictions.milestone_completion.name}</div>
+          <h4 class="text-secondary">Next Milestone</h4>
+          <div class="prediction-milestone text-primary">{predictions.milestone_completion.name}</div>
           <div class="prediction-details">
-            <span class="milestone-date">{predictions.milestone_completion.date}</span>
-            <span class="confidence">{predictions.milestone_completion.confidence}% confidence</span>
+            <span class="milestone-date text-secondary">{predictions.milestone_completion.date}</span>
+            <span class="confidence text-tertiary">{predictions.milestone_completion.confidence}% confidence</span>
           </div>
           <div class="milestone-progress">
             <div class="progress-bar">
               <div 
                 class="progress-fill" 
-                style="width: {predictions.milestone_completion.progress}%"
+                style:width="{predictions.milestone_completion.progress}%"
               ></div>
             </div>
-            <span class="progress-text">{predictions.milestone_completion.progress}%</span>
+            <span class="progress-text text-secondary">{predictions.milestone_completion.progress}%</span>
           </div>
         </div>
       </div>
     </div>
 
     <!-- Custom Reports Section -->
-    <div class="custom-reports">
+    <div class="custom-reports card bg-surface-2">
       <div class="reports-header">
-        <h3>Custom Report Builder</h3>
-        <button class="btn-secondary">Generate Report</button>
+        <h3 class="text-primary">Custom Report Builder</h3>
+        <button class="btn-primary">Generate Report</button>
       </div>
       
       <div class="report-builder">
         <div class="builder-section">
-          <label>Time Range</label>
-          <select class="report-select">
+          <label class="text-secondary">Time Range</label>
+          <select class="report-select bg-surface border rounded-md">
             <option>Last 7 days</option>
             <option>Last 30 days</option>
             <option>Last quarter</option>
@@ -365,21 +365,21 @@
         </div>
         
         <div class="builder-section">
-          <label>Metrics to Include</label>
+          <label class="text-secondary">Metrics to Include</label>
           <div class="metric-checkboxes">
-            <label class="checkbox-item">
+            <label class="checkbox-item text-secondary">
               <input type="checkbox" checked />
               Development Velocity
             </label>
-            <label class="checkbox-item">
+            <label class="checkbox-item text-secondary">
               <input type="checkbox" checked />
               AI Effectiveness
             </label>
-            <label class="checkbox-item">
+            <label class="checkbox-item text-secondary">
               <input type="checkbox" />
               Code Quality
             </label>
-            <label class="checkbox-item">
+            <label class="checkbox-item text-secondary">
               <input type="checkbox" />
               Resource Usage
             </label>
@@ -387,11 +387,11 @@
         </div>
         
         <div class="builder-section">
-          <label>Export Format</label>
+          <label class="text-secondary">Export Format</label>
           <div class="format-options">
-            <button class="format-btn">PDF</button>
-            <button class="format-btn">CSV</button>
-            <button class="format-btn">JSON</button>
+            <button class="btn-secondary format-btn">PDF</button>
+            <button class="btn-secondary format-btn">CSV</button>
+            <button class="btn-secondary format-btn">JSON</button>
           </div>
         </div>
       </div>
@@ -400,17 +400,21 @@
 </div>
 
 <style>
-  .analytics-insights {
-    color: var(--text-primary, CanvasText);
+  .analytics-insights-container {
     min-height: 100vh;
-    padding: 1.5rem;
+    padding: var(--spacing-xl);
+    background: var(--color-background);
   }
 
   .analytics-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 2rem;
+    margin-bottom: var(--spacing-xl);
+    padding: var(--spacing-lg);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
   }
 
   .header-left h2 {
@@ -429,8 +433,8 @@
   .timeframe-selector {
     display: flex;
     gap: 0.25rem;
-    background: var(--bg-secondary, Canvas);
-    border: 1px solid var(--border-color, #e5e7eb);
+    background-color: var(--bg-surface-2);
+    border: 1px solid var(--border-color);
     border-radius: 0.5rem;
     padding: 0.25rem;
   }
@@ -439,7 +443,6 @@
     padding: 0.5rem 1rem;
     background: transparent;
     border: none;
-    color: var(--text-primary, CanvasText);
     border-radius: 0.375rem;
     cursor: pointer;
     transition: all 0.2s;
@@ -447,20 +450,20 @@
   }
 
   .timeframe-btn:hover {
-    background: var(--hover-bg, #f3f4f6);
+    background-color: var(--hover-bg);
   }
 
   .timeframe-btn.active {
-    background: var(--accent-color, #3b82f6);
+    background-color: var(--accent-color);
     color: white;
   }
 
   .metric-navigation {
     display: flex;
-    gap: 1rem;
-    margin-bottom: 2rem;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-xl);
     overflow-x: auto;
-    padding-bottom: 0.5rem;
+    padding-bottom: var(--spacing-sm);
   }
 
   .metric-btn {
@@ -468,22 +471,21 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0.75rem 1.5rem;
-    background: var(--bg-secondary, Canvas);
-    border: 1px solid var(--border-color, #e5e7eb);
+    background-color: var(--bg-surface-2);
+    border: 1px solid var(--border-color);
     border-radius: 0.5rem;
-    color: var(--text-primary, CanvasText);
     cursor: pointer;
     transition: all 0.2s;
     white-space: nowrap;
   }
 
   .metric-btn:hover {
-    background: var(--hover-bg, #f3f4f6);
+    background-color: var(--hover-bg);
   }
 
   .metric-btn.active {
-    background: var(--accent-color, #3b82f6);
-    border-color: var(--accent-color, #3b82f6);
+    background-color: var(--accent-color);
+    border-color: var(--accent-color);
     color: white;
   }
 
@@ -497,20 +499,20 @@
 
   .analytics-content {
     display: grid;
-    gap: 2rem;
+    gap: var(--spacing-xl);
   }
 
   .metrics-overview {
     display: grid;
     grid-template-columns: 2fr 1fr;
-    gap: 2rem;
+    gap: var(--spacing-xl);
   }
 
   .primary-metric {
-    background: var(--bg-secondary, Canvas);
-    border: 1px solid var(--border-color, #e5e7eb);
-    border-radius: 0.75rem;
-    padding: 2rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-xl);
   }
 
   .metric-header {
@@ -521,16 +523,14 @@
   }
 
   .metric-header h3 {
-    color: var(--text-primary, CanvasText);
     font-size: 1.25rem;
     font-weight: 600;
     margin: 0;
   }
 
   .chart-toggle {
-    background: var(--bg-tertiary, #f9fafb);
-    border: 1px solid var(--border-color, #e5e7eb);
-    color: var(--text-primary, CanvasText);
+    background-color: var(--bg-surface-3);
+    border: 1px solid var(--border-color);
     padding: 0.5rem 1rem;
     border-radius: 0.375rem;
     cursor: pointer;
@@ -538,7 +538,7 @@
   }
 
   .chart-toggle:hover {
-    background: var(--hover-bg, #f3f4f6);
+    background-color: var(--hover-bg);
   }
 
   .metric-value {
@@ -551,12 +551,10 @@
   .current-value {
     font-size: 3rem;
     font-weight: 700;
-    color: var(--text-primary, CanvasText);
   }
 
   .metric-unit {
     font-size: 1.125rem;
-    color: var(--text-secondary, #6b7280);
   }
 
   .trend-indicator {
@@ -588,14 +586,13 @@
   }
 
   .secondary-metrics {
-    background: var(--bg-secondary, Canvas);
-    border: 1px solid var(--border-color, #e5e7eb);
-    border-radius: 0.75rem;
-    padding: 1.5rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-xl);
   }
 
   .metric-breakdown h4 {
-    color: var(--text-primary, CanvasText);
     font-size: 1rem;
     font-weight: 600;
     margin: 0 0 1rem 0;
@@ -606,7 +603,7 @@
     align-items: center;
     justify-content: space-between;
     padding: 0.75rem 0;
-    border-bottom: 1px solid var(--border-color, #e5e7eb);
+    border-bottom: 1px solid var(--border-color);
   }
 
   .breakdown-item:last-child {
@@ -614,12 +611,10 @@
   }
 
   .breakdown-label {
-    color: var(--text-secondary, #6b7280);
     font-size: 0.875rem;
   }
 
   .breakdown-count, .breakdown-score, .breakdown-value, .breakdown-time {
-    color: var(--text-primary, CanvasText);
     font-weight: 600;
   }
 
@@ -638,35 +633,33 @@
   }
 
   .target-comparison {
-    color: var(--text-tertiary, #9ca3af);
     font-size: 0.75rem;
   }
 
   .usage-bar {
     width: 60px;
     height: 8px;
-    background: var(--bg-tertiary, #f9fafb);
+    background-color: var(--bg-surface-3);
     border-radius: 4px;
     overflow: hidden;
   }
 
   .usage-fill {
     height: 100%;
-    background: var(--accent-color, #3b82f6);
+    background-color: var(--accent-color);
     transition: width 0.3s;
   }
 
   .usage-text {
-    color: var(--text-secondary, #6b7280);
     font-size: 0.75rem;
-    font-family: monospace;
+    font-family: var(--font-mono);
   }
 
   .predictions-panel {
-    background: var(--bg-secondary, Canvas);
-    border: 1px solid var(--border-color, #e5e7eb);
-    border-radius: 0.75rem;
-    padding: 2rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-xl);
   }
 
   .panel-header {
@@ -674,39 +667,36 @@
   }
 
   .panel-header h3 {
-    color: var(--text-primary, CanvasText);
     font-size: 1.25rem;
     font-weight: 600;
     margin: 0 0 0.5rem 0;
   }
 
   .prediction-note {
-    color: var(--text-secondary, #6b7280);
     font-size: 0.875rem;
   }
 
   .predictions-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1.5rem;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: var(--spacing-lg);
   }
 
   .prediction-card {
-    background: var(--bg-tertiary, #f9fafb);
-    border: 1px solid var(--border-color, #e5e7eb);
-    border-radius: 0.5rem;
-    padding: 1.5rem;
+    background: var(--color-surface-2);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-lg);
   }
 
   .prediction-card h4 {
-    color: var(--text-primary, CanvasText);
     font-size: 1rem;
     font-weight: 600;
     margin: 0 0 1rem 0;
   }
 
   .prediction-date, .prediction-score, .prediction-milestone {
-    color: var(--accent-color, #3b82f6);
+    color: var(--accent-color);
     font-size: 1.25rem;
     font-weight: 700;
     margin-bottom: 0.75rem;
@@ -719,22 +709,10 @@
     font-size: 0.875rem;
   }
 
-  .remaining, .timeline, .milestone-date {
-    color: var(--text-primary, CanvasText);
-  }
-
-  .confidence {
-    color: var(--text-secondary, #6b7280);
-  }
-
-  .milestone-progress {
-    margin-top: 1rem;
-  }
-
   .progress-bar {
     width: 100%;
     height: 8px;
-    background: var(--bg-tertiary, #f9fafb);
+    background-color: var(--bg-surface-3);
     border-radius: 4px;
     overflow: hidden;
     margin-bottom: 0.5rem;
@@ -742,19 +720,21 @@
 
   .progress-fill {
     height: 100%;
-    background: var(--success-color, #10b981);
+    background-color: var(--success-color);
     transition: width 0.3s;
   }
 
   .progress-text {
-    color: var(--text-secondary, #6b7280);
     font-size: 0.75rem;
     font-weight: 600;
   }
 
+  .milestone-progress {
+    margin-top: 1rem;
+  }
+
+
   .custom-reports {
-    background: var(--bg-secondary, Canvas);
-    border: 1px solid var(--border-color, #e5e7eb);
     border-radius: 0.75rem;
     padding: 2rem;
   }
@@ -767,16 +747,14 @@
   }
 
   .reports-header h3 {
-    color: var(--text-primary, CanvasText);
     font-size: 1.25rem;
     font-weight: 600;
     margin: 0;
   }
 
   .btn-secondary {
-    background: var(--bg-tertiary, #f9fafb);
-    border: 1px solid var(--border-color, #e5e7eb);
-    color: var(--text-primary, CanvasText);
+    background-color: var(--bg-surface-3);
+    border: 1px solid var(--border-color);
     padding: 0.75rem 1.5rem;
     border-radius: 0.5rem;
     cursor: pointer;
@@ -785,7 +763,7 @@
   }
 
   .btn-secondary:hover {
-    background: var(--hover-bg, #f3f4f6);
+    background-color: var(--hover-bg);
   }
 
   .report-builder {
@@ -796,7 +774,6 @@
 
   .builder-section label {
     display: block;
-    color: var(--text-primary, CanvasText);
     font-weight: 500;
     margin-bottom: 0.75rem;
   }
@@ -804,10 +781,7 @@
   .report-select {
     width: 100%;
     padding: 0.75rem;
-    background: var(--bg-primary, Canvas);
-    border: 1px solid var(--border-color, #e5e7eb);
     border-radius: 0.5rem;
-    color: var(--text-primary, CanvasText);
   }
 
   .metric-checkboxes {
@@ -819,7 +793,6 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    color: var(--text-primary, CanvasText);
     cursor: pointer;
   }
 
@@ -834,15 +807,29 @@
 
   .format-btn {
     padding: 0.5rem 1rem;
-    background: var(--bg-tertiary, #f9fafb);
-    border: 1px solid var(--border-color, #e5e7eb);
-    color: var(--text-primary, CanvasText);
+    background-color: var(--bg-surface-3);
+    border: 1px solid var(--border-color);
     border-radius: 0.375rem;
     cursor: pointer;
     transition: background 0.2s;
   }
 
   .format-btn:hover {
-    background: var(--hover-bg, #f3f4f6);
+    background-color: var(--color-bg-hover);
   }
+
+  /* Trend Colors */
+  .trend-up { color: var(--color-success); }
+  .trend-down { color: var(--color-error); }
+  .trend-stable { color: var(--color-text-secondary); }
+
+  /* Status Colors */
+  .status-excellent { background-color: var(--color-success); color: var(--color-text-inverse); }
+  .status-good { background-color: var(--color-warning); color: var(--color-text-inverse); }
+  .status-fair { background-color: var(--color-error); color: var(--color-text-inverse); }
+  .status-poor { background-color: var(--color-error); color: var(--color-text-inverse); }
+
+  /* Change Colors */
+  .change-positive { color: var(--color-success); }
+  .change-negative { color: var(--color-error); }
 </style>

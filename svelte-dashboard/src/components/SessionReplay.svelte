@@ -107,13 +107,13 @@
   });
 </script>
 
-<div class="session-replay">
-  <div class="session-header">
-    <h1>Session Replay</h1>
+<div class="session-replay-container">
+  <div class="session-header card">
+    <h1 class="text-primary">Session Replay</h1>
     
     <div class="session-selector">
-      <label>Select Session:</label>
-      <select on:change={(e) => selectSession(sessions.find(s => s.id === e.target.value))}>
+      <label class="text-secondary">Select Session:</label>
+      <select on:change={(e) => selectSession(sessions.find(s => s.id === e.target.value))} class="bg-surface border rounded-md">
         <option value="">Choose a session...</option>
         {#each sessions as session}
           <option value={session.id} selected={selectedSession?.id === session.id}>
@@ -127,35 +127,36 @@
   {#if selectedSession}
     <div class="replay-interface">
       <!-- Left Panel - AI Reasoning -->
-      <div class="reasoning-panel">
-        <h2>AI Reasoning</h2>
+      <div class="reasoning-panel card bg-surface">
+        <h2 class="text-primary">AI Reasoning</h2>
         
         <div class="current-reasoning">
           {#if currentEvent}
-            <div class="reasoning-step active">
+            <div class="reasoning-step card bg-surface-2 border-primary">
               <div class="step-icon">{getEventIcon(currentEvent.type)}</div>
               <div class="step-content">
-                <div class="step-title">{currentEvent.description}</div>
-                <div class="step-reasoning">{currentEvent.reasoning}</div>
-                <div class="step-time">{formatTime(currentEvent.time)}</div>
+                <div class="step-title text-primary">{currentEvent.description}</div>
+                <div class="step-reasoning text-secondary">{currentEvent.reasoning}</div>
+                <div class="step-time text-tertiary">{formatTime(currentEvent.time)}</div>
               </div>
             </div>
           {/if}
         </div>
 
         <div class="reasoning-timeline">
-          <h3>Session Steps</h3>
+          <h3 class="text-primary">Session Steps</h3>
           {#each selectedTimeline as event}
             <div 
-              class="reasoning-step" 
+              class="reasoning-step card bg-surface-2" 
               class:active={currentEvent?.time === event.time}
               class:completed={currentTime > event.time}
+              class:border-primary={currentEvent?.time === event.time}
               on:click={() => setTime(event.time)}
             >
               <div class="step-icon">{getEventIcon(event.type)}</div>
               <div class="step-content">
-                <div class="step-title">{event.description}</div>
-                <div class="step-time">{formatTime(event.time)}</div>
+                <div class="step-title text-primary">{event.description}</div>
+                <div class="step-time text-tertiary">{formatTime(event.time)}</div>
               </div>
             </div>
           {/each}
@@ -163,13 +164,13 @@
       </div>
 
       <!-- Center Panel - Code Changes -->
-      <div class="code-panel">
+      <div class="code-panel card bg-surface">
         <div class="panel-header">
-          <h2>Code Changes</h2>
+          <h2 class="text-primary">Code Changes</h2>
           <div class="file-tabs">
-            <div class="tab active">App.svelte</div>
-            <div class="tab">Header.svelte</div>
-            <div class="tab">stores.js</div>
+            <div class="tab card bg-surface-2 text-primary border-primary">App.svelte</div>
+            <div class="tab card bg-surface-3 text-secondary">Header.svelte</div>
+            <div class="tab card bg-surface-3 text-secondary">stores.js</div>
           </div>
         </div>
         
@@ -186,7 +187,7 @@
                 <div class="diff-line context">  </div>
               </div>
             {:else}
-              <div class="placeholder">
+              <div class="placeholder text-tertiary">
                 Select a session event to view code changes
               </div>
             {/if}
@@ -195,8 +196,8 @@
       </div>
 
       <!-- Right Panel - Tool Usage -->
-      <div class="tools-panel">
-        <h2>Tool Usage</h2>
+      <div class="tools-panel card bg-surface">
+        <h2 class="text-primary">Tool Usage</h2>
         
         <div class="tool-timeline">
           {#each selectedTimeline as event}
@@ -216,26 +217,26 @@
           {/each}
         </div>
 
-        <div class="session-stats">
-          <h3>Session Statistics</h3>
+        <div class="session-stats card bg-surface-2">
+          <h3 class="text-primary">Session Statistics</h3>
           <div class="stat-item">
-            <span class="stat-label">Duration:</span>
-            <span class="stat-value">{selectedSession.duration}</span>
+            <span class="stat-label text-secondary">Duration:</span>
+            <span class="stat-value text-primary">{selectedSession.duration}</span>
           </div>
           <div class="stat-item">
-            <span class="stat-label">Files Modified:</span>
-            <span class="stat-value">{selectedSession.filesModified}</span>
+            <span class="stat-label text-secondary">Files Modified:</span>
+            <span class="stat-value text-primary">{selectedSession.filesModified}</span>
           </div>
           <div class="stat-item">
-            <span class="stat-label">Features Changed:</span>
-            <span class="stat-value">{selectedSession.featuresChanged}</span>
+            <span class="stat-label text-secondary">Features Changed:</span>
+            <span class="stat-value text-primary">{selectedSession.featuresChanged}</span>
           </div>
         </div>
       </div>
     </div>
 
     <!-- Playback Controls -->
-    <div class="playback-controls">
+    <div class="playback-controls card bg-surface">
       <div class="timeline-scrubber">
         <input 
           type="range" 
@@ -248,8 +249,8 @@
           {#each selectedTimeline as event}
             <div 
               class="timeline-marker" 
-              style="left: {(event.time / (Math.max(...selectedTimeline.map(e => e.time)) + 30)) * 100}%"
               on:click={() => setTime(event.time)}
+              style:left="{(event.time / (Math.max(...selectedTimeline.map(e => e.time)) + 30)) * 100}%"
             >
               <div class="marker-tooltip">{event.description}</div>
             </div>
@@ -283,111 +284,108 @@
 </div>
 
 <style>
-  .session-replay {
-    padding: 20px;
+  .session-replay-container {
+    padding: var(--spacing-xl);
     min-height: 100vh;
+    background: var(--color-background);
   }
 
   .session-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 24px;
-  }
-
-  .session-header h1 {
-    color: #9b59d0;
-    font-size: 28px;
-    font-weight: 600;
-    margin: 0;
+    margin-bottom: var(--spacing-xl);
+    padding: var(--spacing-lg);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
   }
 
   .session-selector {
     display: flex;
     align-items: center;
-    gap: 12px;
-  }
-
-  .session-selector label {
-    color: #888;
-    font-size: 14px;
+    gap: var(--spacing-md);
   }
 
   .session-selector select {
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid GrayText;
-    color: #fff;
-    padding: 8px 12px;
-    border-radius: 6px;
-    font-size: 14px;
+    padding: var(--spacing-sm) var(--spacing-md);
+    font-size: var(--font-size-sm);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    color: var(--color-text-primary);
   }
 
   .replay-interface {
     display: grid;
-    grid-template-columns: 300px 1fr 250px;
-    gap: 20px;
-    height: 500px;
-    margin-bottom: 20px;
+    grid-template-columns: 320px 1fr 280px;
+    gap: var(--spacing-lg);
+    min-height: 600px;
+    margin-bottom: var(--spacing-xl);
   }
 
   .reasoning-panel,
   .code-panel,
   .tools-panel {
-    background: Canvas;
-    border: 1px solid GrayText;
-    border-radius: 12px;
     overflow: hidden;
-    opacity: 0.95;
+    border-radius: var(--radius-lg);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    display: flex;
+    flex-direction: column;
   }
 
   .reasoning-panel h2,
   .code-panel h2,
   .tools-panel h2 {
-    color: Highlight;
-    font-size: 16px;
+    font-size: var(--font-size-lg);
     font-weight: 600;
     margin: 0;
-    padding: 16px 20px;
-    border-bottom: 1px solid GrayText;
-    opacity: 0.7;
+    padding: var(--spacing-lg);
+    border-bottom: 1px solid var(--color-border);
+    background: var(--color-surface-2);
   }
 
   .current-reasoning {
-    padding: 16px 20px;
-    border-bottom: 1px solid #333;
+    padding: var(--spacing-lg);
+    border-bottom: 1px solid var(--color-border);
+    flex-shrink: 0;
   }
 
   .reasoning-timeline {
-    padding: 16px 20px;
+    padding: var(--spacing-lg);
     overflow-y: auto;
     flex: 1;
+    min-height: 0;
   }
 
   .reasoning-timeline h3 {
-    color: #888;
-    font-size: 12px;
+    font-size: var(--text-xs);
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin: 0 0 16px 0;
+    letter-spacing: var(--tracking-wide);
+    margin: 0 0 var(--space-4) 0;
   }
 
   .reasoning-step {
     display: flex;
-    gap: 12px;
-    padding: 12px;
-    border-radius: 8px;
-    margin-bottom: 8px;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--spacing-sm);
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all var(--transition-base);
+    background: var(--color-surface-2);
+    border: 1px solid var(--color-border);
   }
 
   .reasoning-step:hover {
-    background: rgba(255, 255, 255, 0.05);
+    background-color: var(--color-surface-3);
+    border-color: var(--color-border-focus);
   }
 
   .reasoning-step.active {
-    background: rgba(155, 89, 208, 0.2);
-    border: 1px solid rgba(155, 89, 208, 0.5);
+    background-color: var(--color-surface-3);
+    border-color: var(--color-primary);
   }
 
   .reasoning-step.completed {
@@ -395,8 +393,8 @@
   }
 
   .step-icon {
-    font-size: 16px;
-    min-width: 20px;
+    font-size: var(--text-base);
+    min-width: var(--space-5);
   }
 
   .step-content {
@@ -404,57 +402,46 @@
   }
 
   .step-title {
-    color: #fff;
-    font-size: 13px;
-    font-weight: 500;
-    margin-bottom: 4px;
-    line-height: 1.3;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    margin-bottom: var(--space-1);
+    line-height: var(--leading-tight);
   }
 
   .step-reasoning {
-    color: #888;
-    font-size: 11px;
-    line-height: 1.4;
-    margin-bottom: 4px;
+    font-size: var(--text-xs);
+    line-height: var(--leading-relaxed);
+    margin-bottom: var(--space-1);
   }
 
   .step-time {
-    color: #9b59d0;
-    font-size: 10px;
-    font-family: monospace;
+    font-size: var(--text-xs);
+    font-family: var(--font-mono);
   }
 
   .panel-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 16px 20px;
-    border-bottom: 1px solid #333;
+    padding: var(--space-4) var(--space-5);
+    border-bottom: 1px solid var(--color-border);
   }
 
   .file-tabs {
     display: flex;
-    gap: 4px;
+    gap: var(--space-1);
   }
 
   .tab {
-    background: rgba(255, 255, 255, 0.05);
-    color: #888;
-    padding: 6px 12px;
-    border-radius: 4px;
-    font-size: 12px;
+    padding: var(--space-1-5) var(--space-3);
+    border-radius: var(--radius-sm);
+    font-size: var(--text-xs);
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all var(--transition-fast) ease;
   }
 
   .tab:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: #ccc;
-  }
-
-  .tab.active {
-    background: rgba(155, 89, 208, 0.2);
-    color: #9b59d0;
+    background-color: var(--color-bg-hover);
   }
 
   .code-viewer {
@@ -463,149 +450,124 @@
   }
 
   .code-content {
-    padding: 20px;
-    font-family: 'Monaco', 'Menlo', monospace;
-    font-size: 13px;
+    padding: var(--spacing-xl);
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: var(--font-size-sm);
     line-height: 1.6;
   }
 
   .diff-view {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: var(--space-0-5);
   }
 
   .diff-line {
-    padding: 2px 8px;
-    border-radius: 3px;
-  }
-
-  .diff-line.added {
-    background: rgba(34, 197, 94, 0.2);
-    color: #4ade80;
-  }
-
-  .diff-line.removed {
-    background: rgba(239, 68, 68, 0.2);
-    color: #f87171;
-  }
-
-  .diff-line.context {
-    color: #888;
+    padding: var(--space-0-5) var(--space-2);
+    border-radius: var(--radius-sm);
   }
 
   .placeholder {
-    color: #666;
     text-align: center;
-    padding: 40px 20px;
+    padding: var(--space-10) var(--space-5);
     font-style: italic;
   }
 
   .tool-timeline {
-    padding: 16px 20px;
+    padding: var(--spacing-lg);
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: var(--spacing-md);
+    flex: 1;
+    overflow-y: auto;
   }
 
   .tool-item {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 8px;
-    border-radius: 6px;
-    transition: all 0.2s ease;
+    gap: var(--space-3);
+    padding: var(--space-2);
+    border-radius: var(--radius-md);
+    transition: all var(--transition-fast) ease;
   }
 
   .tool-item.active {
-    background: rgba(155, 89, 208, 0.2);
+    background-color: var(--color-bg-accent);
   }
 
   .tool-badge {
-    width: 24px;
-    height: 24px;
+    width: var(--space-6);
+    height: var(--space-6);
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 50%;
-    font-size: 12px;
-    transition: all 0.2s ease;
+    background-color: var(--color-bg-surface-3);
+    border-radius: var(--radius-full);
+    font-size: var(--text-xs);
+    transition: all var(--transition-fast) ease;
   }
 
   .tool-badge.used {
-    background: rgba(155, 89, 208, 0.3);
+    background-color: var(--color-bg-accent);
   }
 
   .tool-name {
-    color: #fff;
-    font-size: 11px;
-    font-weight: 600;
+    font-size: var(--text-xs);
+    font-weight: var(--weight-semibold);
   }
 
   .tool-time {
-    color: #888;
-    font-size: 10px;
-    font-family: monospace;
+    font-size: var(--text-xs);
+    font-family: var(--font-mono);
   }
 
   .session-stats {
-    margin-top: 20px;
-    padding: 16px 20px;
-    border-top: 1px solid #333;
+    margin-top: var(--space-5);
+    padding: var(--space-4) var(--space-5);
+    border-top: 1px solid var(--color-border);
   }
 
   .session-stats h3 {
-    color: #888;
-    font-size: 12px;
+    font-size: var(--text-xs);
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin: 0 0 12px 0;
+    letter-spacing: var(--tracking-wide);
+    margin: 0 0 var(--space-3) 0;
   }
 
   .stat-item {
     display: flex;
     justify-content: space-between;
-    margin-bottom: 8px;
-    font-size: 12px;
-  }
-
-  .stat-label {
-    color: #888;
-  }
-
-  .stat-value {
-    color: #9b59d0;
-    font-weight: 600;
+    margin-bottom: var(--space-2);
+    font-size: var(--text-xs);
   }
 
   .playback-controls {
-    background: Canvas;
-    border: 1px solid GrayText;
-    border-radius: 12px;
-    padding: 20px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
   }
 
   .timeline-scrubber {
     position: relative;
-    margin-bottom: 16px;
+    margin-bottom: var(--space-4);
   }
 
   .timeline-slider {
     width: 100%;
     height: 6px;
-    background: #333;
-    border-radius: 3px;
+    background-color: var(--color-bg-surface-3);
+    border-radius: var(--radius-sm);
     outline: none;
     appearance: none;
   }
 
   .timeline-slider::-webkit-slider-thumb {
     appearance: none;
-    width: 16px;
-    height: 16px;
-    background: #9b59d0;
-    border-radius: 50%;
+    width: var(--space-4);
+    height: var(--space-4);
+    background-color: var(--color-accent);
+    border-radius: var(--radius-full);
     cursor: pointer;
   }
 
@@ -622,7 +584,7 @@
     position: absolute;
     width: 4px;
     height: 10px;
-    background: #f59e0b;
+    background-color: var(--color-warning);
     cursor: pointer;
     pointer-events: all;
   }
@@ -630,53 +592,25 @@
   .control-buttons {
     display: flex;
     align-items: center;
-    gap: 12px;
-  }
-
-  .control-btn {
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid GrayText;
-    color: #fff;
-    padding: 8px 12px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 14px;
-    transition: all 0.2s ease;
-  }
-
-  .control-btn:hover {
-    background: rgba(255, 255, 255, 0.2);
-  }
-
-  .play-btn {
-    background: rgba(155, 89, 208, 0.2);
-    border-color: #9b59d0;
+    gap: var(--space-3);
   }
 
   .time-display {
-    color: #9b59d0;
-    font-family: monospace;
-    font-size: 14px;
+    color: var(--color-accent);
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
     margin-left: auto;
   }
 
   .speed-control {
     display: flex;
     align-items: center;
-    gap: 8px;
-  }
-
-  .speed-control label {
-    color: #888;
-    font-size: 12px;
+    gap: var(--space-2);
   }
 
   .speed-control select {
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid GrayText;
-    color: #fff;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 12px;
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+    font-size: var(--text-xs);
   }
 </style>

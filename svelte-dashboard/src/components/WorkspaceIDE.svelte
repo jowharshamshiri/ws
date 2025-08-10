@@ -174,38 +174,38 @@ clap = { version = "4.0", features = ["derive"] }`;
 
   function getFileIcon(file) {
     if (file.type === 'folder') {
-      return file.expanded ? '=¬' : '=¡';
+      return file.expanded ? '=ÔøΩ' : '=ÔøΩ';
     }
     
     switch (file.language) {
-      case 'rust': return '>Ä';
-      case 'javascript': return '=‹';
+      case 'rust': return '>ÔøΩ';
+      case 'javascript': return '=ÔøΩ';
       case 'html': return '<';
-      case 'css': return '<®';
-      case 'markdown': return '=›';
-      case 'toml': return 'ô';
-      default: return '=ƒ';
+      case 'css': return '<ÔøΩ';
+      case 'markdown': return '=ÔøΩ';
+      case 'toml': return 'ÔøΩ';
+      default: return '=ÔøΩ';
     }
   }
 
   function getStatusColor(status) {
     switch (status) {
-      case 'M': return '#f59e0b'; // Modified - orange
-      case 'A': return '#10b981'; // Added - green
-      case 'D': return '#ef4444'; // Deleted - red
+      case 'M': return 'var(--color-warning)'; // Modified - orange
+      case 'A': return 'var(--color-success)'; // Added - green
+      case 'D': return 'var(--color-error)'; // Deleted - red
       default: return 'transparent';
     }
   }
 </script>
 
-<div class="workspace-ide">
+<div class="workspace-ide-container card bg-surface">
   <!-- File Explorer Sidebar -->
-  <div class="file-explorer">
+  <div class="file-explorer card bg-surface-2">
     <div class="explorer-header">
-      <h3>Explorer</h3>
+      <h3 class="text-primary">Explorer</h3>
       <div class="explorer-actions">
-        <button class="action-btn" title="New File">+</button>
-        <button class="action-btn" title="New Folder">=¡</button>
+        <button class="btn-secondary action-btn" title="New File">+</button>
+        <button class="action-btn" title="New Folder">=ÔøΩ</button>
         <button class="action-btn" title="Refresh">=</button>
       </div>
     </div>
@@ -215,7 +215,7 @@ clap = { version = "4.0", features = ["derive"] }`;
         type="text" 
         placeholder="Search files..."
         bind:value={searchQuery}
-        class="search-input"
+        class="search-input bg-surface border rounded-md"
       >
     </div>
 
@@ -231,8 +231,7 @@ clap = { version = "4.0", features = ["derive"] }`;
             <span class="file-name">{file.name}</span>
             {#if file.status}
               <span 
-                class="status-indicator"
-                style="background: {getStatusColor(file.status)}"
+                class="status-indicator status-{file.status}"
                 title="Modified"
               ></span>
             {/if}
@@ -250,8 +249,7 @@ clap = { version = "4.0", features = ["derive"] }`;
                   <span class="file-name">{child.name}</span>
                   {#if child.status}
                     <span 
-                      class="status-indicator"
-                      style="background: {getStatusColor(child.status)}"
+                      class="status-indicator status-{child.status}"
                       title="Modified"
                     ></span>
                   {/if}
@@ -269,23 +267,23 @@ clap = { version = "4.0", features = ["derive"] }`;
     <!-- Action Toolbar -->
     <div class="toolbar">
       <div class="toolbar-group">
-        <button class="toolbar-btn primary" on:click={runCode}>
-          ∂ Run
+        <button class="btn-primary toolbar-btn" on:click={runCode}>
+          ÔøΩ Run
         </button>
-        <button class="toolbar-btn" on:click={debugCode}>
+        <button class="btn-secondary toolbar-btn" on:click={debugCode}>
           = Debug
         </button>
-        <button class="toolbar-btn" on:click={runTests}>
-          >Í Test
+        <button class="btn-secondary toolbar-btn" on:click={runTests}>
+          >ÔøΩ Test
         </button>
       </div>
       
       <div class="toolbar-group">
-        <button class="toolbar-btn" on:click={toggleAIPanel} class:active={showAIPanel}>
+        <button class="btn-secondary toolbar-btn" on:click={toggleAIPanel} class:active={showAIPanel}>
           > AI Assist
         </button>
         <button class="toolbar-btn" title="Format Code">
-          =– Format
+          =ÔøΩ Format
         </button>
         <button class="toolbar-btn" title="Find in Files">
           = Search
@@ -305,9 +303,9 @@ clap = { version = "4.0", features = ["derive"] }`;
             <span class="tab-icon">{getFileIcon(file)}</span>
             <span class="tab-name">{file.name}</span>
             {#if file.status}
-              <span class="tab-status" style="color: {getStatusColor(file.status)}">œ</span>
+              <span class="tab-status status-{file.status}">‚óè</span>
             {/if}
-            <button class="tab-close" on:click|stopPropagation={() => closeFile(index)}>◊</button>
+            <button class="tab-close" on:click|stopPropagation={() => closeFile(index)}>ÔøΩ</button>
           </div>
         {/each}
       </div>
@@ -332,11 +330,11 @@ clap = { version = "4.0", features = ["derive"] }`;
       {:else}
         <div class="empty-editor">
           <div class="empty-state">
-            <h3>Welcome to Workspace IDE</h3>
-            <p>Select a file from the explorer to start editing</p>
+            <h3 class="text-primary">Welcome to Workspace IDE</h3>
+            <p class="text-secondary">Select a file from the explorer to start editing</p>
             <div class="quick-actions">
-              <button class="quick-btn">=ƒ New File</button>
-              <button class="quick-btn">=¡ Open Folder</button>
+              <button class="quick-btn">=ÔøΩ New File</button>
+              <button class="quick-btn">=ÔøΩ Open Folder</button>
               <button class="quick-btn">= Quick Open</button>
             </div>
           </div>
@@ -353,7 +351,7 @@ clap = { version = "4.0", features = ["derive"] }`;
             <div class="terminal-tab">Output</div>
             <div class="terminal-tab">Debug Console</div>
           </div>
-          <button class="terminal-close" on:click={() => showTerminal = false}>◊</button>
+          <button class="terminal-close" on:click={() => showTerminal = false}>ÔøΩ</button>
         </div>
         <div class="terminal-content">
           <pre>{terminalOutput}</pre>
@@ -368,14 +366,14 @@ clap = { version = "4.0", features = ["derive"] }`;
 
   <!-- AI Assistant Panel -->
   {#if showAIPanel}
-    <div class="ai-panel">
+    <div class="ai-panel card bg-surface-2">
       <div class="ai-header">
         <h3>> AI Assistant</h3>
-        <button class="ai-close" on:click={toggleAIPanel}>◊</button>
+        <button class="ai-close" on:click={toggleAIPanel}>ÔøΩ</button>
       </div>
       
       <div class="ai-suggestions">
-        <h4>Suggestions</h4>
+        <h4 class="text-secondary">Suggestions</h4>
         {#each aiSuggestions as suggestion}
           <div class="suggestion-item">
             <div class="suggestion-type">{suggestion.type}</div>
@@ -392,7 +390,7 @@ clap = { version = "4.0", features = ["derive"] }`;
       </div>
 
       <div class="ai-chat">
-        <h4>Ask AI</h4>
+        <h4 class="text-secondary">Ask AI</h4>
         <div class="chat-input">
           <textarea 
             placeholder="Ask about your code, request refactoring suggestions, or get help with implementation..."
@@ -406,25 +404,23 @@ clap = { version = "4.0", features = ["derive"] }`;
 </div>
 
 <style>
-  .workspace-ide {
+  .workspace-ide-container {
     display: flex;
     height: calc(100vh - 140px);
-    font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+    font-family: var(--font-mono);
   }
 
   /* File Explorer */
   .file-explorer {
     width: 280px;
-    border-right: 1px solid var(--border-color, #e5e7eb);
+    border-right: 1px solid var(--color-border);
     display: flex;
     flex-direction: column;
-    background: var(--bg-secondary, Canvas);
-    color: var(--text-primary, CanvasText);
   }
 
   .explorer-header {
-    padding: 12px 16px;
-    border-bottom: 1px solid var(--border-color, #e5e7eb);
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--color-border);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -432,88 +428,82 @@ clap = { version = "4.0", features = ["derive"] }`;
 
   .explorer-header h3 {
     margin: 0;
-    font-size: 13px;
-    font-weight: 600;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: var(--text-secondary, #6b7280);
+    letter-spacing: var(--tracking-wide);
   }
 
   .explorer-actions {
     display: flex;
-    gap: 4px;
+    gap: var(--space-1);
   }
 
   .action-btn {
     background: none;
     border: none;
-    color: var(--text-secondary, #6b7280);
     cursor: pointer;
-    padding: 4px 6px;
-    border-radius: 3px;
-    font-size: 12px;
+    padding: var(--space-1) var(--space-1-5);
+    border-radius: var(--radius-sm);
+    font-size: var(--text-xs);
   }
 
   .action-btn:hover {
-    background: var(--hover-bg, #f3f4f6);
+    background-color: var(--color-bg-hover);
   }
 
   .search-box {
-    padding: 8px 16px;
-    border-bottom: 1px solid var(--border-color, #e5e7eb);
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid var(--border-color);
   }
 
   .search-input {
     width: 100%;
-    padding: 6px 8px;
-    border: 1px solid var(--border-color, #e5e7eb);
-    border-radius: 3px;
-    font-size: 13px;
-    background: var(--bg-primary, Canvas);
-    color: var(--text-primary, CanvasText);
+    padding: 0.375rem 0.5rem;
+    border-radius: 0.1875rem;
+    font-size: 0.8125rem;
   }
 
   .search-input:focus {
     outline: none;
-    border-color: var(--accent-color, #3b82f6);
+    border-color: var(--accent-color);
   }
 
   .file-tree {
     flex: 1;
     overflow-y: auto;
-    padding: 8px 0;
+    padding: 0.5rem 0;
   }
 
   .file-button {
     display: flex;
     align-items: center;
     width: 100%;
-    padding: 4px 16px;
+    padding: 0.25rem 1rem;
     background: none;
     border: none;
-    color: var(--text-primary, CanvasText);
     cursor: pointer;
-    font-size: 13px;
+    font-size: 0.8125rem;
     text-align: left;
     position: relative;
   }
 
   .file-button:hover {
-    background: var(--hover-bg, #f3f4f6);
+    background-color: var(--hover-bg);
   }
 
   .file-button.selected {
-    background: var(--accent-bg, #dbeafe);
-    color: var(--accent-color, #3b82f6);
+    background-color: var(--accent-bg);
+    color: var(--accent-color);
   }
 
   .file-button.child {
-    padding-left: 32px;
+    padding-left: 2rem;
   }
 
   .file-icon {
-    margin-right: 6px;
-    font-size: 14px;
+    margin-right: 0.375rem;
+    font-size: 0.875rem;
   }
 
   .file-name {
@@ -521,10 +511,10 @@ clap = { version = "4.0", features = ["derive"] }`;
   }
 
   .status-indicator {
-    width: 6px;
-    height: 6px;
+    width: 0.375rem;
+    height: 0.375rem;
     border-radius: 50%;
-    margin-left: 6px;
+    margin-left: 0.375rem;
   }
 
   .folder-children {
@@ -543,77 +533,62 @@ clap = { version = "4.0", features = ["derive"] }`;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 8px 16px;
-    border-bottom: 1px solid var(--border-color, #e5e7eb);
-    background: var(--bg-secondary, Canvas);
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid var(--border-color);
+    background-color: var(--bg-surface-2);
   }
 
   .toolbar-group {
     display: flex;
-    gap: 8px;
+    gap: 0.5rem;
   }
 
   .toolbar-btn {
-    padding: 6px 12px;
-    background: var(--bg-primary, Canvas);
-    border: 1px solid var(--border-color, #e5e7eb);
-    border-radius: 3px;
-    color: var(--text-primary, CanvasText);
+    padding: 0.375rem 0.75rem;
+    border-radius: 0.1875rem;
     cursor: pointer;
-    font-size: 12px;
+    font-size: 0.75rem;
     font-weight: 500;
   }
 
   .toolbar-btn:hover {
-    background: var(--hover-bg, #f3f4f6);
-  }
-
-  .toolbar-btn.primary {
-    background: var(--accent-color, #3b82f6);
-    border-color: var(--accent-color, #3b82f6);
-    color: white;
-  }
-
-  .toolbar-btn.primary:hover {
-    background: var(--accent-hover, #2563eb);
+    background-color: var(--hover-bg);
   }
 
   .toolbar-btn.active {
-    background: var(--accent-bg, #dbeafe);
-    border-color: var(--accent-color, #3b82f6);
-    color: var(--accent-color, #3b82f6);
+    background-color: var(--accent-bg);
+    border-color: var(--accent-color);
+    color: var(--accent-color);
   }
 
   .file-tabs {
     display: flex;
-    background: var(--bg-secondary, Canvas);
-    border-bottom: 1px solid var(--border-color, #e5e7eb);
+    background-color: var(--bg-surface-2);
+    border-bottom: 1px solid var(--border-color);
     overflow-x: auto;
   }
 
   .file-tab {
     display: flex;
     align-items: center;
-    padding: 8px 12px;
-    border-right: 1px solid var(--border-color, #e5e7eb);
-    background: var(--bg-tertiary, #f9fafb);
+    padding: 0.5rem 0.75rem;
+    border-right: 1px solid var(--border-color);
+    background-color: var(--bg-surface-3);
     cursor: pointer;
-    min-width: 120px;
-    font-size: 13px;
-    color: var(--text-secondary, #6b7280);
+    min-width: 7.5rem;
+    font-size: 0.8125rem;
   }
 
   .file-tab:hover {
-    background: var(--hover-bg, #f3f4f6);
+    background-color: var(--hover-bg);
   }
 
   .file-tab.active {
-    background: var(--bg-primary, Canvas);
-    color: var(--text-primary, CanvasText);
+    background-color: var(--bg-surface);
   }
 
   .tab-icon {
-    margin-right: 6px;
+    margin-right: 0.375rem;
   }
 
   .tab-name {
@@ -624,17 +599,16 @@ clap = { version = "4.0", features = ["derive"] }`;
   }
 
   .tab-status {
-    margin: 0 4px;
-    font-size: 16px;
+    margin: 0 0.25rem;
+    font-size: 1rem;
   }
 
   .tab-close {
     background: none;
     border: none;
-    color: var(--text-secondary, #6b7280);
     cursor: pointer;
-    padding: 0 4px;
-    margin-left: 4px;
+    padding: 0 0.25rem;
+    margin-left: 0.25rem;
     opacity: 0;
     transition: opacity 0.2s;
   }
@@ -644,8 +618,8 @@ clap = { version = "4.0", features = ["derive"] }`;
   }
 
   .tab-close:hover {
-    background: var(--hover-bg, #f3f4f6);
-    border-radius: 3px;
+    background-color: var(--hover-bg);
+    border-radius: 0.1875rem;
   }
 
   .editor-container {
@@ -657,34 +631,30 @@ clap = { version = "4.0", features = ["derive"] }`;
   .code-editor {
     flex: 1;
     display: flex;
-    background: var(--bg-primary, Canvas);
   }
 
   .line-numbers {
-    background: var(--bg-secondary, Canvas);
-    padding: 16px 8px;
-    border-right: 1px solid var(--border-color, #e5e7eb);
-    min-width: 50px;
+    background-color: var(--bg-surface-2);
+    padding: 1rem 0.5rem;
+    border-right: 1px solid var(--border-color);
+    min-width: 3.125rem;
     text-align: right;
-    color: var(--text-tertiary, #9ca3af);
-    font-size: 13px;
-    line-height: 19px;
+    font-size: 0.8125rem;
+    line-height: 1.1875rem;
     user-select: none;
   }
 
   .line-number {
-    height: 19px;
+    height: 1.1875rem;
   }
 
   .code-textarea {
     flex: 1;
-    background: var(--bg-primary, Canvas);
     border: none;
-    color: var(--text-primary, CanvasText);
-    padding: 16px;
-    font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
-    font-size: 13px;
-    line-height: 19px;
+    padding: 1rem;
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    line-height: 1.1875rem;
     resize: none;
     outline: none;
     white-space: pre;
@@ -697,48 +667,41 @@ clap = { version = "4.0", features = ["derive"] }`;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--bg-primary, Canvas);
   }
 
   .empty-state {
     text-align: center;
-    color: var(--text-secondary, #6b7280);
   }
 
   .empty-state h3 {
-    color: var(--text-primary, CanvasText);
-    margin-bottom: 8px;
+    margin-bottom: 0.5rem;
   }
 
   .empty-state p {
-    margin-bottom: 24px;
+    margin-bottom: 1.5rem;
   }
 
   .quick-actions {
     display: flex;
-    gap: 12px;
+    gap: 0.75rem;
     justify-content: center;
   }
 
   .quick-btn {
-    padding: 8px 16px;
-    background: var(--bg-secondary, Canvas);
-    border: 1px solid var(--border-color, #e5e7eb);
-    border-radius: 3px;
-    color: var(--text-primary, CanvasText);
+    padding: 0.5rem 1rem;
+    border-radius: 0.1875rem;
     cursor: pointer;
-    font-size: 13px;
+    font-size: 0.8125rem;
   }
 
   .quick-btn:hover {
-    background: var(--hover-bg, #f3f4f6);
+    background-color: var(--hover-bg);
   }
 
   /* Terminal Panel */
   .terminal-panel {
     height: 200px;
-    border-top: 1px solid var(--border-color, #e5e7eb);
-    background: var(--bg-primary, Canvas);
+    border-top: 1px solid var(--border-color);
     display: flex;
     flex-direction: column;
   }
@@ -747,9 +710,9 @@ clap = { version = "4.0", features = ["derive"] }`;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 1px solid var(--border-color, #e5e7eb);
-    background: var(--bg-secondary, Canvas);
-    padding: 0 16px;
+    border-bottom: 1px solid var(--border-color);
+    background-color: var(--bg-surface-2);
+    padding: 0 1rem;
   }
 
   .terminal-tabs {
@@ -757,73 +720,68 @@ clap = { version = "4.0", features = ["derive"] }`;
   }
 
   .terminal-tab {
-    padding: 8px 16px;
+    padding: 0.5rem 1rem;
     cursor: pointer;
-    font-size: 13px;
-    color: var(--text-secondary, #6b7280);
+    font-size: 0.8125rem;
   }
 
   .terminal-tab.active {
-    color: var(--accent-color, #3b82f6);
-    border-bottom: 2px solid var(--accent-color, #3b82f6);
+    color: var(--accent-color);
+    border-bottom: 2px solid var(--accent-color);
   }
 
   .terminal-close {
     background: none;
     border: none;
-    color: var(--text-secondary, #6b7280);
     cursor: pointer;
-    font-size: 16px;
-    padding: 4px;
+    font-size: 1rem;
+    padding: 0.25rem;
   }
 
   .terminal-content {
     flex: 1;
-    padding: 12px;
+    padding: 0.75rem;
     overflow-y: auto;
   }
 
   .terminal-content pre {
     margin: 0;
-    color: var(--text-primary, CanvasText);
-    font-family: 'SF Mono', Monaco, monospace;
-    font-size: 13px;
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
     white-space: pre-wrap;
   }
 
   .terminal-input {
     display: flex;
     align-items: center;
-    margin-top: 8px;
+    margin-top: 0.5rem;
   }
 
   .prompt {
-    color: var(--accent-color, #3b82f6);
-    margin-right: 8px;
+    color: var(--accent-color);
+    margin-right: 0.5rem;
   }
 
   .command-input {
     flex: 1;
     background: transparent;
     border: none;
-    color: var(--text-primary, CanvasText);
     outline: none;
-    font-family: 'SF Mono', Monaco, monospace;
-    font-size: 13px;
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
   }
 
   /* AI Panel */
   .ai-panel {
     width: 320px;
-    border-left: 1px solid var(--border-color, #e5e7eb);
-    background: var(--bg-secondary, Canvas);
+    border-left: 1px solid var(--border-color);
     display: flex;
     flex-direction: column;
   }
 
   .ai-header {
-    padding: 12px 16px;
-    border-bottom: 1px solid var(--border-color, #e5e7eb);
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border-color);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -831,145 +789,142 @@ clap = { version = "4.0", features = ["derive"] }`;
 
   .ai-header h3 {
     margin: 0;
-    font-size: 14px;
+    font-size: 0.875rem;
     font-weight: 600;
-    color: var(--text-primary, CanvasText);
   }
 
   .ai-close {
     background: none;
     border: none;
-    color: var(--text-secondary, #6b7280);
     cursor: pointer;
-    font-size: 16px;
-    padding: 4px;
+    font-size: 1rem;
+    padding: 0.25rem;
   }
 
   .ai-suggestions {
-    padding: 16px;
-    border-bottom: 1px solid var(--border-color, #e5e7eb);
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-color);
   }
 
   .ai-suggestions h4 {
-    margin: 0 0 12px 0;
-    font-size: 13px;
+    margin: 0 0 0.75rem 0;
+    font-size: 0.8125rem;
     font-weight: 600;
-    color: var(--text-secondary, #6b7280);
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.03em;
   }
 
   .suggestion-item {
-    background: var(--bg-primary, Canvas);
-    border: 1px solid var(--border-color, #e5e7eb);
-    border-radius: 4px;
-    padding: 12px;
-    margin-bottom: 8px;
+    border-radius: 0.25rem;
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
   }
 
   .suggestion-type {
-    font-size: 11px;
-    color: var(--accent-color, #3b82f6);
+    font-size: 0.6875rem;
+    color: var(--accent-color);
     text-transform: uppercase;
     font-weight: 600;
-    margin-bottom: 4px;
+    margin-bottom: 0.25rem;
   }
 
   .suggestion-content {
-    font-size: 13px;
-    color: var(--text-primary, CanvasText);
-    margin-bottom: 8px;
+    font-size: 0.8125rem;
+    margin-bottom: 0.5rem;
     line-height: 1.4;
   }
 
   .suggestion-meta {
-    font-size: 11px;
-    color: var(--text-tertiary, #9ca3af);
-    margin-bottom: 8px;
+    font-size: 0.6875rem;
+    margin-bottom: 0.5rem;
   }
 
   .suggestion-actions {
     display: flex;
-    gap: 6px;
+    gap: 0.375rem;
   }
 
   .suggestion-btn {
-    padding: 4px 8px;
-    background: var(--accent-color, #3b82f6);
-    border: 1px solid var(--accent-color, #3b82f6);
-    border-radius: 3px;
+    padding: 0.25rem 0.5rem;
+    background-color: var(--accent-color);
+    border: 1px solid var(--accent-color);
+    border-radius: 0.1875rem;
     color: white;
     cursor: pointer;
-    font-size: 11px;
+    font-size: 0.6875rem;
     font-weight: 500;
   }
 
   .suggestion-btn:hover {
-    background: var(--accent-hover, #2563eb);
+    background-color: var(--accent-hover);
   }
 
   .suggestion-btn.secondary {
     background: transparent;
-    border-color: var(--border-color, #e5e7eb);
-    color: var(--text-secondary, #6b7280);
+    border-color: var(--border-color);
   }
 
   .suggestion-btn.secondary:hover {
-    background: var(--hover-bg, #f3f4f6);
+    background-color: var(--hover-bg);
   }
 
   .ai-chat {
     flex: 1;
-    padding: 16px;
+    padding: 1rem;
     display: flex;
     flex-direction: column;
   }
 
   .ai-chat h4 {
-    margin: 0 0 12px 0;
-    font-size: 13px;
+    margin: 0 0 0.75rem 0;
+    font-size: 0.8125rem;
     font-weight: 600;
-    color: var(--text-secondary, #6b7280);
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.03em;
   }
 
   .chat-input {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 0.5rem;
   }
 
   .chat-input textarea {
-    border: 1px solid var(--border-color, #e5e7eb);
-    background: var(--bg-primary, Canvas);
-    border-radius: 3px;
-    color: var(--text-primary, CanvasText);
-    padding: 8px;
-    font-size: 13px;
+    border-radius: 0.1875rem;
+    padding: 0.5rem;
+    font-size: 0.8125rem;
     font-family: inherit;
     resize: vertical;
-    min-height: 60px;
+    min-height: 3.75rem;
   }
 
   .chat-input textarea:focus {
     outline: none;
-    border-color: var(--accent-color, #3b82f6);
+    border-color: var(--accent-color);
   }
 
   .send-btn {
     align-self: flex-end;
-    padding: 6px 16px;
-    background: var(--accent-color, #3b82f6);
-    border: 1px solid var(--accent-color, #3b82f6);
-    border-radius: 3px;
+    padding: 0.375rem 1rem;
+    background-color: var(--accent-color);
+    border: 1px solid var(--accent-color);
+    border-radius: 0.1875rem;
     color: white;
     cursor: pointer;
-    font-size: 12px;
+    font-size: 0.75rem;
     font-weight: 500;
   }
 
   .send-btn:hover {
-    background: var(--accent-hover, #2563eb);
+    background-color: var(--color-accent-hover);
   }
+
+  /* Git Status Colors */
+  .status-indicator.status-M { background-color: var(--color-warning); }
+  .status-indicator.status-A { background-color: var(--color-success); }
+  .status-indicator.status-D { background-color: var(--color-error); }
+  
+  .tab-status.status-M { color: var(--color-warning); }
+  .tab-status.status-A { color: var(--color-success); }
+  .tab-status.status-D { color: var(--color-error); }
 </style>

@@ -51,12 +51,12 @@
   };
 
   const sections = [
-    { id: 'general', name: 'General', icon: '⚙️' },
-    { id: 'project', name: 'Project', icon: '📁' },
-    { id: 'session', name: 'Session Management', icon: '💬' },
-    { id: 'ai', name: 'AI Assistant', icon: '🤖' },
-    { id: 'notifications', name: 'Notifications', icon: '🔔' },
-    { id: 'privacy', name: 'Privacy & Security', icon: '🔒' }
+    { id: 'general', name: 'General', icon: '' },
+    { id: 'project', name: 'Project', icon: '' },
+    { id: 'session', name: 'Session Management', icon: '' },
+    { id: 'ai', name: 'AI Assistant', icon: '' },
+    { id: 'notifications', name: 'Notifications', icon: '' },
+    { id: 'privacy', name: 'Privacy & Security', icon: '' }
   ];
 
   let unsavedChanges = false;
@@ -135,12 +135,12 @@
 
   function getSaveStatusColor() {
     const colors = {
-      saved: 'var(--success-color, #10b981)',
-      saving: 'var(--warning-color, #f59e0b)',
-      unsaved: 'var(--error-color, #ef4444)',
-      error: 'var(--error-color, #ef4444)'
+      saved: 'var(--color-success)',
+      saving: 'var(--color-warning)',
+      unsaved: 'var(--color-error)',
+      error: 'var(--color-error)'
     };
-    return colors[saveStatus] || 'var(--text-secondary, #6b7280)';
+    return colors[saveStatus] || 'var(--color-text-secondary)';
   }
 
   function getSaveStatusText() {
@@ -154,15 +154,15 @@
   }
 </script>
 
-<div class="settings">
+<div class="settings card bg-surface">
   <!-- Header -->
-  <div class="settings-header">
+  <div class="settings-header card bg-surface-2">
     <div class="header-left">
-      <h2>Settings & Configuration</h2>
-      <p class="subtitle">Workspace preferences, AI assistant, and privacy settings</p>
+      <h2 class="text-primary">Settings & Configuration</h2>
+      <p class="subtitle text-secondary">Workspace preferences, AI assistant, and privacy settings</p>
     </div>
     <div class="header-actions">
-      <div class="save-status" style="color: {getSaveStatusColor()}">
+      <div class="save-status text-secondary" style:color={getSaveStatusColor()}>
         <span class="status-indicator"></span>
         {getSaveStatusText()}
       </div>
@@ -180,10 +180,10 @@
   <!-- Settings Layout -->
   <div class="settings-content">
     <!-- Navigation Sidebar -->
-    <div class="settings-nav">
+    <div class="settings-nav card bg-surface-2">
       {#each sections as section}
         <button 
-          class="nav-item {activeSection === section.id ? 'active' : ''}"
+          class="nav-item btn-secondary {activeSection === section.id ? 'btn-primary' : ''}"
           on:click={() => selectSection(section.id)}
         >
           <span class="nav-icon">{section.icon}</span>
@@ -196,11 +196,11 @@
     </div>
 
     <!-- Settings Panels -->
-    <div class="settings-panel">
+    <div class="settings-panel card bg-surface">
       {#if activeSection === 'general'}
         <div class="panel-content">
-          <h3>General Settings</h3>
-          <p class="panel-description">Workspace configuration and basic preferences</p>
+          <h3 class="text-primary">General Settings</h3>
+          <p class="panel-description text-secondary">Workspace configuration and basic preferences</p>
           
           <div class="settings-group">
             <h4>Workspace Configuration</h4>
@@ -715,16 +715,21 @@
 
 <style>
   .settings {
-    color: var(--text-primary, CanvasText);
+    color: var(--color-text-primary);
     min-height: 100vh;
-    padding: 1.5rem;
+    padding: var(--spacing-xl);
+    background: var(--color-background);
   }
 
   .settings-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 2rem;
+    margin-bottom: var(--spacing-xl);
+    padding: var(--spacing-lg);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
   }
 
   .header-left h2 {
@@ -761,59 +766,61 @@
   }
 
   .btn-primary {
-    background: var(--accent-color, #3b82f6);
+    background: var(--color-primary);
     color: white;
     border: none;
-    padding: 0.75rem 1.5rem;
-    border-radius: 0.5rem;
+    padding: var(--spacing-sm) var(--spacing-lg);
+    border-radius: var(--radius-md);
     font-weight: 600;
     cursor: pointer;
-    transition: background 0.2s;
+    transition: background var(--transition-base);
   }
 
   .btn-primary:hover:not(:disabled) {
-    background: var(--accent-hover, #2563eb);
+    background: var(--color-primary-hover);
   }
 
   .btn-primary:disabled {
-    background: var(--bg-tertiary, #f9fafb);
+    background: var(--color-surface-3);
+    color: var(--color-text-disabled);
     cursor: not-allowed;
   }
 
   .btn-secondary {
-    background: var(--bg-tertiary, #f9fafb);
-    border: 1px solid var(--border-color, #e5e7eb);
-    color: var(--text-primary, CanvasText);
-    padding: 0.75rem 1.5rem;
-    border-radius: 0.5rem;
+    background: transparent;
+    border: 1px solid var(--color-border);
+    color: var(--color-text-primary);
+    padding: var(--spacing-sm) var(--spacing-lg);
+    border-radius: var(--radius-md);
     cursor: pointer;
     font-weight: 500;
-    transition: background 0.2s;
+    transition: all var(--transition-base);
   }
 
   .btn-secondary:hover {
-    background: var(--hover-bg, #f3f4f6);
+    background: var(--color-surface-2);
+    border-color: var(--color-border-focus);
   }
 
   .btn-danger {
-    background: var(--error-color, #ef4444);
+    background: var(--color-error);
     color: white;
     border: none;
-    padding: 0.75rem 1.5rem;
-    border-radius: 0.5rem;
+    padding: var(--spacing-sm) var(--spacing-lg);
+    border-radius: var(--radius-md);
     font-weight: 600;
     cursor: pointer;
-    transition: background 0.2s;
+    transition: background var(--transition-base);
   }
 
   .btn-danger:hover {
-    background: var(--error-hover, #dc2626);
+    background: #dc2626;
   }
 
   .settings-content {
     display: grid;
-    grid-template-columns: 250px 1fr;
-    gap: 2rem;
+    grid-template-columns: 280px 1fr;
+    gap: var(--spacing-xl);
     min-height: 600px;
   }
 
@@ -873,7 +880,7 @@
   }
 
   .panel-content {
-    padding: 2rem;
+    padding: var(--spacing-xl);
   }
 
   .panel-content h3 {
@@ -890,7 +897,7 @@
   }
 
   .settings-group {
-    margin-bottom: 2rem;
+    margin-bottom: var(--spacing-xl);
   }
 
   .settings-group:last-child {
@@ -907,7 +914,7 @@
   }
 
   .setting-item {
-    margin-bottom: 1.5rem;
+    margin-bottom: var(--spacing-lg);
   }
 
   .setting-item:last-child {
@@ -916,16 +923,21 @@
 
   .setting-item label {
     display: block;
-    color: var(--text-primary, CanvasText);
+    color: var(--color-text-secondary);
     font-weight: 500;
-    margin-bottom: 0.5rem;
+    margin-bottom: var(--spacing-sm);
+    font-size: var(--font-size-sm);
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
   }
 
   .checkbox-label {
     display: flex !important;
     align-items: center;
-    gap: 0.5rem;
+    gap: var(--spacing-sm);
     cursor: pointer;
+    text-transform: none;
+    letter-spacing: normal;
   }
 
   .checkbox-label input[type="checkbox"] {
@@ -936,12 +948,14 @@
   .setting-item input[type="number"],
   .setting-item select {
     width: 100%;
-    padding: 0.75rem;
-    background: var(--bg-primary, Canvas);
-    border: 1px solid var(--border-color, #e5e7eb);
-    border-radius: 0.5rem;
-    color: var(--text-primary, CanvasText);
-    font-size: 0.875rem;
+    padding: var(--spacing-sm) var(--spacing-md);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    color: var(--color-text-primary);
+    font-size: var(--font-size-sm);
+    font-family: inherit;
+    transition: all var(--transition-fast);
   }
 
   .setting-item input[type="text"]:focus,

@@ -111,20 +111,20 @@
 
   function getSeverityColor(severity) {
     switch (severity) {
-      case 'critical': return '#dc2626';
-      case 'high': return '#ea580c';
-      case 'medium': return '#d97706';
-      case 'low': return '#65a30d';
-      default: return '#6b7280';
+      case 'critical': return 'var(--color-error)';
+      case 'high': return 'var(--color-error)';
+      case 'medium': return 'var(--color-warning)';
+      case 'low': return 'var(--color-success)';
+      default: return 'var(--color-text-secondary)';
     }
   }
 
   function getEnvironmentColor(env) {
     switch (env) {
-      case 'production': return '#dc2626';
-      case 'test': return '#d97706';
-      case 'development': return '#059669';
-      default: return '#6b7280';
+      case 'production': return 'var(--color-error)';
+      case 'test': return 'var(--color-warning)';
+      case 'development': return 'var(--color-success)';
+      default: return 'var(--color-text-secondary)';
     }
   }
 
@@ -156,49 +156,49 @@
   });
 </script>
 
-<div class="issues-diagnostics">
-  <div class="issues-header">
-    <h1>Issues & Diagnostics</h1>
+<div class="issues-diagnostics-container">
+  <div class="issues-header card bg-surface">
+    <h1 class="text-primary">Issues & Diagnostics</h1>
     
     <div class="issue-stats">
-      <div class="stat-card critical">
-        <div class="stat-number">{issueStats.critical}</div>
-        <div class="stat-label">Critical</div>
+      <div class="stat-card card bg-surface-2">
+        <div class="stat-number text-error">{issueStats.critical}</div>
+        <div class="stat-label text-secondary">Critical</div>
       </div>
-      <div class="stat-card high">
-        <div class="stat-number">{issueStats.high}</div>
-        <div class="stat-label">High</div>
+      <div class="stat-card card bg-surface-2">
+        <div class="stat-number text-error">{issueStats.high}</div>
+        <div class="stat-label text-secondary">High</div>
       </div>
-      <div class="stat-card medium">
-        <div class="stat-number">{issueStats.medium}</div>
-        <div class="stat-label">Medium</div>
+      <div class="stat-card card bg-surface-2">
+        <div class="stat-number text-warning">{issueStats.medium}</div>
+        <div class="stat-label text-secondary">Medium</div>
       </div>
-      <div class="stat-card resolved">
-        <div class="stat-number">{issueStats.resolved}</div>
-        <div class="stat-label">Resolved</div>
+      <div class="stat-card card bg-surface-2">
+        <div class="stat-number text-success">{issueStats.resolved}</div>
+        <div class="stat-label text-secondary">Resolved</div>
       </div>
-      <div class="stat-card performance">
-        <div class="stat-number">{issueStats.avgResponseTime}ms</div>
-        <div class="stat-label">Avg Response</div>
+      <div class="stat-card card bg-surface-2">
+        <div class="stat-number text-info">{issueStats.avgResponseTime}ms</div>
+        <div class="stat-label text-secondary">Avg Response</div>
       </div>
     </div>
   </div>
 
   <div class="issues-interface">
     <!-- Left Panel - Issues List -->
-    <div class="issues-panel">
+    <div class="issues-panel card bg-surface">
       <div class="panel-header">
         <h2>Active Issues</h2>
         
         <div class="filters">
-          <select bind:value={filterEnvironment} class="filter-select">
+          <select bind:value={filterEnvironment} class="filter-select bg-surface border rounded-md text-primary">
             <option value="all">All Environments</option>
             <option value="production">Production</option>
             <option value="test">Test</option>
             <option value="development">Development</option>
           </select>
           
-          <select bind:value={filterSeverity} class="filter-select">
+          <select bind:value={filterSeverity} class="filter-select bg-surface border rounded-md text-primary">
             <option value="all">All Severities</option>
             <option value="critical">Critical</option>
             <option value="high">High</option>
@@ -206,7 +206,7 @@
             <option value="low">Low</option>
           </select>
           
-          <select bind:value={sortBy} class="filter-select">
+          <select bind:value={sortBy} class="filter-select bg-surface border rounded-md text-primary">
             <option value="timestamp">Sort by Time</option>
             <option value="severity">Sort by Severity</option>
             <option value="responseTime">Sort by Performance</option>
@@ -217,35 +217,29 @@
       <div class="issues-list">
         {#each filteredIssues as issue}
           <div 
-            class="issue-card" 
+            class="issue-card card bg-surface-2 border rounded-md" 
             class:selected={selectedIssue?.id === issue.id}
             class:resolved={issue.resolved}
             on:click={() => selectIssue(issue)}
           >
             <div class="issue-header">
-              <div 
-                class="severity-badge" 
-                style="background-color: {getSeverityColor(issue.severity)}"
-              >
+              <div class="severity-badge text-primary bg-surface-3 rounded-lg">
                 {issue.severity.toUpperCase()}
               </div>
-              <div 
-                class="environment-badge"
-                style="color: {getEnvironmentColor(issue.environment)}"
-              >
+              <div class="environment-badge text-secondary">
                 {issue.environment}
               </div>
             </div>
             
-            <div class="issue-title">{issue.title}</div>
+            <div class="issue-title text-primary">{issue.title}</div>
             <div class="issue-meta">
-              <span class="issue-time">{formatTimestamp(issue.timestamp)}</span>
-              <span class="issue-response">{issue.responseTime}ms</span>
+              <span class="issue-time text-secondary">{formatTimestamp(issue.timestamp)}</span>
+              <span class="issue-response text-tertiary">{issue.responseTime}ms</span>
             </div>
             
             <div class="issue-tags">
               {#each issue.tags as tag}
-                <span class="tag">{tag}</span>
+                <span class="tag bg-surface-3 text-secondary rounded-md">{tag}</span>
               {/each}
             </div>
           </div>
@@ -254,19 +248,19 @@
     </div>
 
     <!-- Right Panel - Issue Details -->
-    <div class="details-panel">
+    <div class="details-panel card bg-surface">
       {#if selectedIssue}
         <div class="detail-header">
-          <div class="detail-title">{selectedIssue.title}</div>
+          <div class="detail-title text-primary">{selectedIssue.title}</div>
           <div class="detail-actions">
             <button 
-              class="action-btn resolve" 
+              class="btn-secondary" 
               class:disabled={selectedIssue.resolved}
               on:click={() => markResolved(selectedIssue.id)}
             >
               {selectedIssue.resolved ? 'Resolved' : 'Mark Resolved'}
             </button>
-            <button class="action-btn task" on:click={() => createTask(selectedIssue.id)}>
+            <button class="btn-primary" on:click={() => createTask(selectedIssue.id)}>
               Create Task
             </button>
           </div>
@@ -274,29 +268,29 @@
 
         <div class="detail-content">
           <div class="detail-section">
-            <h3>Description</h3>
-            <p class="description">{selectedIssue.description}</p>
+            <h3 class="text-primary">Description</h3>
+            <p class="description text-secondary">{selectedIssue.description}</p>
           </div>
 
           <div class="detail-section">
-            <h3>Stack Trace</h3>
-            <pre class="stack-trace">{selectedIssue.stackTrace}</pre>
+            <h3 class="text-primary">Stack Trace</h3>
+            <pre class="stack-trace bg-surface-2 border rounded-md text-error">{selectedIssue.stackTrace}</pre>
           </div>
 
           <div class="detail-section">
-            <h3>AI Root Cause Analysis</h3>
-            <div class="ai-analysis">
-              <div class="analysis-confidence">
+            <h3 class="text-primary">AI Root Cause Analysis</h3>
+            <div class="ai-analysis card bg-surface-2 border rounded-md">
+              <div class="analysis-confidence text-info">
                 Confidence: {Math.round(selectedIssue.aiAnalysis.confidence * 100)}%
               </div>
               <div class="root-cause">
-                <strong>Root Cause:</strong> {selectedIssue.aiAnalysis.rootCause}
+                <strong class="text-primary">Root Cause:</strong> <span class="text-secondary">{selectedIssue.aiAnalysis.rootCause}</span>
               </div>
               <div class="suggestions">
-                <strong>Suggested Fixes:</strong>
+                <strong class="text-primary">Suggested Fixes:</strong>
                 <ul>
                   {#each selectedIssue.aiAnalysis.suggestions as suggestion}
-                    <li>{suggestion}</li>
+                    <li class="text-secondary">{suggestion}</li>
                   {/each}
                 </ul>
               </div>
@@ -304,21 +298,21 @@
           </div>
 
           <div class="detail-section">
-            <h3>Performance Impact</h3>
+            <h3 class="text-primary">Performance Impact</h3>
             <div class="performance-metrics">
               <div class="metric">
-                <span class="metric-label">Response Time:</span>
-                <span class="metric-value">{selectedIssue.responseTime}ms</span>
+                <span class="metric-label text-secondary">Response Time:</span>
+                <span class="metric-value text-primary">{selectedIssue.responseTime}ms</span>
               </div>
               <div class="metric">
-                <span class="metric-label">Environment:</span>
-                <span class="metric-value" style="color: {getEnvironmentColor(selectedIssue.environment)}">
+                <span class="metric-label text-secondary">Environment:</span>
+                <span class="metric-value text-primary">
                   {selectedIssue.environment}
                 </span>
               </div>
               <div class="metric">
-                <span class="metric-label">Severity:</span>
-                <span class="metric-value" style="color: {getSeverityColor(selectedIssue.severity)}">
+                <span class="metric-label text-secondary">Severity:</span>
+                <span class="metric-value text-primary">
                   {selectedIssue.severity}
                 </span>
               </div>
@@ -327,7 +321,7 @@
         </div>
       {:else}
         <div class="no-selection">
-          <p>Select an issue to view details and AI analysis</p>
+          <p class="text-secondary">Select an issue to view details and AI analysis</p>
         </div>
       {/if}
     </div>
@@ -335,143 +329,120 @@
 </div>
 
 <style>
-  .issues-diagnostics {
-    padding: 20px;
+  .issues-diagnostics-container {
+    padding: var(--spacing-xl);
     min-height: 100vh;
-    color: #fff;
+    background: var(--color-background);
   }
 
   .issues-header {
-    margin-bottom: 24px;
+    margin-bottom: var(--spacing-xl);
+    padding: var(--spacing-lg);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
   }
 
   .issues-header h1 {
-    color: #9b59d0;
-    font-size: 28px;
-    font-weight: 600;
-    margin: 0 0 16px 0;
+    font-size: var(--text-xl);
+    font-weight: var(--weight-semibold);
+    margin: 0 0 var(--space-4) 0;
   }
 
   .issue-stats {
     display: flex;
-    gap: 16px;
+    gap: var(--spacing-lg);
     flex-wrap: wrap;
+    margin-top: var(--spacing-lg);
   }
 
   .stat-card {
-    background: Canvas;
-    border: 1px solid GrayText;
-    border-radius: 8px;
-    padding: 16px;
-    min-width: 100px;
+    border-radius: var(--radius-md);
+    padding: var(--space-4);
+    min-width: 6.25rem;
     text-align: center;
   }
 
-  .stat-card.critical {
-    border-color: #dc2626;
-  }
-
-  .stat-card.high {
-    border-color: #ea580c;
-  }
-
-  .stat-card.medium {
-    border-color: #d97706;
-  }
-
-  .stat-card.resolved {
-    border-color: #059669;
-  }
-
-  .stat-card.performance {
-    border-color: #9b59d0;
-  }
-
   .stat-number {
-    font-size: 24px;
-    font-weight: 700;
-    margin-bottom: 4px;
+    font-size: var(--text-lg);
+    font-weight: var(--weight-bold);
+    margin-bottom: var(--space-1);
   }
-
-  .stat-card.critical .stat-number { color: #dc2626; }
-  .stat-card.high .stat-number { color: #ea580c; }
-  .stat-card.medium .stat-number { color: #d97706; }
-  .stat-card.resolved .stat-number { color: #059669; }
-  .stat-card.performance .stat-number { color: #9b59d0; }
 
   .stat-label {
-    color: #888;
-    font-size: 12px;
+    font-size: var(--text-xs);
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: var(--tracking-wide);
   }
 
   .issues-interface {
     display: grid;
-    grid-template-columns: 400px 1fr;
-    gap: 20px;
-    height: 600px;
+    grid-template-columns: 480px 1fr;
+    gap: var(--spacing-xl);
+    min-height: 700px;
   }
 
   .issues-panel,
   .details-panel {
-    background: Canvas;
-    border: 1px solid GrayText;
-    border-radius: 12px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
   }
 
   .panel-header {
-    padding: 16px 20px;
-    border-bottom: 1px solid #333;
+    padding: var(--spacing-lg);
+    border-bottom: 1px solid var(--color-border);
+    background: var(--color-surface-2);
+    flex-shrink: 0;
   }
 
   .panel-header h2 {
-    color: #9b59d0;
-    font-size: 16px;
-    font-weight: 600;
-    margin: 0 0 12px 0;
+    font-size: var(--text-base);
+    font-weight: var(--weight-semibold);
+    margin: 0 0 var(--space-3) 0;
   }
 
   .filters {
     display: flex;
-    gap: 8px;
+    gap: var(--space-2);
     flex-wrap: wrap;
   }
 
   .filter-select {
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid GrayText;
-    color: #fff;
-    padding: 6px 10px;
-    border-radius: 4px;
-    font-size: 12px;
+    padding: var(--space-1-5) var(--space-2-5);
+    border-radius: var(--radius-sm);
+    font-size: var(--text-xs);
   }
 
   .issues-list {
-    padding: 16px;
+    padding: var(--spacing-lg);
     overflow-y: auto;
-    height: calc(100% - 120px);
+    flex: 1;
+    min-height: 0;
   }
 
   .issue-card {
-    background: rgba(255, 255, 255, 0.02);
-    border: 1px solid GrayText;
-    border-radius: 8px;
-    padding: 16px;
-    margin-bottom: 12px;
+    background: var(--color-surface-2);
+    border: 1px solid var(--color-border);
+    padding: var(--spacing-lg);
+    margin-bottom: var(--spacing-md);
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all var(--transition-base);
+    border-radius: var(--radius-md);
   }
 
   .issue-card:hover {
-    background: rgba(255, 255, 255, 0.05);
-    border-color: #555;
+    background-color: var(--color-surface-3);
+    border-color: var(--color-border-focus);
   }
 
   .issue-card.selected {
-    background: rgba(155, 89, 208, 0.1);
-    border-color: #9b59d0;
+    background-color: var(--color-surface-3);
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px rgba(240, 46, 101, 0.1);
   }
 
   .issue-card.resolved {
@@ -482,52 +453,47 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 8px;
+    margin-bottom: var(--space-2);
   }
 
   .severity-badge {
-    color: #fff;
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 10px;
-    font-weight: 600;
+    padding: var(--space-0-5) var(--space-2);
+    border-radius: var(--radius-lg);
+    font-size: var(--text-xs);
+    font-weight: var(--weight-semibold);
     text-transform: uppercase;
   }
 
   .environment-badge {
-    font-size: 10px;
+    font-size: var(--text-xs);
     text-transform: uppercase;
-    font-weight: 600;
+    font-weight: var(--weight-semibold);
   }
 
   .issue-title {
-    font-size: 14px;
-    font-weight: 500;
-    color: #fff;
-    margin-bottom: 8px;
-    line-height: 1.3;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    margin-bottom: var(--space-2);
+    line-height: var(--leading-tight);
   }
 
   .issue-meta {
     display: flex;
     justify-content: space-between;
-    margin-bottom: 8px;
-    font-size: 11px;
-    color: #888;
+    margin-bottom: var(--space-2);
+    font-size: var(--text-xs);
   }
 
   .issue-tags {
     display: flex;
-    gap: 4px;
+    gap: var(--space-1);
     flex-wrap: wrap;
   }
 
   .tag {
-    background: rgba(155, 89, 208, 0.2);
-    color: #9b59d0;
-    padding: 2px 6px;
-    border-radius: 10px;
-    font-size: 10px;
+    padding: var(--space-0-5) var(--space-1-5);
+    border-radius: var(--radius-sm);
+    font-size: var(--text-xs);
   }
 
   .details-panel {
@@ -536,140 +502,92 @@
   }
 
   .detail-header {
-    padding: 16px 20px;
-    border-bottom: 1px solid #333;
+    padding: var(--space-4) var(--space-5);
+    border-bottom: 1px solid var(--color-border);
     display: flex;
     justify-content: space-between;
     align-items: center;
   }
 
   .detail-title {
-    color: #9b59d0;
-    font-size: 16px;
-    font-weight: 600;
+    font-size: var(--text-base);
+    font-weight: var(--weight-semibold);
     flex: 1;
   }
 
   .detail-actions {
     display: flex;
-    gap: 8px;
-  }
-
-  .action-btn {
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid GrayText;
-    color: #fff;
-    padding: 6px 12px;
-    border-radius: 4px;
-    font-size: 12px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-  }
-
-  .action-btn:hover:not(.disabled) {
-    background: rgba(255, 255, 255, 0.2);
-  }
-
-  .action-btn.resolve {
-    background: rgba(5, 150, 105, 0.2);
-    border-color: #059669;
-    color: #10b981;
-  }
-
-  .action-btn.task {
-    background: rgba(155, 89, 208, 0.2);
-    border-color: #9b59d0;
-    color: #9b59d0;
-  }
-
-  .action-btn.disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+    gap: var(--space-2);
   }
 
   .detail-content {
-    padding: 20px;
+    padding: var(--space-5);
     overflow-y: auto;
     flex: 1;
   }
 
   .detail-section {
-    margin-bottom: 24px;
+    margin-bottom: var(--space-6);
   }
 
   .detail-section h3 {
-    color: #9b59d0;
-    font-size: 14px;
-    font-weight: 600;
-    margin: 0 0 12px 0;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+    margin: 0 0 var(--space-3) 0;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: var(--tracking-wide);
   }
 
   .description {
-    color: #ccc;
-    line-height: 1.5;
+    line-height: var(--leading-relaxed);
     margin: 0;
   }
 
   .stack-trace {
-    background: rgba(0, 0, 0, 0.3);
-    border: 1px solid GrayText;
-    border-radius: 4px;
-    padding: 12px;
-    color: #f87171;
-    font-family: 'Monaco', 'Menlo', monospace;
-    font-size: 12px;
-    line-height: 1.4;
+    padding: var(--space-3);
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    line-height: var(--leading-relaxed);
     overflow-x: auto;
     margin: 0;
   }
 
   .ai-analysis {
-    background: rgba(155, 89, 208, 0.05);
-    border: 1px solid rgba(155, 89, 208, 0.2);
-    border-radius: 8px;
-    padding: 16px;
+    padding: var(--space-4);
   }
 
   .analysis-confidence {
-    color: #9b59d0;
-    font-size: 12px;
-    font-weight: 600;
-    margin-bottom: 8px;
+    font-size: var(--text-xs);
+    font-weight: var(--weight-semibold);
+    margin-bottom: var(--space-2);
   }
 
   .root-cause {
-    color: #ccc;
-    line-height: 1.5;
-    margin-bottom: 12px;
-  }
-
-  .suggestions {
-    color: #ccc;
+    line-height: var(--leading-relaxed);
+    margin-bottom: var(--space-3);
   }
 
   .suggestions ul {
-    margin: 8px 0 0 0;
-    padding-left: 20px;
+    margin: var(--space-2) 0 0 0;
+    padding-left: var(--space-5);
   }
 
   .suggestions li {
-    margin-bottom: 4px;
-    line-height: 1.4;
+    margin-bottom: var(--space-1);
+    line-height: var(--leading-relaxed);
   }
 
   .performance-metrics {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: var(--space-2);
   }
 
   .metric {
     display: flex;
     justify-content: space-between;
-    padding: 8px 0;
-    border-bottom: 1px solid #333;
+    padding: var(--space-2) 0;
+    border-bottom: 1px solid var(--color-border);
   }
 
   .metric:last-child {
@@ -677,20 +595,17 @@
   }
 
   .metric-label {
-    color: #888;
-    font-size: 13px;
+    font-size: var(--text-sm);
   }
 
   .metric-value {
-    color: #fff;
-    font-weight: 600;
-    font-size: 13px;
+    font-weight: var(--weight-semibold);
+    font-size: var(--text-sm);
   }
 
   .no-selection {
-    padding: 40px;
+    padding: var(--space-10);
     text-align: center;
-    color: #666;
     font-style: italic;
   }
 </style>
