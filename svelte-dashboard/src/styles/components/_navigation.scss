@@ -1,0 +1,696 @@
+// Design System - Navigation Components
+// =====================================
+
+@import '../variables';
+@import '../mixins';
+
+// NAVIGATION BAR
+// --------------
+.navbar {
+  background-color: $neutral-900;
+  border-bottom: $border-width solid $neutral-800;
+  padding: $space-4 0;
+  position: sticky;
+  top: 0;
+  z-index: $z-40;
+}
+
+.navbar__container {
+  @include container;
+  @include flex-between;
+}
+
+.navbar__brand {
+  @include heading-3;
+  color: $neutral-100;
+  text-decoration: none;
+  font-weight: $font-bold;
+  
+  &:hover {
+    color: $primary-400;
+  }
+}
+
+.navbar__nav {
+  display: flex;
+  align-items: center;
+  gap: $space-6;
+  
+  @include mobile-only {
+    display: none;
+    
+    &--mobile-open {
+      display: flex;
+      flex-direction: column;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background-color: $neutral-900;
+      border-bottom: $border-width solid $neutral-800;
+      padding: $space-4;
+      gap: $space-4;
+    }
+  }
+}
+
+.navbar__item {
+  @include body-base;
+  color: $neutral-300;
+  text-decoration: none;
+  font-weight: $font-medium;
+  transition: color $transition-fast;
+  
+  &:hover {
+    color: $neutral-100;
+  }
+  
+  &--active {
+    color: $primary-500;
+  }
+}
+
+.navbar__toggle {
+  @include button-ghost;
+  display: none;
+  padding: $space-2;
+  
+  @include mobile-only {
+    display: flex;
+  }
+}
+
+// TAB NAVIGATION
+// --------------
+.tabs {
+  display: flex;
+  border-bottom: $border-width solid $neutral-800;
+  overflow-x: auto;
+  @include scroll-custom;
+}
+
+.tabs__item {
+  @include body-base;
+  color: $neutral-400;
+  text-decoration: none;
+  padding: $space-3 $space-4;
+  border-bottom: 2px solid transparent;
+  font-weight: $font-medium;
+  white-space: nowrap;
+  transition: all $transition-fast;
+  cursor: pointer;
+  background: none;
+  border-top: none;
+  border-left: none;
+  border-right: none;
+  
+  &:hover {
+    color: $neutral-200;
+    background-color: rgba($neutral-700, 0.3);
+  }
+  
+  &--active {
+    color: $primary-500;
+    border-bottom-color: $primary-500;
+  }
+  
+  &:focus-visible {
+    outline: 2px solid $primary-500;
+    outline-offset: -2px;
+  }
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    
+    &:hover {
+      color: $neutral-400;
+      background-color: transparent;
+    }
+  }
+}
+
+.tabs__content {
+  padding: $space-6 0;
+}
+
+.tabs__panel {
+  display: none;
+  
+  &--active {
+    display: block;
+  }
+}
+
+// PILL NAVIGATION
+// ---------------
+.pills {
+  display: flex;
+  gap: $space-2;
+  flex-wrap: wrap;
+}
+
+.pills__item {
+  @include body-small;
+  padding: $space-2 $space-4;
+  color: $neutral-300;
+  background-color: transparent;
+  border: $border-width solid $neutral-700;
+  border-radius: $rounded-full;
+  text-decoration: none;
+  font-weight: $font-medium;
+  transition: all $transition-fast;
+  cursor: pointer;
+  
+  &:hover {
+    background-color: $neutral-800;
+    border-color: $neutral-600;
+    color: $neutral-100;
+  }
+  
+  &--active {
+    background-color: $primary-500;
+    border-color: $primary-500;
+    color: $neutral-0;
+    
+    &:hover {
+      background-color: $primary-600;
+      border-color: $primary-600;
+    }
+  }
+  
+  &:focus-visible {
+    outline: 2px solid $primary-500;
+    outline-offset: 2px;
+  }
+}
+
+// BREADCRUMB NAVIGATION
+// ---------------------
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: $space-2;
+  padding: $space-4 0;
+}
+
+.breadcrumb__item {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  
+  &:not(:last-child)::after {
+    content: '/';
+    color: $neutral-500;
+    font-weight: $font-normal;
+  }
+}
+
+.breadcrumb__link {
+  @include body-small;
+  color: $neutral-400;
+  text-decoration: none;
+  transition: color $transition-fast;
+  
+  &:hover {
+    color: $neutral-200;
+  }
+  
+  &--current {
+    color: $neutral-100;
+    font-weight: $font-medium;
+  }
+}
+
+// PAGINATION
+// ----------
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $space-1;
+  padding: $space-6 0;
+}
+
+.pagination__item {
+  @include button-ghost;
+  min-width: 40px;
+  height: 40px;
+  padding: 0;
+  
+  &--active {
+    @include button-primary;
+  }
+  
+  &--disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.pagination__ellipsis {
+  @include body-base;
+  color: $neutral-500;
+  padding: $space-2 $space-3;
+}
+
+.pagination__info {
+  @include body-small;
+  color: $neutral-400;
+  margin: 0 $space-4;
+}
+
+// SIDEBAR NAVIGATION
+// ------------------
+.sidebar {
+  width: 240px;
+  background-color: $neutral-900;
+  border-right: $border-width solid $neutral-800;
+  padding: $space-6 0;
+  overflow-y: auto;
+  @include scroll-custom;
+  
+  @include mobile-only {
+    width: 100%;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: $z-50;
+    transform: translateX(-100%);
+    transition: transform $transition-base;
+    
+    &--open {
+      transform: translateX(0);
+    }
+  }
+}
+
+.sidebar__section {
+  margin-bottom: $space-6;
+  
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.sidebar__title {
+  @include caption;
+  color: $neutral-500;
+  padding: 0 $space-4;
+  margin-bottom: $space-3;
+}
+
+.sidebar__nav {
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar__item {
+  @include body-base;
+  color: $neutral-300;
+  text-decoration: none;
+  padding: $space-3 $space-4;
+  border-radius: 0;
+  transition: all $transition-fast;
+  display: flex;
+  align-items: center;
+  gap: $space-3;
+  
+  &:hover {
+    background-color: $neutral-800;
+    color: $neutral-100;
+  }
+  
+  &--active {
+    background-color: rgba($primary-500, 0.1);
+    color: $primary-500;
+    border-right: 2px solid $primary-500;
+  }
+  
+  &:focus-visible {
+    outline: 2px solid $primary-500;
+    outline-offset: -2px;
+  }
+}
+
+.sidebar__icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex-shrink: 0;
+}
+
+.sidebar__badge {
+  @include body-small;
+  background-color: $primary-500;
+  color: $neutral-0;
+  padding: $space-1 $space-2;
+  border-radius: $rounded-full;
+  font-weight: $font-medium;
+  margin-left: auto;
+  min-width: 1.5rem;
+  text-align: center;
+}
+
+// MOBILE OVERLAY
+// --------------
+.nav-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba($neutral-950, 0.8);
+  z-index: $z-40;
+  opacity: 0;
+  visibility: hidden;
+  transition: all $transition-base;
+  
+  &--active {
+    opacity: 1;
+    visibility: visible;
+  }
+  
+  @include desktop-up {
+    display: none;
+  }
+}
+
+// MENU DROPDOWN
+// -------------
+.menu {
+  position: relative;
+  display: inline-block;
+}
+
+.menu__trigger {
+  @include button-ghost;
+}
+
+.menu__content {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background-color: $neutral-900;
+  border: $border-width solid $neutral-700;
+  border-radius: $rounded-md;
+  box-shadow: $shadow-xl;
+  min-width: 200px;
+  z-index: $z-50;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-8px);
+  transition: all $transition-fast;
+  
+  &--open {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+  }
+  
+  &--left {
+    right: auto;
+    left: 0;
+  }
+}
+
+.menu__item {
+  @include body-base;
+  color: $neutral-300;
+  text-decoration: none;
+  padding: $space-3 $space-4;
+  display: flex;
+  align-items: center;
+  gap: $space-3;
+  transition: all $transition-fast;
+  cursor: pointer;
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+  
+  &:hover {
+    background-color: $neutral-800;
+    color: $neutral-100;
+  }
+  
+  &:focus-visible {
+    outline: 2px solid $primary-500;
+    outline-offset: -2px;
+  }
+  
+  &--danger {
+    color: $error-500;
+    
+    &:hover {
+      background-color: rgba($error-500, 0.1);
+      color: $error-400;
+    }
+  }
+  
+  &--divider {
+    border-bottom: $border-width solid $neutral-800;
+    margin: $space-2 0;
+    padding: 0;
+    height: 1px;
+    cursor: default;
+    
+    &:hover {
+      background-color: transparent;
+    }
+  }
+}
+
+.menu__icon {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+}
+
+// STEP NAVIGATION
+// ---------------
+.steps {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: $space-8 0;
+  
+  @include mobile-only {
+    overflow-x: auto;
+    justify-content: flex-start;
+    gap: $space-4;
+    padding-bottom: $space-2;
+  }
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: $space-3;
+  flex: 1;
+  
+  &:not(:last-child) {
+    &::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background-color: $neutral-800;
+      margin-left: $space-4;
+      
+      @include mobile-only {
+        display: none;
+      }
+    }
+  }
+  
+  @include mobile-only {
+    flex: none;
+    white-space: nowrap;
+  }
+}
+
+.step__number {
+  width: 2rem;
+  height: 2rem;
+  border-radius: $rounded-full;
+  background-color: $neutral-800;
+  color: $neutral-400;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $text-sm;
+  font-weight: $font-medium;
+  flex-shrink: 0;
+  
+  .step--active & {
+    background-color: $primary-500;
+    color: $neutral-0;
+  }
+  
+  .step--completed & {
+    background-color: $success-500;
+    color: $neutral-0;
+  }
+}
+
+.step__label {
+  @include body-small;
+  color: $neutral-500;
+  font-weight: $font-medium;
+  
+  .step--active & {
+    color: $neutral-200;
+  }
+  
+  .step--completed & {
+    color: $neutral-300;
+  }
+}
+
+// HEADER NAVIGATION (Appwrite Style)
+// -----------------------------------
+header {
+  background: $neutral-900; // Clean Appwrite header background
+  border-bottom: 1px solid rgba($neutral-700, 0.3);
+  position: sticky;
+  top: 0;
+  z-index: $z-50;
+  margin-bottom: $space-6;
+  
+  // Light mode support
+  [data-theme="light"] & {
+    background: $neutral-0;
+    border-bottom-color: $neutral-200;
+  }
+}
+
+.header-content {
+  @include flex-between;
+  padding: 0 $space-8;
+  height: 64px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+
+  h1 {
+    @include heading-3;
+    margin: 0;
+    color: $neutral-100;
+  }
+}
+
+nav {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  flex: 1;
+  margin-left: $space-8;
+  height: 64px;
+}
+
+.nav-item {
+  @include body-base;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  height: 64px;
+  padding: 0 $space-4;
+  color: $neutral-400;
+  font-weight: $font-medium;
+  cursor: pointer;
+  transition: all $transition-fast;
+  display: flex;
+  align-items: center;
+  
+  &:hover {
+    color: $neutral-200;
+    background-color: rgba($neutral-800, 0.5);
+  }
+  
+  &.active {
+    color: $primary-500;
+    border-bottom-color: $primary-500;
+    background: none;
+  }
+  
+  // Light mode support
+  [data-theme="light"] & {
+    color: $neutral-600;
+    
+    &:hover {
+      color: $neutral-900;
+      background-color: rgba($neutral-100, 0.5);
+    }
+    
+    &.active {
+      color: $primary-500;
+    }
+  }
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: $space-4;
+  @include body-small;
+  color: $neutral-400;
+
+  span {
+    display: flex;
+    align-items: center;
+    gap: $space-2;
+  }
+}
+
+// ACCESSIBILITY ENHANCEMENTS
+// ---------------------------
+.nav-skip-link {
+  position: absolute;
+  top: -40px;
+  left: 6px;
+  background: $primary-500;
+  color: $neutral-0;
+  padding: $space-2 $space-4;
+  text-decoration: none;
+  border-radius: $rounded;
+  z-index: $z-50;
+  transition: top $transition-fast;
+  
+  &:focus {
+    top: $space-2;
+  }
+}
+
+// HIGH CONTRAST MODE
+// ------------------
+@media (prefers-contrast: high) {
+  .tabs__item {
+    border-bottom-width: 3px;
+  }
+  
+  .sidebar__item--active {
+    border-right-width: 4px;
+  }
+  
+  .pills__item {
+    border-width: $border-width-2;
+  }
+}
+
+// REDUCED MOTION
+// --------------
+@media (prefers-reduced-motion: reduce) {
+  .sidebar,
+  .menu__content,
+  .nav-overlay {
+    transition: none;
+  }
+  
+  .menu__content {
+    transform: none;
+  }
+}

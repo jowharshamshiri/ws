@@ -1,0 +1,313 @@
+// Design System - Button Components
+// =================================
+
+@import '../variables';
+@import '../mixins';
+
+// BUTTON BASE CLASSES
+// -------------------
+.btn {
+  @include button-base;
+}
+
+// BUTTON VARIANTS
+// ---------------
+.btn--primary {
+  @include button-primary;
+}
+
+.btn--secondary {
+  @include button-secondary;
+}
+
+.btn--ghost {
+  @include button-ghost;
+}
+
+.btn--danger {
+  @include button-danger;
+}
+
+// BUTTON SIZES
+// ------------
+.btn--sm {
+  padding: $space-2 $space-3;
+  font-size: $text-xs;
+  border-radius: $rounded-sm;
+}
+
+.btn--md {
+  padding: $space-2 $space-4;
+  font-size: $text-sm;
+  border-radius: $rounded-md;
+}
+
+.btn--lg {
+  padding: $space-3 $space-6;
+  font-size: $text-base;
+  border-radius: $rounded-md;
+}
+
+.btn--xl {
+  padding: $space-4 $space-8;
+  font-size: $text-lg;
+  border-radius: $rounded-lg;
+}
+
+// BUTTON WITH ICON
+// ----------------
+.btn--icon-only {
+  padding: $space-2;
+  
+  &.btn--sm {
+    padding: $space-1;
+  }
+  
+  &.btn--lg {
+    padding: $space-3;
+  }
+  
+  &.btn--xl {
+    padding: $space-4;
+  }
+}
+
+.btn--icon-left {
+  flex-direction: row;
+  
+  .btn__icon {
+    margin-right: $space-2;
+    margin-left: -$space-1;
+  }
+}
+
+.btn--icon-right {
+  flex-direction: row-reverse;
+  
+  .btn__icon {
+    margin-left: $space-2;
+    margin-right: -$space-1;
+  }
+}
+
+// BUTTON STATES
+// -------------
+.btn--loading {
+  position: relative;
+  color: transparent;
+  
+  &::after {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    top: 50%;
+    left: 50%;
+    margin-left: -8px;
+    margin-top: -8px;
+    border: 2px solid transparent;
+    border-top: 2px solid currentColor;
+    border-radius: $rounded-full;
+    animation: button-spin 1s linear infinite;
+  }
+  
+  &.btn--primary::after {
+    border-top-color: $neutral-0;
+  }
+  
+  &.btn--secondary::after,
+  &.btn--ghost::after {
+    border-top-color: $neutral-300;
+  }
+}
+
+@keyframes button-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// BUTTON GROUP
+// ------------
+.btn-group {
+  display: inline-flex;
+  align-items: center;
+  
+  .btn {
+    border-radius: 0;
+    
+    &:first-child {
+      border-top-left-radius: $rounded-md;
+      border-bottom-left-radius: $rounded-md;
+    }
+    
+    &:last-child {
+      border-top-right-radius: $rounded-md;
+      border-bottom-right-radius: $rounded-md;
+    }
+    
+    &:not(:first-child) {
+      margin-left: -1px;
+    }
+    
+    &:hover,
+    &:focus {
+      z-index: $z-10;
+    }
+  }
+}
+
+// BUTTON ICON
+// -----------
+.btn__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1em;
+  height: 1em;
+  
+  svg {
+    width: 100%;
+    height: 100%;
+    fill: currentColor;
+  }
+}
+
+// SPECIALIZED BUTTON VARIANTS
+// ----------------------------
+.btn--outline-primary {
+  @include button-base;
+  background-color: transparent;
+  color: $primary-500;
+  border-color: $primary-500;
+  
+  &:hover:not(:disabled) {
+    background-color: $primary-500;
+    color: $neutral-0;
+  }
+  
+  &:active:not(:disabled) {
+    background-color: $primary-600;
+    border-color: $primary-600;
+  }
+  
+  &:focus-visible {
+    outline: 2px solid $primary-500;
+    outline-offset: 2px;
+  }
+}
+
+.btn--outline-secondary {
+  @include button-base;
+  background-color: transparent;
+  color: $neutral-300;
+  border-color: $neutral-600;
+  
+  &:hover:not(:disabled) {
+    background-color: $neutral-300;
+    color: $neutral-900;
+    border-color: $neutral-300;
+  }
+  
+  &:active:not(:disabled) {
+    background-color: $neutral-400;
+    border-color: $neutral-400;
+  }
+  
+  &:focus-visible {
+    outline: 2px solid $neutral-500;
+    outline-offset: 2px;
+  }
+}
+
+.btn--text {
+  @include button-base;
+  background-color: transparent;
+  color: $primary-500;
+  border: none;
+  padding: $space-1 $space-2;
+  
+  &:hover:not(:disabled) {
+    background-color: rgba($primary-500, 0.1);
+  }
+  
+  &:active:not(:disabled) {
+    background-color: rgba($primary-500, 0.2);
+  }
+  
+  &:focus-visible {
+    outline: 2px solid $primary-500;
+    outline-offset: 2px;
+  }
+}
+
+// FLOATING ACTION BUTTON
+// ----------------------
+.btn--fab {
+  @include button-primary;
+  border-radius: $rounded-full;
+  padding: $space-4;
+  box-shadow: $shadow-lg;
+  position: fixed;
+  bottom: $space-6;
+  right: $space-6;
+  z-index: $z-40;
+  
+  &:hover:not(:disabled) {
+    box-shadow: $shadow-xl;
+    transform: translateY(-1px);
+  }
+}
+
+// BUTTON ACCESSIBILITY ENHANCEMENTS
+// ----------------------------------
+.btn[aria-pressed="true"] {
+  background-color: $primary-600;
+  
+  &.btn--secondary {
+    background-color: $neutral-700;
+    border-color: $neutral-400;
+  }
+  
+  &.btn--ghost {
+    background-color: $neutral-700;
+  }
+}
+
+// HIGH CONTRAST MODE SUPPORT
+// ---------------------------
+@media (prefers-contrast: high) {
+  .btn {
+    border-width: $border-width-2;
+  }
+  
+  .btn--primary {
+    border-color: $primary-700;
+  }
+  
+  .btn--secondary {
+    border-color: $neutral-400;
+  }
+  
+  .btn--ghost {
+    border-color: $neutral-400;
+  }
+}
+
+// REDUCED MOTION SUPPORT
+// ----------------------
+@media (prefers-reduced-motion: reduce) {
+  .btn {
+    transition: none;
+  }
+  
+  .btn--loading::after {
+    animation: none;
+    border: 2px solid currentColor;
+  }
+  
+  .btn--fab:hover {
+    transform: none;
+  }
+}

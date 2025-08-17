@@ -5,41 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ADE Workspace</title>
     <link rel="stylesheet" href="/dashboard/ade-main.css">
-    <style>
-        /* Loading state */
-        .ade-loading {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-        }
-
-        .loading-spinner {
-            width: 40px;
-            height: 40px;
-            border: 2px solid #666;
-            border-top: 2px solid #f02e65;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-bottom: 20px;
-        }
-
-        .loading-text {
-            color: #666;
-            font-size: 14px;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        /* Hide loading once Svelte app loads */
-        .ade-loading.hidden {
-            display: none;
-        }
-    </style>
 </head>
 <body>
     <div id="ade-app">

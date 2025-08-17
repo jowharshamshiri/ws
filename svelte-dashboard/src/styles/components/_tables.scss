@@ -1,0 +1,610 @@
+// Design System - Table Components (Professional Data Display)
+// ============================================================
+
+@import '../variables';
+@import '../mixins';
+
+// TABLE FOUNDATION (Sophisticated data tables)
+// =============================================
+.table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: rgba($neutral-850, 0.7);
+  border: 1px solid rgba($neutral-700, 0.3);
+  border-radius: $rounded-lg;
+  overflow: hidden;
+  
+  // Subtle table glow
+  box-shadow: 
+    0 1px 3px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+// TABLE HEADER (Professional styling)
+// ===================================
+.table__header {
+  background: linear-gradient(135deg, $neutral-800 0%, $neutral-850 100%);
+  border-bottom: 1px solid rgba($neutral-700, 0.4);
+  position: relative;
+  
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba($neutral-600, 0.8), transparent);
+  }
+}
+
+.table__header-cell {
+  @include body-small;
+  font-weight: $font-semibold;
+  color: $neutral-200;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: $space-4 $space-5;
+  text-align: left;
+  border-right: 1px solid rgba($neutral-700, 0.3);
+  position: relative;
+  
+  &:last-child {
+    border-right: none;
+  }
+  
+  // Sortable columns
+  &--sortable {
+    cursor: pointer;
+    user-select: none;
+    transition: all $transition-fast;
+    
+    &:hover {
+      background: rgba($neutral-700, 0.3);
+      color: $neutral-100;
+    }
+    
+    &::after {
+      content: '';
+      display: inline-block;
+      width: 0;
+      height: 0;
+      margin-left: $space-2;
+      vertical-align: middle;
+      border-left: 4px solid transparent;
+      border-right: 4px solid transparent;
+      border-bottom: 4px solid $neutral-500;
+      opacity: 0;
+      transition: opacity $transition-fast;
+    }
+    
+    &:hover::after {
+      opacity: 0.5;
+    }
+    
+    &--sorted-asc::after {
+      opacity: 1;
+      border-bottom: 4px solid $primary-500;
+    }
+    
+    &--sorted-desc::after {
+      opacity: 1;
+      border-top: 4px solid $primary-500;
+      border-bottom: none;
+    }
+  }
+  
+  // Resizable columns
+  &--resizable {
+    position: relative;
+    
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 1px;
+      height: 100%;
+      background: rgba($neutral-600, 0.5);
+      cursor: col-resize;
+    }
+  }
+  
+  // Column alignment
+  &--center {
+    text-align: center;
+  }
+  
+  &--right {
+    text-align: right;
+  }
+  
+  // Column types
+  &--numeric {
+    text-align: right;
+    font-family: $font-family-mono;
+  }
+  
+  &--actions {
+    width: 120px;
+    text-align: center;
+  }
+}
+
+// TABLE BODY
+// ==========
+.table__body {
+  background: rgba($neutral-850, 0.5);
+}
+
+.table__row {
+  border-bottom: 1px solid rgba($neutral-800, 0.5);
+  transition: all $transition-fast;
+  
+  &:hover {
+    background: rgba($neutral-800, 0.4);
+  }
+  
+  &:last-child {
+    border-bottom: none;
+  }
+  
+  // Row states
+  &--selected {
+    background: rgba($primary-500, 0.08);
+    border-color: rgba($primary-500, 0.2);
+    
+    &:hover {
+      background: rgba($primary-500, 0.12);
+    }
+  }
+  
+  &--highlighted {
+    background: rgba($warning-500, 0.05);
+    border-color: rgba($warning-500, 0.2);
+  }
+  
+  &--disabled {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+}
+
+.table__cell {
+  @include body-small;
+  color: $neutral-200;
+  padding: $space-4 $space-5;
+  border-right: 1px solid rgba($neutral-800, 0.3);
+  vertical-align: middle;
+  
+  &:last-child {
+    border-right: none;
+  }
+  
+  // Cell alignment
+  &--center {
+    text-align: center;
+  }
+  
+  &--right {
+    text-align: right;
+  }
+  
+  // Cell types
+  &--numeric {
+    text-align: right;
+    font-family: $font-family-mono;
+    font-weight: $font-medium;
+    color: $neutral-100;
+  }
+  
+  &--status {
+    .status-badge {
+      font-size: $text-xs;
+      padding: $space-1 $space-2;
+    }
+  }
+  
+  &--actions {
+    text-align: center;
+    padding: $space-2 $space-3;
+    
+    .btn {
+      padding: $space-1 $space-2;
+      font-size: $text-xs;
+      margin: 0 $space-1;
+    }
+  }
+  
+  // Truncated content
+  &--truncate {
+    max-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+// TABLE VARIANTS
+// ==============
+
+// Borderless table
+.table--borderless {
+  border: none;
+  
+  .table__header-cell,
+  .table__cell {
+    border-right: none;
+  }
+  
+  .table__row {
+    border-bottom: 1px solid rgba($neutral-800, 0.3);
+  }
+}
+
+// Striped table
+.table--striped {
+  .table__row:nth-child(even) {
+    background: rgba($neutral-800, 0.2);
+    
+    &:hover {
+      background: rgba($neutral-700, 0.4);
+    }
+  }
+}
+
+// Compact table
+.table--compact {
+  .table__header-cell,
+  .table__cell {
+    padding: $space-2 $space-3;
+  }
+}
+
+// Large table
+.table--large {
+  .table__header-cell,
+  .table__cell {
+    padding: $space-6 $space-8;
+  }
+}
+
+// TABLE CONTAINER (Scrollable wrapper)
+// ====================================
+.table-container {
+  position: relative;
+  overflow-x: auto;
+  overflow-y: visible;
+  border-radius: $rounded-lg;
+  
+  @include scroll-custom;
+  
+  // Shadow indicators for scrolling
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 20px;
+    pointer-events: none;
+    z-index: 2;
+    transition: opacity $transition-fast;
+  }
+  
+  &::before {
+    left: 0;
+    background: linear-gradient(90deg, rgba($neutral-850, 0.9), transparent);
+    opacity: 0;
+  }
+  
+  &::after {
+    right: 0;
+    background: linear-gradient(270deg, rgba($neutral-850, 0.9), transparent);
+    opacity: 0;
+  }
+  
+  &--scroll-left::before {
+    opacity: 1;
+  }
+  
+  &--scroll-right::after {
+    opacity: 1;
+  }
+}
+
+// TABLE TOOLBAR (Actions and filters)
+// ===================================
+.table__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $space-4 $space-5;
+  background: rgba($neutral-850, 0.9);
+  border-bottom: 1px solid rgba($neutral-700, 0.3);
+  border-radius: $rounded-lg $rounded-lg 0 0;
+  
+  &__left,
+  &__right {
+    display: flex;
+    align-items: center;
+    gap: $space-3;
+  }
+  
+  &__title {
+    @include heading-4;
+    color: $neutral-100;
+    margin: 0;
+  }
+  
+  &__subtitle {
+    @include body-small;
+    color: $neutral-400;
+    margin-left: $space-3;
+  }
+  
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: $space-2;
+  }
+}
+
+// TABLE PAGINATION
+// ================
+.table__pagination {
+  display: flex;
+  align-items: center;
+  justify-content: between;
+  padding: $space-4 $space-5;
+  background: rgba($neutral-850, 0.9);
+  border-top: 1px solid rgba($neutral-700, 0.3);
+  border-radius: 0 0 $rounded-lg $rounded-lg;
+  
+  &__info {
+    @include body-small;
+    color: $neutral-400;
+    flex: 1;
+  }
+  
+  &__controls {
+    display: flex;
+    align-items: center;
+    gap: $space-2;
+  }
+  
+  &__select {
+    @include select-base;
+    padding: $space-1 $space-6 $space-1 $space-2;
+    font-size: $text-xs;
+    background-size: 0.75rem;
+    background-position: right $space-2 center;
+  }
+  
+  &__button {
+    @include button-ghost;
+    padding: $space-2;
+    width: 32px;
+    height: 32px;
+    
+    &:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+  }
+  
+  &__pages {
+    display: flex;
+    align-items: center;
+    gap: $space-1;
+    margin: 0 $space-3;
+  }
+  
+  &__page {
+    @include button-ghost;
+    padding: $space-1 $space-2;
+    min-width: 32px;
+    height: 32px;
+    font-size: $text-sm;
+    
+    &--current {
+      @include button-primary;
+      font-weight: $font-semibold;
+    }
+  }
+  
+  &__ellipsis {
+    @include body-small;
+    color: $neutral-500;
+    padding: $space-1 $space-2;
+  }
+}
+
+// TABLE LOADING STATE
+// ===================
+.table--loading {
+  position: relative;
+  pointer-events: none;
+  
+  .table__body {
+    opacity: 0.3;
+  }
+  
+  &::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 32px;
+    height: 32px;
+    border: 3px solid rgba($primary-500, 0.2);
+    border-top-color: $primary-500;
+    border-radius: $rounded-full;
+    transform: translate(-50%, -50%);
+    animation: spin 1s linear infinite;
+  }
+}
+
+// TABLE EMPTY STATE
+// =================
+.table__empty {
+  text-align: center;
+  padding: $space-12 $space-6;
+  color: $neutral-500;
+  
+  &__icon {
+    width: 48px;
+    height: 48px;
+    margin: 0 auto $space-4 auto;
+    opacity: 0.5;
+  }
+  
+  &__message {
+    @include body-base;
+    margin-bottom: $space-2;
+  }
+  
+  &__description {
+    @include body-small;
+    color: $neutral-600;
+    margin-bottom: $space-6;
+  }
+  
+  &__action {
+    @include button-primary;
+  }
+}
+
+// TABLE SELECTION
+// ===============
+.table--selectable {
+  .table__header-cell:first-child,
+  .table__cell:first-child {
+    width: 40px;
+    text-align: center;
+    padding-left: $space-3;
+    padding-right: $space-3;
+  }
+  
+  .table__checkbox {
+    margin: 0;
+  }
+}
+
+// STATUS BADGES (for table cells)
+// ===============================
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-1;
+  padding: $space-1 $space-2;
+  border-radius: $rounded;
+  font-size: $text-xs;
+  font-weight: $font-medium;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  
+  &::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: $rounded-full;
+    background-color: currentColor;
+    opacity: 0.8;
+  }
+  
+  &--success {
+    @include status-success;
+  }
+  
+  &--warning {
+    @include status-warning;
+  }
+  
+  &--error {
+    @include status-error;
+  }
+  
+  &--info {
+    @include status-info;
+  }
+  
+  &--neutral {
+    background-color: rgba($neutral-500, 0.1);
+    color: $neutral-400;
+    border: 1px solid rgba($neutral-500, 0.3);
+  }
+}
+
+// RESPONSIVE TABLE BEHAVIOR
+// =========================
+@include mobile-only {
+  .table-container {
+    border-radius: $rounded;
+  }
+  
+  .table {
+    font-size: $text-xs;
+  }
+  
+  .table__header-cell,
+  .table__cell {
+    padding: $space-2 $space-3;
+  }
+  
+  .table__toolbar,
+  .table__pagination {
+    flex-direction: column;
+    align-items: stretch;
+    gap: $space-3;
+    
+    &__left,
+    &__right {
+      justify-content: space-between;
+    }
+  }
+}
+
+// ACCESSIBILITY ENHANCEMENTS
+// ===========================
+@media (prefers-reduced-motion: reduce) {
+  .table__row,
+  .table__header-cell--sortable {
+    transition: none;
+  }
+}
+
+// Keyboard navigation
+.table__row:focus,
+.table__header-cell--sortable:focus {
+  outline: 2px solid $primary-500;
+  outline-offset: -2px;
+}
+
+// High contrast support
+@media (prefers-contrast: high) {
+  .table {
+    border-color: $neutral-600;
+  }
+  
+  .table__header-cell,
+  .table__cell {
+    border-color: $neutral-600;
+  }
+  
+  .table__row {
+    border-color: $neutral-600;
+  }
+}
+
+// UTILITY ANIMATIONS
+// ==================
+@keyframes spin {
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}

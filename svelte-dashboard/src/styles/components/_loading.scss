@@ -1,0 +1,96 @@
+// Design System - Loading Components
+// =================================
+
+@import '../variables';
+@import '../mixins';
+
+// LOADING STATES
+// --------------
+.ade-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  
+  &.hidden {
+    display: none;
+  }
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 2px solid $neutral-600;
+  border-top: 2px solid $primary-500;
+  border-radius: $rounded-full;
+  animation: spin 1s linear infinite;
+  margin-bottom: $space-5;
+}
+
+.loading-text {
+  color: $neutral-500;
+  font-size: $text-sm;
+  @include body-small;
+}
+
+// LOADING ANIMATIONS
+// ------------------
+@keyframes spin {
+  0% { 
+    transform: rotate(0deg); 
+  }
+  100% { 
+    transform: rotate(360deg); 
+  }
+}
+
+// LOADING VARIANTS
+// ----------------
+.loading-spinner--small {
+  width: 20px;
+  height: 20px;
+  border-width: 1px;
+  margin-bottom: $space-2;
+}
+
+.loading-spinner--large {
+  width: 60px;
+  height: 60px;
+  border-width: 3px;
+  margin-bottom: $space-6;
+}
+
+// INLINE LOADING
+// --------------
+.loading-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-2;
+  
+  .loading-spinner {
+    width: 16px;
+    height: 16px;
+    border-width: 1px;
+    margin-bottom: 0;
+  }
+}
+
+// LOADING OVERLAY
+// ---------------
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba($neutral-950, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: $z-50;
+  
+  &.hidden {
+    display: none;
+  }
+}

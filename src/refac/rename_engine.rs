@@ -137,6 +137,11 @@ impl RenameEngine {
             return Ok(());
         }
 
+        // Phase 4.5: Show diff preview for content changes
+        if !content_files.is_empty() && self.output_format == OutputFormat::Human {
+            self.show_diff_preview(&content_files)?;
+        }
+
         if !self.confirm_changes()? {
             self.print_info("Operation cancelled by user.")?;
             return Ok(());
@@ -575,14 +580,110 @@ impl RenameEngine {
                             self.print_verbose(&format!("   Rename:  {} → {}", 
                                 relative_path.display(), relative_target.display()))?;
                         }
-                        
-                        self.print_info("")?; // Empty line for readability
                     }
                 }
             }
         }
 
         Ok(report.total_stats)
+    }
+
+    /// Show diff preview for content changes with colored +/- lines
+    fn show_diff_preview(&self, content_files: &[PathBuf]) -> Result<()> {
+        self.print_info("=== DIFF PREVIEW ===")?;
+        
+        for (i, file_path) in content_files.iter().enumerate() {
+            if i >= 5 {  // Limit preview to first 5 files to avoid overwhelming output
+                self.print_info(&format!("... and {} more files", content_files.len() - i))?;
+                break;
+            }
+            
+            let relative_path = file_path.strip_prefix(&self.config.root_dir)
+                .unwrap_or(file_path);
+            
+            // Read file content
+            let content = match std::fs::read_to_string(file_path) {
+                Ok(content) => content,
+                Err(_) => {
+                    self.print_warning(&format!("⚠️  Cannot preview {}: unable to read file", relative_path.display()))?;
+                    continue;
+                }
+            };
+            
+            self.print_info(&format!("\n⏺ Update({})", relative_path.display()))?;
+            
+            // Count replacements
+            let replacement_count = content.matches(&self.config.pattern).count();
+            let pattern_removals = self.config.pattern.lines().count() * replacement_count;
+            let substitute_additions = self.config.substitute.lines().count() * replacement_count;
+            
+            self.print_verbose(&format!("  ⎿  Updated {} with {} additions and {} removals", 
+                relative_path.display(), substitute_additions, pattern_removals))?;
+            
+            // Show context around changes
+            self.show_diff_context(&content, file_path)?;
+        }
+        
+        self.print_info("")?;  // Empty line for spacing
+        Ok(())
+    }
+    
+    /// Show diff context with colored +/- lines for a specific file
+    fn show_diff_context(&self, content: &str, _file_path: &Path) -> Result<()> {
+        use colored::*;
+        
+        let lines: Vec<&str> = content.lines().collect();
+        let mut changes_shown = 0;
+        const MAX_CHANGES_TO_SHOW: usize = 3;  // Limit changes shown per file
+        
+        for (i, line) in lines.iter().enumerate() {
+            if changes_shown >= MAX_CHANGES_TO_SHOW {
+                break;
+            }
+            
+            if line.contains(&self.config.pattern) {
+                // Show context: 2 lines before, the change, 2 lines after
+                let start_context = i.saturating_sub(2);
+                let end_context = std::cmp::min(i + 3, lines.len());
+                
+                // Show context lines before the change
+                for j in start_context..i {
+                    let line_num = j + 1;  // Line numbers start at 1
+                    println!("      {}        {}", line_num.to_string().dimmed(), lines[j]);
+                }
+                
+                // Show the removed line (bright red background with white text)
+                let line_num = i + 1;
+                println!("      {} {}      {}", 
+                    line_num.to_string().dimmed(),
+                    "-".red().bold(),
+                    line.white().on_bright_red()
+                );
+                
+                // Show the added line (bright green background with white text)  
+                let new_line = line.replace(&self.config.pattern, &self.config.substitute);
+                
+                println!("      {} {}      {}", 
+                    line_num.to_string().dimmed(),
+                    "+".green().bold(),
+                    new_line.white().on_bright_green()
+                );
+                
+                // Show context lines after the change
+                for j in (i + 1)..end_context {
+                    let line_num = j + 1;
+                    println!("      {}        {}", line_num.to_string().dimmed(), lines[j]);
+                }
+                
+                changes_shown += 1;
+                
+                if changes_shown < MAX_CHANGES_TO_SHOW && i + 3 < lines.len() {
+                    println!("      ..."); // Separator between changes
+                }
+            }
+        }
+        
+        Ok(())
     }
 
     /// Confirm changes with the user

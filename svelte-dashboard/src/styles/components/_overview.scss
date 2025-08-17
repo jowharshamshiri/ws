@@ -1,0 +1,185 @@
+// Overview Layout - Appwrite Style
+// =================================
+
+@import '../mixins';
+
+.overview-container {
+  display: flex;
+  flex-direction: column;
+  gap: $space-6;
+  padding: $space-6;
+}
+
+// Project info styling
+.project-info {
+  display: flex;
+  flex-direction: column;
+  gap: $space-2;
+  
+  .project-name {
+    @include heading-3;
+    color: $neutral-100;
+    
+    [data-theme="light"] & {
+      color: $neutral-900;
+    }
+  }
+  
+  .project-description {
+    @include body-base;
+    color: $neutral-300;
+    
+    [data-theme="light"] & {
+      color: $neutral-600;
+    }
+  }
+  
+  .project-version {
+    @include body-small;
+    color: $neutral-400;
+    font-family: $font-family-mono;
+    
+    [data-theme="light"] & {
+      color: $neutral-500;
+    }
+  }
+}
+
+// Session and activity card content
+.session-content, .activity-content {
+  .session-info {
+    display: flex;
+    flex-direction: column;
+    gap: $space-3;
+    
+    .session-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: $space-2 0;
+      border-bottom: 1px solid rgba($neutral-700, 0.2);
+      
+      &:last-child {
+        border-bottom: none;
+      }
+      
+      .label {
+        @include body-small;
+        color: $neutral-400;
+        font-weight: $font-medium;
+        
+        [data-theme="light"] & {
+          color: $neutral-600;
+        }
+      }
+      
+      .value {
+        @include body-small;
+        color: $neutral-100;
+        font-weight: $font-medium;
+        
+        [data-theme="light"] & {
+          color: $neutral-900;
+        }
+      }
+    }
+    
+    .context-usage {
+      display: flex;
+      align-items: center;
+      gap: $space-2;
+      
+      .progress-bar--small {
+        width: 60px;
+        height: 4px;
+        background: rgba($neutral-700, 0.3);
+        border-radius: $rounded-full;
+        
+        .progress-bar__fill {
+          height: 100%;
+          background: $primary-500;
+          border-radius: $rounded-full;
+          transition: width 0.3s ease;
+        }
+        
+        [data-theme="light"] & {
+          background: rgba($neutral-300, 0.5);
+        }
+      }
+      
+      .context-percent {
+        @include body-small;
+        color: $neutral-300;
+        font-weight: $font-medium;
+        
+        &.warning {
+          color: $warning-500;
+        }
+        
+        [data-theme="light"] & {
+          color: $neutral-700;
+        }
+      }
+    }
+  }
+  
+  .timeline {
+    display: flex;
+    flex-direction: column;
+    gap: $space-3;
+    
+    .timeline-item {
+      display: grid;
+      grid-template-columns: 60px 1fr auto;
+      gap: $space-3;
+      align-items: center;
+      padding: $space-2 0;
+      border-bottom: 1px solid rgba($neutral-700, 0.1);
+      
+      &:last-child {
+        border-bottom: none;
+      }
+      
+      .timeline-time {
+        @include body-small;
+        color: $neutral-400;
+        font-family: $font-family-mono;
+        
+        [data-theme="light"] & {
+          color: $neutral-600;
+        }
+      }
+      
+      .timeline-description {
+        @include body-small;
+        color: $neutral-200;
+        
+        [data-theme="light"] & {
+          color: $neutral-800;
+        }
+      }
+      
+      .timeline-type {
+        font-size: $text-xs;
+        padding: $space-1 $space-2;
+        border-radius: $rounded;
+        background: rgba($neutral-700, 0.3);
+        color: $neutral-300;
+        
+        [data-theme="light"] & {
+          background: rgba($neutral-200, 0.6);
+          color: $neutral-700;
+        }
+      }
+    }
+  }
+}
+
+// Card spanning utilities
+.card--span-2 {
+  grid-column: span 2;
+  
+  @include mobile-only {
+    grid-column: span 1;
+  }
+}

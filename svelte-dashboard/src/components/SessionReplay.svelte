@@ -108,55 +108,56 @@
 </script>
 
 <div class="session-replay-container">
-  <div class="session-header card">
-    <h1 class="text-primary">Session Replay</h1>
-    
-    <div class="session-selector">
-      <label class="text-secondary">Select Session:</label>
-      <select on:change={(e) => selectSession(sessions.find(s => s.id === e.target.value))} class="bg-surface border rounded-md">
-        <option value="">Choose a session...</option>
-        {#each sessions as session}
-          <option value={session.id} selected={selectedSession?.id === session.id}>
-            {session.title} - {session.date}
-          </option>
-        {/each}
-      </select>
+  <div class="card">
+    <div class="card__header">
+      <h1 class="card__title">Session Replay</h1>
+      
+      <div class="session-selector">
+        <label class="form__label">Select Session:</label>
+        <select on:change={(e) => selectSession(sessions.find(s => s.id === e.target.value))} class="form__select">
+          <option value="">Choose a session...</option>
+          {#each sessions as session}
+            <option value={session.id} selected={selectedSession?.id === session.id}>
+              {session.title} - {session.date}
+            </option>
+          {/each}
+        </select>
+      </div>
     </div>
   </div>
 
   {#if selectedSession}
     <div class="replay-interface">
       <!-- Left Panel - AI Reasoning -->
-      <div class="reasoning-panel card bg-surface">
-        <h2 class="text-primary">AI Reasoning</h2>
+      <div class="card panel panel--reasoning">
+        <h2 class="card__title">AI Reasoning</h2>
         
         <div class="current-reasoning">
           {#if currentEvent}
-            <div class="reasoning-step card bg-surface-2 border-primary">
+            <div class="card card--interactive card--active">
               <div class="step-icon">{getEventIcon(currentEvent.type)}</div>
               <div class="step-content">
-                <div class="step-title text-primary">{currentEvent.description}</div>
-                <div class="step-reasoning text-secondary">{currentEvent.reasoning}</div>
-                <div class="step-time text-tertiary">{formatTime(currentEvent.time)}</div>
+                <div class="step-title">{currentEvent.description}</div>
+                <div class="step-reasoning">{currentEvent.reasoning}</div>
+                <div class="step-time">{formatTime(currentEvent.time)}</div>
               </div>
             </div>
           {/if}
         </div>
 
         <div class="reasoning-timeline">
-          <h3 class="text-primary">Session Steps</h3>
+          <h3 class="heading heading--small">Session Steps</h3>
           {#each selectedTimeline as event}
             <div 
-              class="reasoning-step card bg-surface-2" 
-              class:active={currentEvent?.time === event.time}
-              class:completed={currentTime > event.time}
-              class:border-primary={currentEvent?.time === event.time}
+              class="card card--interactive timeline-step" 
+              class:card--active={currentEvent?.time === event.time}
+              class:timeline-step--completed={currentTime > event.time}
               on:click={() => setTime(event.time)}
             >
               <div class="step-icon">{getEventIcon(event.type)}</div>
               <div class="step-content">
-                <div class="step-title text-primary">{event.description}</div>
-                <div class="step-time text-tertiary">{formatTime(event.time)}</div>
+                <div class="step-title">{event.description}</div>
+                <div class="step-time">{formatTime(event.time)}</div>
               </div>
             </div>
           {/each}
@@ -283,334 +284,3 @@
   {/if}
 </div>
 
-<style>
-  .session-replay-container {
-    padding: var(--spacing-xl);
-    min-height: 100vh;
-    background: var(--color-background);
-  }
-
-  .session-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: var(--spacing-xl);
-    padding: var(--spacing-lg);
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg);
-  }
-
-  .session-selector {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-md);
-  }
-
-  .session-selector select {
-    padding: var(--spacing-sm) var(--spacing-md);
-    font-size: var(--font-size-sm);
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    color: var(--color-text-primary);
-  }
-
-  .replay-interface {
-    display: grid;
-    grid-template-columns: 320px 1fr 280px;
-    gap: var(--spacing-lg);
-    min-height: 600px;
-    margin-bottom: var(--spacing-xl);
-  }
-
-  .reasoning-panel,
-  .code-panel,
-  .tools-panel {
-    overflow: hidden;
-    border-radius: var(--radius-lg);
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    display: flex;
-    flex-direction: column;
-  }
-
-  .reasoning-panel h2,
-  .code-panel h2,
-  .tools-panel h2 {
-    font-size: var(--font-size-lg);
-    font-weight: 600;
-    margin: 0;
-    padding: var(--spacing-lg);
-    border-bottom: 1px solid var(--color-border);
-    background: var(--color-surface-2);
-  }
-
-  .current-reasoning {
-    padding: var(--spacing-lg);
-    border-bottom: 1px solid var(--color-border);
-    flex-shrink: 0;
-  }
-
-  .reasoning-timeline {
-    padding: var(--spacing-lg);
-    overflow-y: auto;
-    flex: 1;
-    min-height: 0;
-  }
-
-  .reasoning-timeline h3 {
-    font-size: var(--text-xs);
-    text-transform: uppercase;
-    letter-spacing: var(--tracking-wide);
-    margin: 0 0 var(--space-4) 0;
-  }
-
-  .reasoning-step {
-    display: flex;
-    gap: var(--spacing-md);
-    padding: var(--spacing-md);
-    border-radius: var(--radius-md);
-    margin-bottom: var(--spacing-sm);
-    cursor: pointer;
-    transition: all var(--transition-base);
-    background: var(--color-surface-2);
-    border: 1px solid var(--color-border);
-  }
-
-  .reasoning-step:hover {
-    background-color: var(--color-surface-3);
-    border-color: var(--color-border-focus);
-  }
-
-  .reasoning-step.active {
-    background-color: var(--color-surface-3);
-    border-color: var(--color-primary);
-  }
-
-  .reasoning-step.completed {
-    opacity: 0.7;
-  }
-
-  .step-icon {
-    font-size: var(--text-base);
-    min-width: var(--space-5);
-  }
-
-  .step-content {
-    flex: 1;
-  }
-
-  .step-title {
-    font-size: var(--text-sm);
-    font-weight: var(--weight-medium);
-    margin-bottom: var(--space-1);
-    line-height: var(--leading-tight);
-  }
-
-  .step-reasoning {
-    font-size: var(--text-xs);
-    line-height: var(--leading-relaxed);
-    margin-bottom: var(--space-1);
-  }
-
-  .step-time {
-    font-size: var(--text-xs);
-    font-family: var(--font-mono);
-  }
-
-  .panel-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: var(--space-4) var(--space-5);
-    border-bottom: 1px solid var(--color-border);
-  }
-
-  .file-tabs {
-    display: flex;
-    gap: var(--space-1);
-  }
-
-  .tab {
-    padding: var(--space-1-5) var(--space-3);
-    border-radius: var(--radius-sm);
-    font-size: var(--text-xs);
-    cursor: pointer;
-    transition: all var(--transition-fast) ease;
-  }
-
-  .tab:hover {
-    background-color: var(--color-bg-hover);
-  }
-
-  .code-viewer {
-    height: 400px;
-    overflow: auto;
-  }
-
-  .code-content {
-    padding: var(--spacing-xl);
-    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-    font-size: var(--font-size-sm);
-    line-height: 1.6;
-  }
-
-  .diff-view {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-0-5);
-  }
-
-  .diff-line {
-    padding: var(--space-0-5) var(--space-2);
-    border-radius: var(--radius-sm);
-  }
-
-  .placeholder {
-    text-align: center;
-    padding: var(--space-10) var(--space-5);
-    font-style: italic;
-  }
-
-  .tool-timeline {
-    padding: var(--spacing-lg);
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-md);
-    flex: 1;
-    overflow-y: auto;
-  }
-
-  .tool-item {
-    display: flex;
-    align-items: center;
-    gap: var(--space-3);
-    padding: var(--space-2);
-    border-radius: var(--radius-md);
-    transition: all var(--transition-fast) ease;
-  }
-
-  .tool-item.active {
-    background-color: var(--color-bg-accent);
-  }
-
-  .tool-badge {
-    width: var(--space-6);
-    height: var(--space-6);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: var(--color-bg-surface-3);
-    border-radius: var(--radius-full);
-    font-size: var(--text-xs);
-    transition: all var(--transition-fast) ease;
-  }
-
-  .tool-badge.used {
-    background-color: var(--color-bg-accent);
-  }
-
-  .tool-name {
-    font-size: var(--text-xs);
-    font-weight: var(--weight-semibold);
-  }
-
-  .tool-time {
-    font-size: var(--text-xs);
-    font-family: var(--font-mono);
-  }
-
-  .session-stats {
-    margin-top: var(--space-5);
-    padding: var(--space-4) var(--space-5);
-    border-top: 1px solid var(--color-border);
-  }
-
-  .session-stats h3 {
-    font-size: var(--text-xs);
-    text-transform: uppercase;
-    letter-spacing: var(--tracking-wide);
-    margin: 0 0 var(--space-3) 0;
-  }
-
-  .stat-item {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: var(--space-2);
-    font-size: var(--text-xs);
-  }
-
-  .playback-controls {
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg);
-    padding: var(--spacing-lg);
-  }
-
-  .timeline-scrubber {
-    position: relative;
-    margin-bottom: var(--space-4);
-  }
-
-  .timeline-slider {
-    width: 100%;
-    height: 6px;
-    background-color: var(--color-bg-surface-3);
-    border-radius: var(--radius-sm);
-    outline: none;
-    appearance: none;
-  }
-
-  .timeline-slider::-webkit-slider-thumb {
-    appearance: none;
-    width: var(--space-4);
-    height: var(--space-4);
-    background-color: var(--color-accent);
-    border-radius: var(--radius-full);
-    cursor: pointer;
-  }
-
-  .timeline-markers {
-    position: absolute;
-    top: -2px;
-    left: 0;
-    right: 0;
-    height: 10px;
-    pointer-events: none;
-  }
-
-  .timeline-marker {
-    position: absolute;
-    width: 4px;
-    height: 10px;
-    background-color: var(--color-warning);
-    cursor: pointer;
-    pointer-events: all;
-  }
-
-  .control-buttons {
-    display: flex;
-    align-items: center;
-    gap: var(--space-3);
-  }
-
-  .time-display {
-    color: var(--color-accent);
-    font-family: var(--font-mono);
-    font-size: var(--text-sm);
-    margin-left: auto;
-  }
-
-  .speed-control {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-  }
-
-  .speed-control select {
-    padding: var(--space-1) var(--space-2);
-    border-radius: var(--radius-sm);
-    font-size: var(--text-xs);
-  }
-</style>

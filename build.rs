@@ -9,6 +9,7 @@ fn main() {
     
     if build_svelte {
         println!("cargo:rerun-if-changed=svelte-dashboard/src");
+        println!("cargo:rerun-if-changed=svelte-dashboard/src/styles");
         println!("cargo:rerun-if-changed=svelte-dashboard/package.json");
         println!("cargo:rerun-if-changed=svelte-dashboard/vite.config.js");
         
@@ -30,6 +31,11 @@ fn main() {
                     panic!("npm install failed: {}", String::from_utf8_lossy(&install_output.stderr));
                 }
             }
+            
+            // Clean any previous build artifacts to ensure fresh build
+            let _ = std::fs::remove_dir_all(svelte_dir.join("dist"));
+            let _ = std::fs::remove_file("src/static/ade-main.css");
+            let _ = std::fs::remove_file("src/static/ade-app.js");
             
             // Run the Svelte build
             let build_output = Command::new("npm")

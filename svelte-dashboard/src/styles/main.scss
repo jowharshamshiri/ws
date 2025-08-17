@@ -1,0 +1,35 @@
+// Design System Main Entry Point
+// ==============================
+
+// Foundation imports (order matters!)
+@import 'variables';
+@import 'semantic-tokens';
+@import 'mixins';
+@import 'base';
+@import 'utilities';
+
+// Layout imports
+@import 'layout/grid';
+@import 'layout/layout';
+
+// Component imports
+@import 'components/buttons';
+@import 'components/forms';
+@import 'components/cards';
+@import 'components/navigation';
+@import 'components/data-display';
+@import 'components/stats';
+@import 'components/overview';
+
+// State components will be imported as they're created
+@import 'components/loading';
+
+// Advanced component systems (professional patterns)
+@import 'components/dialogs';
+@import 'components/tables';
+@import 'components/kanban';
+@import 'components/charts';
+
+// Additional components as needed
+// @import 'components/errors';
+// @import 'components/empty-states';

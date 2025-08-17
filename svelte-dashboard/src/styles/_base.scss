@@ -1,0 +1,260 @@
+// Design System Foundation - Base Styles
+// =====================================
+
+@import 'variables';
+@import 'mixins';
+
+// RESET & BASE
+// ------------
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-family: $font-family-sans;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+// All styling now comes from SASS variables and mixins only
+// No CSS custom properties needed - design system is fully SASS-based
+
+body {
+  @include body-base;
+  color: $neutral-100;
+  background: $neutral-950; // Clean Appwrite-style pure black background
+  line-height: $leading-normal;
+  overflow-x: hidden;
+  min-height: 100vh;
+  
+  // Light mode support
+  &[data-theme="light"] {
+    color: $neutral-900;
+    background: $neutral-50;
+  }
+}
+
+// TYPOGRAPHY
+// ----------
+h1, .h1 { @include heading-1; }
+h2, .h2 { @include heading-2; }
+h3, .h3 { @include heading-3; }
+h4, .h4 { @include heading-4; }
+
+p {
+  margin-bottom: $space-4;
+  
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+a {
+  color: $primary-500;
+  text-decoration: none;
+  transition: color $transition-fast;
+  
+  &:hover {
+    color: $primary-400;
+  }
+  
+  &:focus-visible {
+    outline: 2px solid $primary-500;
+    outline-offset: 2px;
+    border-radius: $rounded-sm;
+  }
+}
+
+code {
+  @include code;
+  color: $primary-400;
+  background-color: $neutral-800;
+  padding: $space-1 $space-2;
+  border-radius: $rounded-sm;
+}
+
+pre {
+  @include code;
+  background-color: $neutral-900;
+  border: $border-width solid $neutral-800;
+  border-radius: $rounded-md;
+  padding: $space-4;
+  overflow-x: auto;
+  @include scroll-custom;
+  
+  code {
+    background: transparent;
+    padding: 0;
+  }
+}
+
+// LISTS
+// -----
+ul, ol {
+  padding-left: $space-6;
+  margin-bottom: $space-4;
+  
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+li {
+  margin-bottom: $space-2;
+  
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+// FORMS
+// -----
+button {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  margin: 0;
+}
+
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  margin: 0;
+}
+
+fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+legend {
+  @include heading-4;
+  color: $neutral-200;
+  margin-bottom: $space-4;
+}
+
+label {
+  @include body-small;
+  font-weight: $font-medium;
+  color: $neutral-200;
+  display: block;
+  margin-bottom: $space-2;
+}
+
+// TABLES
+// ------
+table {
+  width: 100%;
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+
+th,
+td {
+  padding: $space-3 $space-4;
+  text-align: left;
+  border-bottom: $border-width solid $neutral-800;
+}
+
+th {
+  @include body-small;
+  font-weight: $font-semibold;
+  color: $neutral-300;
+  background-color: $neutral-900;
+  
+  &:first-child {
+    border-top-left-radius: $rounded-md;
+  }
+  
+  &:last-child {
+    border-top-right-radius: $rounded-md;
+  }
+}
+
+td {
+  @include body-small;
+  color: $neutral-200;
+}
+
+tbody tr {
+  transition: background-color $transition-fast;
+  
+  &:hover {
+    background-color: $neutral-900;
+  }
+}
+
+// MEDIA
+// -----
+img,
+svg,
+video,
+canvas {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+img {
+  border-style: none;
+}
+
+svg {
+  overflow: hidden;
+  vertical-align: middle;
+}
+
+// ACCESSIBILITY
+// -------------
+[hidden] {
+  display: none !important;
+}
+
+.sr-only {
+  @include visually-hidden;
+}
+
+// Skip link for keyboard navigation
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 6px;
+  background: $neutral-900;
+  color: $neutral-100;
+  padding: 8px;
+  text-decoration: none;
+  border-radius: $rounded;
+  z-index: $z-50;
+  
+  &:focus {
+    top: 6px;
+  }
+}
+
+// Focus styles for keyboard navigation
+*:focus-visible {
+  outline: 2px solid $primary-500;
+  outline-offset: 2px;
+}
+
+// Reduced motion preference
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

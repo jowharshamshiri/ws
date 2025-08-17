@@ -3,6 +3,13 @@ import { svelte } from '@sveltejs/vite-plugin-svelte'
 
 export default defineConfig({
   plugins: [svelte()],
+  css: {
+    preprocessorOptions: {
+      scss: {
+        additionalData: `@import "./src/styles/variables.scss"; @import "./src/styles/mixins.scss";`
+      }
+    }
+  },
   build: {
     outDir: '../src/static',
     emptyOutDir: false,

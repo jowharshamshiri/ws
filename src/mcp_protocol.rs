@@ -137,6 +137,13 @@ impl McpProtocolHandler {
             handler.session_active = true;
         }
         
+        // Start periodic consolidation check task in background
+        tokio::spawn(async move {
+            if let Err(e) = Self::run_periodic_consolidation_checks().await {
+                eprintln!("Periodic consolidation check task failed: {}", e);
+            }
+        });
+        
         // Start message processing loop
         handler.process_messages().await?;
         
@@ -544,6 +551,14 @@ impl McpProtocolHandler {
                 }),
             },
             Tool {
+                name: "get_consolidation_status".to_string(),
+                description: "Get periodic consolidation status and next check time".to_string(),
+                input_schema: serde_json::json!({
+                    "type": "object",
+                    "properties": {}
+                }),
+            },
+            Tool {
                 name: "setup_project".to_string(),
                 description: "Setup a new project with feature-centric development methodology and templates".to_string(),
                 input_schema: serde_json::json!({
@@ -737,6 +752,7 @@ impl McpProtocolHandler {
             "end_session" => self.exec_end_session(request.arguments).await,
             "check_documentation_crowding" => self.exec_check_documentation_crowding(request.arguments).await,
             "trigger_consolidation" => self.exec_trigger_consolidation(request.arguments).await,
+            "get_consolidation_status" => self.exec_get_consolidation_status(request.arguments).await,
             "setup_project" => self.exec_setup_project(request.arguments).await,
             "add_milestone" => self.exec_add_milestone(request.arguments).await,
             "update_milestone" => self.exec_update_milestone(request.arguments).await,
@@ -906,7 +922,7 @@ impl McpProtocolHandler {
             .unwrap_or("medium");
 
         let output = Command::new("ws")
-            .args(&["add-feature", name, description, "--category", category, "--priority", priority])
+            .args(&["feature", "add", name, description, "--category", category, "--priority", priority])
             .output()
             .await
             .context("Failed to execute add-feature command")?;
@@ -945,11 +961,14 @@ impl McpProtocolHandler {
             cmd_args.extend_from_slice(&["--notes", notes]);
         }
 
+        let mut full_args = vec!["feature", "update"];
+        full_args.extend(cmd_args.into_iter().skip(1)); // Skip the "update-feature" part
+        
         let output = Command::new("ws")
-            .args(&cmd_args)
+            .args(&full_args)
             .output()
             .await
-            .context("Failed to execute update-feature command")?;
+            .context("Failed to execute feature update command")?;
 
         let result_text = if output.status.success() {
             format!("Feature {} updated successfully\n{}", feature_id, String::from_utf8_lossy(&output.stdout))
@@ -967,7 +986,7 @@ impl McpProtocolHandler {
     }
 
     async fn exec_list_features(&self, args: HashMap<String, serde_json::Value>) -> Result<ToolCallResult> {
-        let mut cmd_args = vec!["list-features"];
+        let mut cmd_args = vec!["feature", "list"];
         
         if let Some(state) = args.get("state").and_then(|v| v.as_str()) {
             cmd_args.extend_from_slice(&["--state", state]);
@@ -985,7 +1004,7 @@ impl McpProtocolHandler {
             .args(&cmd_args)
             .output()
             .await
-            .context("Failed to execute list-features command")?;
+            .context("Failed to execute feature list command")?;
 
         let result_text = if output.status.success() {
             String::from_utf8_lossy(&output.stdout).to_string()
@@ -2059,6 +2078,94 @@ program.parse();
             }],
             is_error: Some(!output.status.success()),
         })
+    }
+
+    /// Get consolidation status and configuration
+    async fn exec_get_consolidation_status(&self, _args: HashMap<String, serde_json::Value>) -> Result<ToolCallResult> {
+        // Get current documentation status
+        let crowding_status = self.check_document_crowding().await?;
+        
+        // Calculate next check time (30 minutes from now)
+        let next_check = std::time::SystemTime::now() + std::time::Duration::from_secs(30 * 60);
+        let next_check_time = format!("{}", 
+            chrono::DateTime::<chrono::Utc>::from(next_check).format("%Y-%m-%d %H:%M:%S UTC")
+        );
+        
+        let status_text = format!(
+            "📋 **Periodic Consolidation Status**\n\n\
+            ⏰ **Next Check**: {}\n\
+            📄 **Current Status**: {}\n\
+            📊 **Document Analysis**:\n\
+            - Total Size: {} bytes\n\
+            - Needs Consolidation: {}\n\n\
+            🔧 **Configuration**:\n\
+            - Check Interval: 30 minutes\n\
+            - Size Threshold: 80KB total\n\
+            - Individual File Limit: 8KB (CLAUDE.md)\n\n\
+            💡 **Features**:\n\
+            - ✅ Automatic session end consolidation\n\
+            - ✅ Context threshold consolidation (95%)\n\
+            - ✅ Periodic background checks (F0116)\n\
+            - ✅ Manual consolidation trigger",
+            next_check_time,
+            if crowding_status.needs_consolidation { "⚠️ CONSOLIDATION NEEDED" } else { "✅ Within limits" },
+            crowding_status.total_size,
+            if crowding_status.needs_consolidation { "Yes" } else { "No" }
+        );
+        
+        Ok(ToolCallResult {
+            content: vec![ToolContent {
+                content_type: "text".to_string(),
+                text: status_text,
+            }],
+            is_error: Some(false),
+        })
+    }
+
+    /// Run periodic consolidation checks (F0116 completion)
+    async fn run_periodic_consolidation_checks() -> Result<()> {
+        let mut interval = tokio::time::interval(std::time::Duration::from_secs(30 * 60)); // 30 minutes
+        
+        loop {
+            interval.tick().await;
+            
+            eprintln!("📋 Running periodic consolidation check...");
+            
+            // Create a temporary handler to check document status
+            let temp_handler = Self::new();
+            
+            // Check documentation crowding status
+            match temp_handler.check_document_crowding().await {
+                Ok(status) => {
+                    if status.needs_consolidation {
+                        eprintln!("📄 Documentation crowding detected: {}", status.summary);
+                        
+                        // Trigger consolidation via CLI command
+                        match tokio::process::Command::new("cargo")
+                            .args(&["run", "--", "consolidate", "--preserve-complexity"])
+                            .output()
+                            .await
+                        {
+                            Ok(output) => {
+                                if output.status.success() {
+                                    eprintln!("✅ Periodic consolidation completed successfully");
+                                } else {
+                                    eprintln!("❌ Periodic consolidation failed: {}", String::from_utf8_lossy(&output.stderr));
+                                }
+                            },
+                            Err(e) => {
+                                eprintln!("❌ Periodic consolidation command failed: {}", e);
+                            }
+                        }
+                    } else {
+                        eprintln!("✅ Documentation size within limits, no consolidation needed");
+                    }
+                },
+                Err(e) => {
+                    eprintln!("⚠️ Failed to check documentation crowding: {}", e);
+                }
+            }
+        }
     }
 }
 

@@ -1,0 +1,673 @@
+// Design System - Chart & Visualization Components
+// ================================================
+
+@import '../variables';
+@import '../mixins';
+
+// CHART CONTAINER BASE
+// ====================
+.chart-container {
+  @include card-base;
+  position: relative;
+  overflow: hidden;
+}
+
+.chart-container__header {
+  @include card-header;
+  
+  &__title {
+    @include heading-4;
+    color: $neutral-100;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: $space-2;
+  }
+  
+  &__subtitle {
+    @include body-small;
+    color: $neutral-400;
+    margin: $space-1 0 0 0;
+  }
+  
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: $space-2;
+    
+    .btn {
+      padding: $space-1 $space-2;
+      font-size: $text-xs;
+    }
+  }
+}
+
+.chart-container__content {
+  padding: $space-4;
+  position: relative;
+  min-height: 300px;
+  
+  &--large {
+    min-height: 400px;
+  }
+  
+  &--compact {
+    padding: $space-3;
+    min-height: 200px;
+  }
+}
+
+// CHART LOADING STATE
+// ===================
+.chart--loading {
+  .chart-container__content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    &::before {
+      content: '';
+      width: 32px;
+      height: 32px;
+      border: 3px solid rgba($primary-500, 0.2);
+      border-top-color: $primary-500;
+      border-radius: $rounded-full;
+      animation: spin 1s linear infinite;
+    }
+  }
+}
+
+// SVG CHART STYLING (Professional appearance)
+// ============================================
+.chart-svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  
+  // Grid lines
+  .grid-line {
+    stroke: rgba($neutral-700, 0.3);
+    stroke-width: 1;
+    stroke-dasharray: 2,2;
+  }
+  
+  .grid-line--major {
+    stroke: rgba($neutral-600, 0.5);
+    stroke-dasharray: none;
+  }
+  
+  // Axes
+  .axis-line {
+    stroke: rgba($neutral-600, 0.8);
+    stroke-width: 2;
+  }
+  
+  .axis-label {
+    fill: $neutral-300;
+    font-size: 12px;
+    font-family: $font-family-sans;
+    font-weight: $font-medium;
+  }
+  
+  .axis-title {
+    fill: $neutral-200;
+    font-size: 14px;
+    font-family: $font-family-sans;
+    font-weight: $font-semibold;
+  }
+  
+  // Data elements
+  .data-point {
+    transition: all 0.2s ease;
+    cursor: pointer;
+    
+    &:hover {
+      r: 6;
+      filter: drop-shadow(0 0 8px currentColor);
+    }
+  }
+  
+  .data-line {
+    fill: none;
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition: all 0.2s ease;
+    
+    &--primary {
+      stroke: $primary-500;
+    }
+    
+    &--success {
+      stroke: $success-500;
+    }
+    
+    &--warning {
+      stroke: $warning-500;
+    }
+    
+    &--error {
+      stroke: $error-500;
+    }
+    
+    &--info {
+      stroke: $info-500;
+    }
+    
+    &:hover {
+      stroke-width: 4;
+      filter: drop-shadow(0 2px 8px rgba(128, 128, 128, 0.3));
+    }
+  }
+  
+  .data-area {
+    transition: all 0.2s ease;
+    opacity: 0.1;
+    
+    &--primary {
+      fill: $primary-500;
+    }
+    
+    &--success {
+      fill: $success-500;
+    }
+    
+    &--warning {
+      fill: $warning-500;
+    }
+    
+    &--error {
+      fill: $error-500;
+    }
+    
+    &--info {
+      fill: $info-500;
+    }
+    
+    &:hover {
+      opacity: 0.2;
+    }
+  }
+  
+  .data-bar {
+    transition: all 0.2s ease;
+    cursor: pointer;
+    
+    &--primary {
+      fill: $primary-500;
+    }
+    
+    &--success {
+      fill: $success-500;
+    }
+    
+    &--warning {
+      fill: $warning-500;
+    }
+    
+    &--error {
+      fill: $error-500;
+    }
+    
+    &--info {
+      fill: $info-500;
+    }
+    
+    &:hover {
+      opacity: 0.8;
+      filter: brightness(1.1);
+    }
+  }
+}
+
+// CHART TOOLTIP
+// ==============
+.chart-tooltip {
+  position: absolute;
+  background: rgba($neutral-900, 0.95);
+  border: 1px solid rgba($neutral-700, 0.5);
+  border-radius: $rounded-md;
+  padding: $space-3;
+  pointer-events: none;
+  z-index: 10;
+  backdrop-filter: blur(8px);
+  box-shadow: $shadow-lg;
+  transform: translate(-50%, -100%);
+  
+  &::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 6px solid rgba($neutral-900, 0.95);
+  }
+  
+  &__title {
+    @include body-small;
+    color: $neutral-100;
+    font-weight: $font-semibold;
+    margin-bottom: $space-1;
+  }
+  
+  &__content {
+    @include body-small;
+    color: $neutral-300;
+    
+    .tooltip-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: $space-3;
+      margin-bottom: $space-1;
+      
+      &:last-child {
+        margin-bottom: 0;
+      }
+      
+      &__label {
+        display: flex;
+        align-items: center;
+        gap: $space-2;
+        
+        &::before {
+          content: '';
+          width: 8px;
+          height: 8px;
+          border-radius: $rounded-full;
+          background-color: currentColor;
+        }
+      }
+      
+      &__value {
+        font-weight: $font-semibold;
+        color: $neutral-100;
+      }
+    }
+  }
+}
+
+// CHART LEGEND
+// ============
+.chart-legend {
+  display: flex;
+  align-items: center;
+  gap: $space-4;
+  padding: $space-4;
+  background: rgba($neutral-800, 0.3);
+  border-top: 1px solid rgba($neutral-700, 0.3);
+  
+  &--vertical {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: $space-2;
+  }
+  
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: $space-2;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+    
+    &:hover {
+      opacity: 0.8;
+    }
+    
+    &--disabled {
+      opacity: 0.4;
+    }
+    
+    &__indicator {
+      width: 12px;
+      height: 12px;
+      border-radius: $rounded-full;
+      flex-shrink: 0;
+      
+      &--primary {
+        background-color: $primary-500;
+      }
+      
+      &--success {
+        background-color: $success-500;
+      }
+      
+      &--warning {
+        background-color: $warning-500;
+      }
+      
+      &--error {
+        background-color: $error-500;
+      }
+      
+      &--info {
+        background-color: $info-500;
+      }
+      
+      &--line {
+        border-radius: 0;
+        height: 3px;
+        width: 16px;
+      }
+    }
+    
+    &__label {
+      @include body-small;
+      color: $neutral-300;
+      font-weight: $font-medium;
+    }
+    
+    &__value {
+      @include body-small;
+      color: $neutral-100;
+      font-weight: $font-semibold;
+      margin-left: auto;
+    }
+  }
+}
+
+// CHART METRICS (Summary stats)
+// ==============================
+.chart-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: $space-4;
+  padding: $space-4;
+  background: rgba($neutral-800, 0.2);
+  border-top: 1px solid rgba($neutral-700, 0.3);
+  
+  &__item {
+    text-align: center;
+    
+    &__value {
+      @include heading-3;
+      color: $neutral-100;
+      font-weight: $font-bold;
+      margin-bottom: $space-1;
+      
+      &--primary {
+        color: $primary-500;
+      }
+      
+      &--success {
+        color: $success-500;
+      }
+      
+      &--warning {
+        color: $warning-500;
+      }
+      
+      &--error {
+        color: $error-500;
+      }
+    }
+    
+    &__label {
+      @include body-small;
+      color: $neutral-400;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-weight: $font-medium;
+    }
+    
+    &__change {
+      @include body-small;
+      font-weight: $font-medium;
+      margin-top: $space-1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: $space-1;
+      
+      &--positive {
+        color: $success-500;
+        
+        &::before {
+          content: '↗';
+        }
+      }
+      
+      &--negative {
+        color: $error-500;
+        
+        &::before {
+          content: '↘';
+        }
+      }
+      
+      &--neutral {
+        color: $neutral-400;
+        
+        &::before {
+          content: '→';
+        }
+      }
+    }
+  }
+}
+
+// PROGRESS RING/DONUT CHART
+// ==========================
+.progress-ring {
+  transform: rotate(-90deg);
+  
+  &__background {
+    fill: none;
+    stroke: rgba($neutral-800, 0.5);
+    stroke-width: 8;
+  }
+  
+  &__progress {
+    fill: none;
+    stroke: $primary-500;
+    stroke-width: 8;
+    stroke-linecap: round;
+    transition: stroke-dasharray 0.5s ease;
+    
+    &--success {
+      stroke: $success-500;
+    }
+    
+    &--warning {
+      stroke: $warning-500;
+    }
+    
+    &--error {
+      stroke: $error-500;
+    }
+  }
+  
+  &__center {
+    transform: rotate(90deg);
+    text-anchor: middle;
+    dominant-baseline: central;
+    
+    &__value {
+      fill: $neutral-100;
+      font-size: 24px;
+      font-weight: $font-bold;
+      font-family: $font-family-sans;
+    }
+    
+    &__label {
+      fill: $neutral-400;
+      font-size: 12px;
+      font-weight: $font-medium;
+      font-family: $font-family-sans;
+    }
+  }
+}
+
+// SPARKLINE CHARTS (Inline mini charts)
+// ======================================
+.sparkline {
+  width: 100px;
+  height: 32px;
+  display: inline-block;
+  vertical-align: middle;
+  
+  .sparkline-line {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  
+  .sparkline-area {
+    fill: currentColor;
+    opacity: 0.1;
+  }
+  
+  .sparkline-point {
+    fill: currentColor;
+    r: 1.5;
+    
+    &--last {
+      r: 3;
+      filter: drop-shadow(0 0 4px currentColor);
+    }
+  }
+}
+
+// CHART EMPTY STATE
+// =================
+.chart--empty {
+  .chart-container__content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: $neutral-500;
+    
+    &__icon {
+      width: 48px;
+      height: 48px;
+      margin-bottom: $space-4;
+      opacity: 0.5;
+    }
+    
+    &__message {
+      @include body-base;
+      margin-bottom: $space-2;
+    }
+    
+    &__description {
+      @include body-small;
+      color: $neutral-600;
+      text-align: center;
+      margin-bottom: $space-6;
+    }
+    
+    &__action {
+      @include button-primary;
+    }
+  }
+}
+
+// CHART ANIMATIONS
+// ================
+@keyframes chart-draw {
+  from {
+    stroke-dashoffset: 1000;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.chart-svg .data-line--animated {
+  stroke-dasharray: 1000;
+  animation: chart-draw 1.5s ease-out forwards;
+}
+
+@keyframes bar-grow {
+  from {
+    transform: scaleY(0);
+    transform-origin: bottom;
+  }
+  to {
+    transform: scaleY(1);
+    transform-origin: bottom;
+  }
+}
+
+.chart-svg .data-bar--animated {
+  animation: bar-grow 0.8s ease-out forwards;
+}
+
+// RESPONSIVE CHART BEHAVIOR
+// =========================
+@include mobile-only {
+  .chart-container__header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: $space-2;
+  }
+  
+  .chart-legend {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: $space-2;
+    
+    &__item {
+      width: 100%;
+      justify-content: space-between;
+    }
+  }
+  
+  .chart-metrics {
+    grid-template-columns: repeat(2, 1fr);
+    gap: $space-3;
+  }
+  
+  .chart-tooltip {
+    position: fixed;
+    transform: none;
+    top: auto;
+    bottom: $space-4;
+    left: $space-4;
+    right: $space-4;
+    
+    &::after {
+      display: none;
+    }
+  }
+}
+
+// ACCESSIBILITY ENHANCEMENTS
+// ===========================
+@media (prefers-reduced-motion: reduce) {
+  .chart-svg .data-line,
+  .chart-svg .data-bar,
+  .chart-svg .data-point,
+  .chart-svg .data-area {
+    transition: none;
+  }
+  
+  .chart-svg .data-line--animated,
+  .chart-svg .data-bar--animated {
+    animation: none;
+  }
+  
+  .progress-ring__progress {
+    transition: none;
+  }
+}
+
+// Screen reader accessible chart descriptions
+.chart__sr-description {
+  @include visually-hidden;
+}
+
+// Utility animations
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

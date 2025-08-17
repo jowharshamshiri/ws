@@ -5,12 +5,12 @@
   $: activity = $agentActivity;
 </script>
 
-<div class="overview-grid">
-  <!-- Project Status Card -->
-  <div class="metric-card project-card">
-    <div class="card-header">
-      <h3>Project Status</h3>
-      <div class="status-badge active">Active</div>
+<div class="overview-container">
+  <!-- Project Status Card - Full card for complex content -->
+  <div class="card card--project card--span-2">
+    <div class="card__header">
+      <h3 class="card__title">Project Status</h3>
+      <div class="badge badge--success">Active</div>
     </div>
     <div class="project-info">
       <div class="project-name">{project.name}</div>
@@ -19,78 +19,78 @@
     </div>
   </div>
 
-  <!-- Implementation Progress Card -->
-  <div class="metric-card progress-card">
-    <div class="card-header">
-      <h3>Implementation Progress</h3>
-      <div class="progress-percentage">56%</div>
-    </div>
-    <div class="progress-content">
-      <div class="progress-bar">
-        <div class="progress-fill" style="width: 56%"></div>
+  <!-- Compact Stats Grid - Appwrite style small metrics -->
+  <div class="stats-grid">
+    <!-- Implementation Progress Stat -->
+    <div class="stat-box">
+      <div class="stat-header">
+        <div class="stat-title">Implementation Progress</div>
+        <div class="stat-indicator success">56%</div>
       </div>
-      <div class="progress-stats">
-        <div class="stat">
-          <span class="stat-value">179</span>
-          <span class="stat-label">Implemented</span>
+      <div class="stat-content">
+        <span class="metric-number">179</span>
+        <span class="metric-label">Implemented</span>
+      </div>
+      <div class="stat-progress">
+        <div class="progress-bar">
+          <div class="progress-fill" style="width: 59.7%"></div>
         </div>
-        <div class="stat">
-          <span class="stat-value">121</span>
-          <span class="stat-label">Remaining</span>
-        </div>
+        <div class="progress-text">121 remaining</div>
       </div>
     </div>
-  </div>
 
-  <!-- Test Coverage Card -->
-  <div class="metric-card test-card">
-    <div class="card-header">
-      <h3>Test Coverage</h3>
-      <div class="coverage-percentage">55%</div>
-    </div>
-    <div class="coverage-content">
-      <div class="coverage-bar">
-        <div class="coverage-fill" style="width: 55%"></div>
+    <!-- Test Coverage Stat -->
+    <div class="stat-box">
+      <div class="stat-header">
+        <div class="stat-title">Test Coverage</div>
+        <div class="stat-indicator success">55%</div>
       </div>
-      <div class="coverage-stats">
-        <div class="stat">
-          <span class="stat-value">163</span>
-          <span class="stat-label">Tested</span>
+      <div class="stat-content">
+        <span class="metric-number">163</span>
+        <span class="metric-label">Tested</span>
+      </div>
+      <div class="stat-progress">
+        <div class="progress-bar">
+          <div class="progress-fill success" style="width: 54.3%"></div>
         </div>
-        <div class="stat">
-          <span class="stat-value">137</span>
-          <span class="stat-label">Pending</span>
-        </div>
+        <div class="progress-text">137 pending</div>
       </div>
     </div>
-  </div>
 
-  <!-- Development Velocity Card -->
-  <div class="metric-card velocity-card">
-    <div class="card-header">
-      <h3>Development Velocity</h3>
-      <div class="velocity-trend">↗ +14.3</div>
-    </div>
-    <div class="velocity-content">
-      <div class="velocity-metric">
-        <span class="velocity-value">14.3</span>
-        <span class="velocity-unit">features/week</span>
+    <!-- Development Velocity Stat -->
+    <div class="stat-box">
+      <div class="stat-header">
+        <div class="stat-title">Development Velocity</div>
+        <div class="stat-indicator success">↗ +14.3</div>
       </div>
-      <div class="velocity-chart">
-        <div class="chart-bar" style="height: 40%"></div>
-        <div class="chart-bar" style="height: 60%"></div>
-        <div class="chart-bar" style="height: 80%"></div>
-        <div class="chart-bar" style="height: 100%"></div>
-        <div class="chart-bar" style="height: 90%"></div>
+      <div class="stat-content">
+        <span class="metric-number">14.3</span>
+        <span class="metric-label">features/week</span>
+      </div>
+      <div class="stat-trend">
+        <span class="trend-icon up">↗</span>
+        <span class="trend-value up">+14.3</span>
+      </div>
+    </div>
+
+    <!-- Active Issues Stat -->
+    <div class="stat-box">
+      <div class="stat-header">
+        <div class="stat-title">Active Issues</div>
+        <div class="stat-indicator info">0</div>
+      </div>
+      <div class="stat-content">
+        <span class="metric-number">0</span>
+        <span class="metric-label">Issues</span>
       </div>
     </div>
   </div>
 
   <!-- Active Session Card -->
-  <div class="metric-card session-card span-2">
-    <div class="card-header">
-      <h3>Active Session</h3>
-      <div class="session-status online">Online</div>
+  <div class="card card--session card--span-2">
+    <div class="card__header">
+      <h3 class="card__title">Active Session</h3>
+      <div class="badge badge--success">Online</div>
     </div>
     <div class="session-content">
       <div class="session-info">
@@ -109,8 +109,8 @@
         <div class="session-item">
           <span class="label">Context Usage:</span>
           <div class="context-usage">
-            <div class="context-bar">
-              <div class="context-fill" style="width: {activity.contextUsage}%"></div>
+            <div class="progress-bar progress-bar--small">
+              <div class="progress-bar__fill" style="width: {activity.contextUsage}%"></div>
             </div>
             <span class="context-percent" class:warning={activity.contextUsage > 80}>
               {activity.contextUsage}%
@@ -122,34 +122,34 @@
   </div>
 
   <!-- Recent Activity Card -->
-  <div class="metric-card activity-card span-2">
-    <div class="card-header">
-      <h3>Recent Activity</h3>
-      <div class="activity-count">3 actions</div>
+  <div class="card card--activity card--span-2">
+    <div class="card__header">
+      <h3 class="card__title">Recent Activity</h3>
+      <div class="badge badge--secondary">3 actions</div>
     </div>
     <div class="activity-content">
-      <div class="activity-timeline">
+      <div class="timeline">
         {#each activity.recentActions as action}
-          <div class="activity-item">
-            <div class="activity-time">{action.time}</div>
-            <div class="activity-description">{action.description}</div>
-            <div class="activity-type">{action.type || 'System'}</div>
+          <div class="timeline-item">
+            <div class="timeline-time">{action.time}</div>
+            <div class="timeline-description">{action.description}</div>
+            <div class="timeline-type badge badge--small">{action.type || 'System'}</div>
           </div>
         {:else}
-          <div class="activity-item">
-            <div class="activity-time">12:36</div>
-            <div class="activity-description">ADE overview dashboard implemented</div>
-            <div class="activity-type">Feature</div>
+          <div class="timeline-item">
+            <div class="timeline-time">12:36</div>
+            <div class="timeline-description">ADE overview dashboard implemented</div>
+            <div class="timeline-type badge badge--small">Feature</div>
           </div>
-          <div class="activity-item">
-            <div class="activity-time">12:35</div>
-            <div class="activity-description">Svelte components analyzed</div>
-            <div class="activity-type">Analysis</div>
+          <div class="timeline-item">
+            <div class="timeline-time">12:35</div>
+            <div class="timeline-description">Svelte components analyzed</div>
+            <div class="timeline-type badge badge--small">Analysis</div>
           </div>
-          <div class="activity-item">
-            <div class="activity-time">12:34</div>
-            <div class="activity-description">Session initialized successfully</div>
-            <div class="activity-type">System</div>
+          <div class="timeline-item">
+            <div class="timeline-time">12:34</div>
+            <div class="timeline-description">Session initialized successfully</div>
+            <div class="timeline-type badge badge--small">System</div>
           </div>
         {/each}
       </div>
@@ -157,316 +157,3 @@
   </div>
 </div>
 
-<style>
-  .overview-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-    gap: var(--spacing-lg);
-    align-items: start;
-  }
-
-  .metric-card {
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg);
-    padding: var(--spacing-lg);
-    transition: all var(--transition-base);
-  }
-
-  .metric-card:hover {
-    transform: translateY(-1px);
-    border-color: var(--color-border-focus);
-  }
-
-  .span-2 {
-    grid-column: span 2;
-  }
-
-  .card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: var(--spacing-md);
-  }
-
-  .card-header h3 {
-    margin: 0;
-    font-size: var(--font-size-lg);
-    font-weight: 600;
-    color: var(--color-text-primary);
-    letter-spacing: -0.025em;
-  }
-
-  .status-badge {
-    padding: var(--spacing-xs) var(--spacing-sm);
-    border-radius: var(--radius-md);
-    font-size: var(--font-size-xs);
-    font-weight: 500;
-    background: var(--color-success);
-    color: white;
-  }
-
-  .progress-percentage,
-  .coverage-percentage {
-    padding: var(--spacing-xs) var(--spacing-sm);
-    border-radius: var(--radius-md);
-    font-size: var(--font-size-lg);
-    font-weight: 700;
-    font-family: ui-monospace, SFMono-Regular, 'SF Mono', monospace;
-    background: var(--color-surface-2);
-    color: var(--color-text-primary);
-  }
-
-  .velocity-trend {
-    font-size: var(--font-size-sm);
-    font-weight: 600;
-    font-family: ui-monospace, SFMono-Regular, 'SF Mono', monospace;
-    color: var(--color-success);
-  }
-
-  .session-status {
-    padding: var(--spacing-xs) var(--spacing-sm);
-    border-radius: var(--radius-md);
-    font-size: var(--font-size-xs);
-    font-weight: 500;
-    background: var(--color-success);
-    color: white;
-  }
-
-  .activity-count {
-    padding: var(--spacing-xs) var(--spacing-sm);
-    border-radius: var(--radius-md);
-    font-size: var(--font-size-xs);
-    font-weight: 500;
-    background: var(--color-surface-2);
-    color: var(--color-text-secondary);
-  }
-
-  /* Project Card */
-  .project-info {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-sm);
-  }
-
-  .project-name {
-    font-size: var(--font-size-xl);
-    font-weight: 700;
-    color: var(--color-text-primary);
-  }
-
-  .project-description {
-    font-size: var(--font-size-sm);
-    color: var(--color-text-secondary);
-  }
-
-  .project-version {
-    padding: var(--spacing-xs) var(--spacing-sm);
-    border-radius: var(--radius-md);
-    font-size: var(--font-size-xs);
-    font-family: ui-monospace, SFMono-Regular, 'SF Mono', monospace;
-    align-self: flex-start;
-    font-weight: 600;
-    background: var(--color-surface-2);
-    color: var(--color-text-primary);
-  }
-
-  /* Progress Card */
-  .progress-content,
-  .coverage-content {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-md);
-  }
-
-  .progress-bar,
-  .coverage-bar {
-    width: 100%;
-    height: 8px;
-    background: var(--color-surface-2);
-    border-radius: var(--radius-sm);
-    overflow: hidden;
-  }
-
-  .progress-fill {
-    height: 100%;
-    background: var(--color-primary);
-    transition: width var(--transition-slow);
-  }
-
-  .coverage-fill {
-    height: 100%;
-    background: var(--color-success);
-    transition: width var(--transition-slow);
-  }
-
-  .progress-stats,
-  .coverage-stats {
-    display: flex;
-    justify-content: space-between;
-  }
-
-  .stat {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: var(--spacing-xs);
-  }
-
-  .stat-value {
-    font-size: var(--font-size-xl);
-    font-weight: 700;
-    font-family: ui-monospace, SFMono-Regular, 'SF Mono', monospace;
-    color: var(--color-text-primary);
-  }
-
-  .stat-label {
-    font-size: var(--font-size-xs);
-    font-weight: 500;
-    color: var(--color-text-secondary);
-  }
-
-  /* Velocity Card */
-  .velocity-content {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-  }
-
-  .velocity-metric {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-xs);
-  }
-
-  .velocity-value {
-    font-size: 28px;
-    font-weight: 700;
-    font-family: ui-monospace, SFMono-Regular, 'SF Mono', monospace;
-  }
-
-  .velocity-unit {
-    font-size: 12px;
-    font-weight: 500;
-  }
-
-  .velocity-chart {
-    display: flex;
-    align-items: flex-end;
-    gap: 4px;
-    height: 40px;
-  }
-
-  .chart-bar {
-    width: 8px;
-    border-radius: 2px;
-    transition: all 0.2s ease;
-  }
-
-  .chart-bar:hover {
-  }
-
-  /* Session Card */
-  .session-content {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .session-info {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .session-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 13px;
-  }
-
-  .session-item .label {
-  }
-
-  .session-item .value {
-    font-weight: 600;
-  }
-
-  .context-usage {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .context-bar {
-    width: 80px;
-    height: 6px;
-    border-radius: 3px;
-    overflow: hidden;
-  }
-
-  .context-fill {
-    height: 100%;
-    transition: width 0.3s ease;
-  }
-
-  .context-percent {
-    font-size: 12px;
-    font-weight: 600;
-    font-family: ui-monospace, SFMono-Regular, 'SF Mono', monospace;
-  }
-
-  .context-percent.warning {
-  }
-
-  /* Activity Card */
-  .activity-content {
-    max-height: 200px;
-    overflow-y: auto;
-  }
-
-  .activity-timeline {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-sm);
-  }
-
-  .activity-item {
-    display: grid;
-    grid-template-columns: 60px 1fr auto;
-    gap: var(--spacing-md);
-    padding: var(--spacing-sm) var(--spacing-md);
-    background: var(--color-surface-2);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    font-size: var(--font-size-sm);
-    transition: all var(--transition-fast);
-  }
-
-  .activity-item:hover {
-    background: var(--color-surface-3);
-    border-color: var(--color-border-focus);
-  }
-
-  .activity-time {
-    font-family: ui-monospace, SFMono-Regular, 'SF Mono', monospace;
-    font-weight: 600;
-    color: var(--color-text-tertiary);
-  }
-
-  .activity-description {
-    color: var(--color-text-primary);
-  }
-
-  .activity-type {
-    padding: var(--spacing-xs) var(--spacing-sm);
-    background: var(--color-surface-3);
-    border-radius: var(--radius-sm);
-    font-size: 10px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.025em;
-    color: var(--color-text-secondary);
-  }
-</style>

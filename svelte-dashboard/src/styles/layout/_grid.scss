@@ -1,0 +1,414 @@
+// Design System - Grid Layout System
+// ==================================
+
+@import '../variables';
+@import '../mixins';
+
+// CONTAINER SYSTEM
+// ----------------
+.container {
+  @include container;
+}
+
+.container--fluid {
+  width: 100%;
+  padding-left: $space-4;
+  padding-right: $space-4;
+  
+  @include tablet-up {
+    padding-left: $space-6;
+    padding-right: $space-6;
+  }
+}
+
+.container--narrow {
+  max-width: 768px;
+}
+
+.container--wide {
+  max-width: 1536px;
+}
+
+// GRID SYSTEM
+// -----------
+.grid {
+  display: grid;
+  gap: $space-6;
+  
+  &--gap-sm {
+    gap: $space-3;
+  }
+  
+  &--gap-md {
+    gap: $space-4;
+  }
+  
+  &--gap-lg {
+    gap: $space-8;
+  }
+  
+  &--gap-xl {
+    gap: $space-12;
+  }
+  
+  // Column definitions
+  &--1 {
+    grid-template-columns: 1fr;
+  }
+  
+  &--2 {
+    grid-template-columns: repeat(2, 1fr);
+    
+    @include mobile-only {
+      grid-template-columns: 1fr;
+    }
+  }
+  
+  &--3 {
+    grid-template-columns: repeat(3, 1fr);
+    
+    @include mobile-only {
+      grid-template-columns: 1fr;
+    }
+    
+    @include tablet-up {
+      @media (max-width: #{$breakpoint-lg - 1px}) {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+  }
+  
+  &--4 {
+    grid-template-columns: repeat(4, 1fr);
+    
+    @include mobile-only {
+      grid-template-columns: 1fr;
+    }
+    
+    @include tablet-up {
+      @media (max-width: #{$breakpoint-lg - 1px}) {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    
+    @include desktop-up {
+      @media (max-width: #{$breakpoint-xl - 1px}) {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+  }
+  
+  &--5 {
+    grid-template-columns: repeat(5, 1fr);
+    
+    @include mobile-only {
+      grid-template-columns: 1fr;
+    }
+    
+    @include tablet-up {
+      @media (max-width: #{$breakpoint-lg - 1px}) {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    
+    @include desktop-up {
+      @media (max-width: #{$breakpoint-xl - 1px}) {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+  }
+  
+  &--6 {
+    grid-template-columns: repeat(6, 1fr);
+    
+    @include mobile-only {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    
+    @include tablet-up {
+      @media (max-width: #{$breakpoint-lg - 1px}) {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+    
+    @include desktop-up {
+      @media (max-width: #{$breakpoint-xl - 1px}) {
+        grid-template-columns: repeat(4, 1fr);
+      }
+    }
+  }
+  
+  // Auto-fit grids
+  &--auto-fit {
+    @include grid-auto-fit(280px);
+  }
+  
+  &--auto-fit-sm {
+    @include grid-auto-fit(200px);
+  }
+  
+  &--auto-fit-lg {
+    @include grid-auto-fit(360px);
+  }
+  
+  // Dense packing
+  &--dense {
+    grid-auto-flow: dense;
+  }
+}
+
+// GRID ITEM UTILITIES
+// -------------------
+.grid-item {
+  // Column span
+  &--span-1 { grid-column: span 1; }
+  &--span-2 { grid-column: span 2; }
+  &--span-3 { grid-column: span 3; }
+  &--span-4 { grid-column: span 4; }
+  &--span-5 { grid-column: span 5; }
+  &--span-6 { grid-column: span 6; }
+  &--span-full { grid-column: 1 / -1; }
+  
+  // Row span
+  &--row-span-1 { grid-row: span 1; }
+  &--row-span-2 { grid-row: span 2; }
+  &--row-span-3 { grid-row: span 3; }
+  &--row-span-4 { grid-row: span 4; }
+  &--row-span-5 { grid-row: span 5; }
+  &--row-span-6 { grid-row: span 6; }
+  
+  // Responsive column spans
+  @include tablet-up {
+    &--md-span-1 { grid-column: span 1; }
+    &--md-span-2 { grid-column: span 2; }
+    &--md-span-3 { grid-column: span 3; }
+    &--md-span-4 { grid-column: span 4; }
+    &--md-span-5 { grid-column: span 5; }
+    &--md-span-6 { grid-column: span 6; }
+    &--md-span-full { grid-column: 1 / -1; }
+  }
+  
+  @include desktop-up {
+    &--lg-span-1 { grid-column: span 1; }
+    &--lg-span-2 { grid-column: span 2; }
+    &--lg-span-3 { grid-column: span 3; }
+    &--lg-span-4 { grid-column: span 4; }
+    &--lg-span-5 { grid-column: span 5; }
+    &--lg-span-6 { grid-column: span 6; }
+    &--lg-span-full { grid-column: 1 / -1; }
+  }
+}
+
+// SPECIALIZED GRID LAYOUTS
+// -------------------------
+
+// Dashboard grid (common pattern)
+.dashboard-grid {
+  display: grid;
+  gap: $space-6;
+  grid-template-columns: 1fr;
+  
+  @include tablet-up {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  @include desktop-up {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  @include large-desktop-up {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+// Main content with sidebar
+.layout-with-sidebar {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: $space-6;
+  
+  @include desktop-up {
+    grid-template-columns: 240px 1fr;
+    gap: 0;
+  }
+}
+
+// Header, main, footer layout
+.layout-full-height {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  min-height: 100vh;
+}
+
+// Two-column layout with flexible widths
+.layout-two-column {
+  display: grid;
+  gap: $space-6;
+  grid-template-columns: 1fr;
+  
+  @include tablet-up {
+    grid-template-columns: 2fr 1fr;
+  }
+  
+  &--equal {
+    @include tablet-up {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  
+  &--reverse {
+    @include tablet-up {
+      grid-template-columns: 1fr 2fr;
+    }
+  }
+}
+
+// Three-column layout
+.layout-three-column {
+  display: grid;
+  gap: $space-6;
+  grid-template-columns: 1fr;
+  
+  @include tablet-up {
+    grid-template-columns: 1fr 1fr;
+  }
+  
+  @include desktop-up {
+    grid-template-columns: 1fr 2fr 1fr;
+  }
+}
+
+// Masonry-style grid (using grid)
+.masonry-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-auto-rows: max-content;
+  gap: $space-6;
+  align-items: start;
+}
+
+// Feature grid (for feature cards, etc.)
+.feature-grid {
+  display: grid;
+  gap: $space-4;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  
+  @include mobile-only {
+    grid-template-columns: 1fr;
+  }
+}
+
+// Metric grid (for stats/metrics)
+.metric-grid {
+  display: grid;
+  gap: $space-4;
+  
+  @include mobile-only {
+    grid-template-columns: 1fr;
+  }
+  
+  @include tablet-up {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  @include desktop-up {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+// CONTENT POSITIONING
+// -------------------
+.grid-center {
+  place-items: center;
+}
+
+.grid-start {
+  place-items: start;
+}
+
+.grid-end {
+  place-items: end;
+}
+
+.grid-stretch {
+  place-items: stretch;
+}
+
+// RESPONSIVE UTILITIES
+// --------------------
+@include mobile-only {
+  .grid--mobile-1 { grid-template-columns: 1fr !important; }
+  .grid--mobile-2 { grid-template-columns: repeat(2, 1fr) !important; }
+  .grid--mobile-stack { grid-template-columns: 1fr !important; }
+}
+
+@include tablet-up {
+  .grid--tablet-1 { grid-template-columns: 1fr !important; }
+  .grid--tablet-2 { grid-template-columns: repeat(2, 1fr) !important; }
+  .grid--tablet-3 { grid-template-columns: repeat(3, 1fr) !important; }
+}
+
+@include desktop-up {
+  .grid--desktop-1 { grid-template-columns: 1fr !important; }
+  .grid--desktop-2 { grid-template-columns: repeat(2, 1fr) !important; }
+  .grid--desktop-3 { grid-template-columns: repeat(3, 1fr) !important; }
+  .grid--desktop-4 { grid-template-columns: repeat(4, 1fr) !important; }
+  .grid--desktop-5 { grid-template-columns: repeat(5, 1fr) !important; }
+  .grid--desktop-6 { grid-template-columns: repeat(6, 1fr) !important; }
+}
+
+// FLEXBOX ALTERNATIVES
+// ---------------------
+// When grid isn't suitable, these flex utilities provide alternatives
+.flex-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-6;
+  
+  > * {
+    flex: 1 1 280px;
+    min-width: 0; // Prevent flex items from overflowing
+  }
+}
+
+.flex-grid--2-col > * {
+  flex-basis: calc(50% - #{$space-3});
+  
+  @include mobile-only {
+    flex-basis: 100%;
+  }
+}
+
+.flex-grid--3-col > * {
+  flex-basis: calc(33.333% - #{$space-4});
+  
+  @include mobile-only {
+    flex-basis: 100%;
+  }
+  
+  @include tablet-up {
+    @media (max-width: #{$breakpoint-lg - 1px}) {
+      flex-basis: calc(50% - #{$space-3});
+    }
+  }
+}
+
+.flex-grid--4-col > * {
+  flex-basis: calc(25% - #{$space-4.5});
+  
+  @include mobile-only {
+    flex-basis: 100%;
+  }
+  
+  @include tablet-up {
+    @media (max-width: #{$breakpoint-lg - 1px}) {
+      flex-basis: calc(50% - #{$space-3});
+    }
+  }
+  
+  @include desktop-up {
+    @media (max-width: #{$breakpoint-xl - 1px}) {
+      flex-basis: calc(33.333% - #{$space-4});
+    }
+  }
+}

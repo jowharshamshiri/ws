@@ -1,0 +1,564 @@
+// Design System - Layout Components
+// =================================
+
+@import '../variables';
+@import '../mixins';
+
+// APP LAYOUT
+// ----------
+.app {
+  min-height: 100vh;
+  background-color: $neutral-950;
+  color: $neutral-100;
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+
+.app__header {
+  position: sticky;
+  top: 0;
+  z-index: $z-40;
+  background-color: $neutral-900;
+  border-bottom: $border-width solid $neutral-800;
+}
+
+.app__main {
+  display: grid;
+  grid-template-columns: 1fr;
+  min-height: 0; // Allow content to shrink
+  
+  @include desktop-up {
+    &--with-sidebar {
+      grid-template-columns: 240px 1fr;
+    }
+  }
+}
+
+.app__sidebar {
+  background-color: $neutral-900;
+  border-right: $border-width solid $neutral-800;
+  overflow-y: auto;
+  
+  @include mobile-only {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 280px;
+    z-index: $z-50;
+    transform: translateX(-100%);
+    transition: transform $transition-base;
+    
+    &--open {
+      transform: translateX(0);
+    }
+  }
+}
+
+.app__content {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+// PAGE LAYOUTS
+// ------------
+.page {
+  padding: $space-6;
+  max-width: none;
+  min-height: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  
+  @include mobile-only {
+    padding: $space-4;
+  }
+}
+
+.page__header {
+  margin-bottom: $space-8;
+  
+  @include mobile-only {
+    margin-bottom: $space-6;
+  }
+}
+
+.page__title {
+  @include heading-1;
+  color: $neutral-100;
+  margin-bottom: $space-2;
+  
+  @include mobile-only {
+    @include heading-2;
+  }
+}
+
+.page__subtitle {
+  @include body-large;
+  color: $neutral-400;
+  margin-bottom: $space-4;
+}
+
+.page__actions {
+  display: flex;
+  align-items: center;
+  gap: $space-3;
+  margin-top: $space-4;
+  
+  @include mobile-only {
+    flex-wrap: wrap;
+  }
+}
+
+.page__content {
+  flex: 1;
+  min-height: 0;
+}
+
+// SECTION LAYOUTS
+// ---------------
+.section {
+  margin-bottom: $space-12;
+  
+  &:last-child {
+    margin-bottom: 0;
+  }
+  
+  @include mobile-only {
+    margin-bottom: $space-8;
+  }
+}
+
+.section__header {
+  margin-bottom: $space-6;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  
+  @include mobile-only {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: $space-4;
+  }
+}
+
+.section__title {
+  @include heading-2;
+  color: $neutral-100;
+  margin: 0;
+}
+
+.section__description {
+  @include body-base;
+  color: $neutral-400;
+  margin-top: $space-2;
+  
+  @include mobile-only {
+    margin-bottom: $space-4;
+  }
+}
+
+.section__actions {
+  display: flex;
+  align-items: center;
+  gap: $space-3;
+  
+  @include mobile-only {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
+
+.section__content {
+  // Content styling handled by child components
+}
+
+// PANEL LAYOUTS
+// -------------
+.panel {
+  background-color: $neutral-900;
+  border: $border-width solid $neutral-800;
+  border-radius: $rounded-lg;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.panel__header {
+  padding: $space-6;
+  border-bottom: $border-width solid $neutral-800;
+  background-color: rgba($neutral-800, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  
+  @include mobile-only {
+    padding: $space-4;
+  }
+}
+
+.panel__title {
+  @include heading-3;
+  color: $neutral-100;
+  margin: 0;
+}
+
+.panel__actions {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+}
+
+.panel__content {
+  padding: $space-6;
+  flex: 1;
+  min-height: 0;
+  
+  @include mobile-only {
+    padding: $space-4;
+  }
+}
+
+.panel__footer {
+  padding: $space-6;
+  border-top: $border-width solid $neutral-800;
+  background-color: rgba($neutral-800, 0.3);
+  
+  @include mobile-only {
+    padding: $space-4;
+  }
+}
+
+// Split panel layout
+.panel--split {
+  @include desktop-up {
+    flex-direction: row;
+    
+    .panel__content {
+      flex: 2;
+      border-right: $border-width solid $neutral-800;
+    }
+    
+    .panel__sidebar {
+      flex: 1;
+      padding: $space-6;
+      background-color: rgba($neutral-800, 0.1);
+    }
+  }
+}
+
+// CONTENT AREAS
+// -------------
+.content-area {
+  background-color: $neutral-900;
+  border-radius: $rounded-lg;
+  padding: $space-8;
+  
+  @include mobile-only {
+    padding: $space-4;
+    border-radius: $rounded;
+  }
+}
+
+.content-area--bordered {
+  border: $border-width solid $neutral-800;
+}
+
+.content-area--elevated {
+  box-shadow: $shadow-lg;
+}
+
+// MODAL/DIALOG LAYOUTS
+// --------------------
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba($neutral-950, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: $z-50;
+  padding: $space-4;
+  opacity: 0;
+  visibility: hidden;
+  transition: all $transition-base;
+  
+  &--open {
+    opacity: 1;
+    visibility: visible;
+  }
+}
+
+.modal {
+  background-color: $neutral-900;
+  border: $border-width solid $neutral-700;
+  border-radius: $rounded-lg;
+  box-shadow: $shadow-xl;
+  width: 100%;
+  max-width: 500px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  transform: scale(0.95);
+  transition: transform $transition-base;
+  
+  .modal-overlay--open & {
+    transform: scale(1);
+  }
+  
+  &--sm {
+    max-width: 400px;
+  }
+  
+  &--lg {
+    max-width: 800px;
+  }
+  
+  &--xl {
+    max-width: 1200px;
+  }
+  
+  &--full {
+    max-width: calc(100vw - #{$space-8});
+    max-height: calc(100vh - #{$space-8});
+  }
+}
+
+.modal__header {
+  padding: $space-6;
+  border-bottom: $border-width solid $neutral-800;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.modal__title {
+  @include heading-3;
+  color: $neutral-100;
+  margin: 0;
+}
+
+.modal__close {
+  @include button-ghost;
+  padding: $space-2;
+}
+
+.modal__content {
+  padding: $space-6;
+  flex: 1;
+  overflow-y: auto;
+  @include scroll-custom;
+}
+
+.modal__footer {
+  padding: $space-6;
+  border-top: $border-width solid $neutral-800;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: $space-3;
+}
+
+// RESPONSIVE LAYOUTS
+// ------------------
+.layout-stack {
+  display: flex;
+  flex-direction: column;
+  gap: $space-6;
+  
+  @include desktop-up {
+    &--horizontal {
+      flex-direction: row;
+      align-items: flex-start;
+      
+      > *:first-child {
+        flex: 2;
+      }
+      
+      > *:last-child {
+        flex: 1;
+      }
+    }
+  }
+}
+
+.layout-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 50vh;
+  text-align: center;
+  padding: $space-8;
+}
+
+// WORKSPACE LAYOUTS
+// -----------------
+.workspace {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: auto 1fr;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.workspace__header {
+  background-color: $neutral-900;
+  border-bottom: $border-width solid $neutral-800;
+  padding: $space-4 $space-6;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.workspace__content {
+  display: grid;
+  grid-template-columns: 1fr;
+  min-height: 0;
+  
+  @include desktop-up {
+    &--with-sidebar {
+      grid-template-columns: 240px 1fr;
+    }
+    
+    &--with-panels {
+      grid-template-columns: 240px 1fr 280px;
+    }
+  }
+}
+
+.workspace__sidebar {
+  background-color: $neutral-900;
+  border-right: $border-width solid $neutral-800;
+  overflow-y: auto;
+  @include scroll-custom;
+}
+
+.workspace__main {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background-color: $neutral-950;
+}
+
+.workspace__panel {
+  background-color: $neutral-900;
+  border-left: $border-width solid $neutral-800;
+  overflow-y: auto;
+  @include scroll-custom;
+}
+
+// UTILITY LAYOUTS
+// ---------------
+.stack {
+  display: flex;
+  flex-direction: column;
+  
+  &--sm > * + * { margin-top: $space-2; }
+  &--md > * + * { margin-top: $space-4; }
+  &--lg > * + * { margin-top: $space-6; }
+  &--xl > * + * { margin-top: $space-8; }
+}
+
+.cluster {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  
+  &--sm { gap: $space-2; }
+  &--md { gap: $space-4; }
+  &--lg { gap: $space-6; }
+  &--xl { gap: $space-8; }
+}
+
+.divider {
+  height: $border-width;
+  background-color: $neutral-800;
+  margin: $space-6 0;
+  
+  &--vertical {
+    width: $border-width;
+    height: auto;
+    margin: 0 $space-6;
+  }
+  
+  &--dashed {
+    background: none;
+    border-top: $border-width dashed $neutral-800;
+    
+    &.divider--vertical {
+      border-top: none;
+      border-left: $border-width dashed $neutral-800;
+    }
+  }
+}
+
+// ACCESSIBILITY
+// -------------
+// Focus trap for modals
+.focus-trap {
+  outline: none;
+}
+
+// Skip links
+.skip-links {
+  position: absolute;
+  top: -100px;
+  left: 0;
+  z-index: $z-50;
+  
+  &:focus-within {
+    top: 0;
+  }
+}
+
+.skip-link {
+  @include button-primary;
+  position: absolute;
+  top: $space-2;
+  left: $space-2;
+}
+
+// PRINT STYLES
+// ------------
+@media print {
+  .app__sidebar,
+  .app__header,
+  .panel__actions,
+  .page__actions,
+  .section__actions {
+    display: none !important;
+  }
+  
+  .app__main {
+    grid-template-columns: 1fr !important;
+  }
+  
+  .page {
+    padding: 0;
+  }
+  
+  .panel,
+  .content-area {
+    box-shadow: none;
+    border: $border-width solid $neutral-600;
+  }
+}
+
+// REDUCED MOTION
+// --------------
+@media (prefers-reduced-motion: reduce) {
+  .modal-overlay,
+  .modal,
+  .app__sidebar {
+    transition: none;
+  }
+  
+  .modal {
+    transform: none;
+  }
+}

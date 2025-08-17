@@ -1,0 +1,568 @@
+// Design System - Card Components
+// ===============================
+
+@import '../variables';
+@import '../mixins';
+
+// BASE CARD STYLES
+// ----------------
+.card {
+  @include card-base;
+  display: flex;
+  flex-direction: column;
+}
+
+.card--elevated {
+  @include card-elevated;
+}
+
+.card--bordered {
+  @include card-bordered;
+}
+
+.card--compact {
+  padding: $space-4;
+}
+
+.card--spacious {
+  padding: $space-8;
+}
+
+// CARD HEADER
+// -----------
+.card__header {
+  @include card-header;
+}
+
+.card__title {
+  @include heading-4;
+  color: $neutral-100;
+  margin: 0;
+  flex: 1;
+}
+
+.card__subtitle {
+  @include body-small;
+  color: $neutral-400;
+  margin: 0;
+  margin-top: $space-1;
+}
+
+.card__actions {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+}
+
+// CARD CONTENT
+// ------------
+.card__content {
+  flex: 1;
+  
+  &:not(:first-child) {
+    margin-top: $space-4;
+  }
+  
+  &:not(:last-child) {
+    margin-bottom: $space-4;
+  }
+}
+
+.card__body {
+  @include body-base;
+  color: $neutral-200;
+}
+
+// CARD FOOTER
+// -----------
+.card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: $space-4;
+  padding-top: $space-4;
+  border-top: $border-width solid $neutral-800;
+}
+
+.card__footer--center {
+  justify-content: center;
+}
+
+.card__footer--end {
+  justify-content: flex-end;
+}
+
+// CARD MEDIA
+// ----------
+.card__media {
+  margin: -#{$space-6} -#{$space-6} $space-4 -#{$space-6};
+  border-radius: $rounded-lg $rounded-lg 0 0;
+  overflow: hidden;
+  
+  img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+  
+  .card--compact & {
+    margin: -#{$space-4} -#{$space-4} $space-3 -#{$space-4};
+  }
+  
+  .card--spacious & {
+    margin: -#{$space-8} -#{$space-8} $space-6 -#{$space-8};
+  }
+}
+
+// METRIC CARD VARIANTS
+// --------------------
+.metric-card {
+  @include card-base;
+  position: relative;
+  overflow: hidden;
+}
+
+.metric-card__label {
+  @include body-small;
+  color: $neutral-400;
+  margin-bottom: $space-2;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: $font-medium;
+}
+
+.metric-card__value {
+  @include heading-2;
+  color: $neutral-100;
+  margin-bottom: $space-1;
+  font-weight: $font-bold;
+}
+
+.metric-card__change {
+  @include body-small;
+  display: flex;
+  align-items: center;
+  gap: $space-1;
+  font-weight: $font-medium;
+  
+  &--positive {
+    color: $success-500;
+  }
+  
+  &--negative {
+    color: $error-500;
+  }
+  
+  &--neutral {
+    color: $neutral-400;
+  }
+}
+
+.metric-card__description {
+  @include body-small;
+  color: $neutral-500;
+  margin-top: $space-2;
+}
+
+// STATUS CARD VARIANTS
+// --------------------
+.status-card {
+  @include card-base;
+  border-left: 4px solid transparent;
+  
+  &--success {
+    border-left-color: $success-500;
+    background-color: rgba($success-500, 0.02);
+  }
+  
+  &--warning {
+    border-left-color: $warning-500;
+    background-color: rgba($warning-500, 0.02);
+  }
+  
+  &--error {
+    border-left-color: $error-500;
+    background-color: rgba($error-500, 0.02);
+  }
+  
+  &--info {
+    border-left-color: $info-500;
+    background-color: rgba($info-500, 0.02);
+  }
+}
+
+// PROGRESS CARD
+// -------------
+.progress-card {
+  @include card-base;
+}
+
+.progress-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $space-4;
+}
+
+.progress-card__title {
+  @include heading-4;
+  color: $neutral-100;
+  margin: 0;
+}
+
+.progress-card__percentage {
+  @include body-base;
+  color: $neutral-300;
+  font-weight: $font-semibold;
+}
+
+.progress-card__bar {
+  width: 100%;
+  height: 8px;
+  background-color: $neutral-800;
+  border-radius: $rounded-full;
+  overflow: hidden;
+  margin-bottom: $space-3;
+}
+
+.progress-card__fill {
+  height: 100%;
+  background-color: $primary-500;
+  border-radius: $rounded-full;
+  transition: width $transition-base;
+  position: relative;
+  
+  &--success {
+    background-color: $success-500;
+  }
+  
+  &--warning {
+    background-color: $warning-500;
+  }
+  
+  &--error {
+    background-color: $error-500;
+  }
+}
+
+.progress-card__stats {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.progress-card__stat {
+  text-align: center;
+  
+  &-value {
+    @include body-base;
+    font-weight: $font-semibold;
+    color: $neutral-100;
+    margin-bottom: $space-1;
+  }
+  
+  &-label {
+    @include body-small;
+    color: $neutral-400;
+  }
+}
+
+// INTERACTIVE CARDS
+// -----------------
+.card--interactive {
+  cursor: pointer;
+  transition: all $transition-fast;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: $shadow-xl;
+    border-color: $neutral-600;
+  }
+  
+  &:active {
+    transform: translateY(0);
+  }
+  
+  &:focus-visible {
+    outline: 2px solid $primary-500;
+    outline-offset: 2px;
+  }
+}
+
+.card--selectable {
+  cursor: pointer;
+  border: $border-width-2 solid transparent;
+  transition: all $transition-fast;
+  
+  &:hover {
+    border-color: $neutral-600;
+  }
+  
+  &--selected {
+    border-color: $primary-500;
+    background-color: rgba($primary-500, 0.05);
+  }
+  
+  &:focus-visible {
+    outline: 2px solid $primary-500;
+    outline-offset: 2px;
+  }
+}
+
+// CARD LAYOUTS
+// ------------
+.card-grid {
+  display: grid;
+  gap: $space-6;
+  
+  &--auto-fit {
+    @include grid-auto-fit(280px);
+  }
+  
+  &--2-col {
+    grid-template-columns: repeat(2, 1fr);
+    
+    @include mobile-only {
+      grid-template-columns: 1fr;
+    }
+  }
+  
+  &--3-col {
+    grid-template-columns: repeat(3, 1fr);
+    
+    @include mobile-only {
+      grid-template-columns: 1fr;
+    }
+    
+    @include tablet-up {
+      @media (max-width: #{$breakpoint-lg - 1px}) {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+  }
+  
+  &--4-col {
+    grid-template-columns: repeat(4, 1fr);
+    
+    @include mobile-only {
+      grid-template-columns: 1fr;
+    }
+    
+    @include tablet-up {
+      @media (max-width: #{$breakpoint-lg - 1px}) {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    
+    @include desktop-up {
+      @media (max-width: #{$breakpoint-xl - 1px}) {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+  }
+}
+
+// CARD STACK
+// ----------
+.card-stack {
+  display: flex;
+  flex-direction: column;
+  gap: $space-4;
+}
+
+// SPECIALIZED CARD TYPES
+// ----------------------
+.feature-card {
+  @include card-base;
+  position: relative;
+  
+  &__status {
+    position: absolute;
+    top: $space-4;
+    right: $space-4;
+    width: 12px;
+    height: 12px;
+    border-radius: $rounded-full;
+    
+    &--complete {
+      background-color: $success-500;
+    }
+    
+    &--progress {
+      background-color: $info-500;
+    }
+    
+    &--testing {
+      background-color: $warning-500;
+    }
+    
+    &--blocked {
+      background-color: $error-500;
+    }
+    
+    &--not-started {
+      background-color: $neutral-600;
+    }
+  }
+  
+  &__title {
+    @include body-base;
+    font-weight: $font-medium;
+    color: $neutral-100;
+    margin-bottom: $space-2;
+    padding-right: $space-6; // Account for status indicator
+  }
+  
+  &__description {
+    @include body-small;
+    color: $neutral-400;
+    line-height: $leading-relaxed;
+    margin-bottom: $space-4;
+  }
+  
+  &__meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: $space-3;
+    border-top: $border-width solid $neutral-800;
+  }
+  
+  &__effort {
+    @include body-small;
+    color: $neutral-500;
+  }
+  
+  &__assignee {
+    @include body-small;
+    color: $neutral-300;
+    font-weight: $font-medium;
+  }
+}
+
+.issue-card {
+  @include card-base;
+  
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: $space-3;
+    margin-bottom: $space-3;
+  }
+  
+  &__severity {
+    padding: $space-1 $space-2;
+    border-radius: $rounded;
+    font-size: $text-xs;
+    font-weight: $font-medium;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    
+    &--critical {
+      background-color: rgba($error-500, 0.1);
+      color: $error-500;
+      border: $border-width solid $error-600;
+    }
+    
+    &--high {
+      background-color: rgba($warning-500, 0.1);
+      color: $warning-500;
+      border: $border-width solid $warning-600;
+    }
+    
+    &--medium {
+      background-color: rgba($info-500, 0.1);
+      color: $info-500;
+      border: $border-width solid $info-600;
+    }
+    
+    &--low {
+      background-color: rgba($neutral-500, 0.1);
+      color: $neutral-400;
+      border: $border-width solid $neutral-600;
+    }
+  }
+  
+  &__environment {
+    @include body-small;
+    color: $neutral-500;
+  }
+  
+  &__title {
+    @include body-base;
+    color: $neutral-100;
+    margin-bottom: $space-2;
+  }
+  
+  &__time {
+    @include body-small;
+    color: $neutral-500;
+    margin-bottom: $space-3;
+  }
+  
+  &__tags {
+    display: flex;
+    gap: $space-2;
+    flex-wrap: wrap;
+  }
+  
+  &__tag {
+    padding: $space-1 $space-2;
+    background-color: $neutral-800;
+    color: $neutral-300;
+    border-radius: $rounded;
+    font-size: $text-xs;
+  }
+}
+
+// CARD LOADING STATE
+// ------------------
+.card--loading {
+  position: relative;
+  overflow: hidden;
+  
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba($neutral-600, 0.2),
+      transparent
+    );
+    animation: card-shimmer 1.5s infinite;
+  }
+}
+
+@keyframes card-shimmer {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+// ACCESSIBILITY ENHANCEMENTS
+// ---------------------------
+@media (prefers-reduced-motion: reduce) {
+  .card--interactive {
+    transition: none;
+    
+    &:hover {
+      transform: none;
+    }
+  }
+  
+  .progress-card__fill {
+    transition: none;
+  }
+  
+  .card--loading::after {
+    animation: none;
+  }
+}

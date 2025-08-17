@@ -1,0 +1,440 @@
+// Design System - Dialog Components (Modal/Overlay System)
+// =========================================================
+
+@import '../variables';
+@import '../mixins';
+
+// DIALOG OVERLAY SYSTEM (matching design reference)
+// ==================================================
+.dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba($neutral-950, 0.8);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: $z-50;
+  padding: $space-4;
+  
+  // Smooth entrance animation
+  animation: overlay-enter 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  &--exiting {
+    animation: overlay-exit 0.15s cubic-bezier(0.4, 0, 1, 1);
+  }
+}
+
+// DIALOG CONTAINER (Professional Appwrite-style)
+// ===============================================
+.dialog {
+  background: $neutral-900; // Clean Appwrite solid background
+  border: 1px solid rgba($neutral-700, 0.3);
+  border-radius: $rounded-lg;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.8), 0 10px 10px -5px rgba(0, 0, 0, 0.4);
+  width: 100%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow: hidden;
+  position: relative;
+  
+  // Clean entrance animation
+  animation: dialog-enter 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  
+  // Light mode support
+  [data-theme="light"] & {
+    background: $neutral-0;
+    border-color: $neutral-200;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  }
+  
+  &--large {
+    max-width: 800px;
+  }
+  
+  &--small {
+    max-width: 400px;
+  }
+  
+  &--fullscreen {
+    max-width: 95vw;
+    max-height: 95vh;
+    
+    @include mobile-only {
+      max-width: 100vw;
+      max-height: 100vh;
+      border-radius: 0;
+    }
+  }
+  
+  &--exiting {
+    animation: dialog-exit 0.2s cubic-bezier(0.4, 0, 1, 1);
+  }
+}
+
+// DIALOG HEADER (Consistent with design reference)
+// ================================================
+.dialog__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $space-6 $space-6 $space-4 $space-6;
+  border-bottom: 1px solid rgba($neutral-700, 0.3);
+  position: relative;
+  
+  // Subtle header glow
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: $space-6;
+    right: $space-6;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba($neutral-600, 0.5), transparent);
+  }
+}
+
+.dialog__title {
+  @include heading-3;
+  color: $neutral-100;
+  margin: 0;
+  font-weight: $font-semibold;
+}
+
+.dialog__subtitle {
+  @include body-small;
+  color: $neutral-400;
+  margin: $space-1 0 0 0;
+}
+
+.dialog__close {
+  @include button-base;
+  padding: $space-2;
+  background: rgba($neutral-700, 0.3);
+  border: 1px solid rgba($neutral-600, 0.3);
+  border-radius: $rounded-md;
+  color: $neutral-400;
+  width: 32px;
+  height: 32px;
+  
+  &:hover {
+    background: rgba($neutral-600, 0.4);
+    border-color: rgba($error-500, 0.4);
+    color: $neutral-200;
+  }
+  
+  &:active {
+    background: rgba($neutral-500, 0.5);
+    transform: translateY(0.5px);
+  }
+  
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+// DIALOG CONTENT (Scrollable with custom scrollbar)
+// =================================================
+.dialog__content {
+  padding: $space-6;
+  overflow-y: auto;
+  max-height: calc(90vh - 140px);
+  
+  @include scroll-custom;
+  
+  // Content spacing
+  > * + * {
+    margin-top: $space-4;
+  }
+  
+  // First/last element spacing
+  > :first-child {
+    margin-top: 0;
+  }
+  
+  > :last-child {
+    margin-bottom: 0;
+  }
+}
+
+// DIALOG ACTIONS (Form buttons area)
+// ==================================
+.dialog__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: $space-3;
+  padding: $space-4 $space-6 $space-6 $space-6;
+  border-top: 1px solid rgba($neutral-700, 0.3);
+  position: relative;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: $space-6;
+    right: $space-6;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba($neutral-600, 0.5), transparent);
+  }
+  
+  &--left {
+    justify-content: flex-start;
+  }
+  
+  &--center {
+    justify-content: center;
+  }
+  
+  &--between {
+    justify-content: space-between;
+  }
+  
+  &--stacked {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    
+    .btn {
+      width: 100%;
+      justify-content: center;
+    }
+  }
+}
+
+// SPECIALIZED DIALOG VARIANTS
+// ============================
+
+// Confirmation Dialog
+.dialog--confirm {
+  .dialog__content {
+    text-align: center;
+    
+    .dialog__icon {
+      width: 48px;
+      height: 48px;
+      margin: 0 auto $space-4 auto;
+      padding: $space-3;
+      border-radius: $rounded-full;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      
+      &--warning {
+        background: rgba($warning-500, 0.1);
+        color: $warning-500;
+        border: 1px solid rgba($warning-500, 0.3);
+      }
+      
+      &--error {
+        background: rgba($error-500, 0.1);
+        color: $error-500;
+        border: 1px solid rgba($error-500, 0.3);
+      }
+      
+      &--info {
+        background: rgba($info-500, 0.1);
+        color: $info-500;
+        border: 1px solid rgba($info-500, 0.3);
+      }
+    }
+    
+    .dialog__message {
+      @include body-base;
+      color: $neutral-200;
+      margin-bottom: $space-2;
+    }
+    
+    .dialog__description {
+      @include body-small;
+      color: $neutral-400;
+    }
+  }
+}
+
+// Form Dialog (matching design references)
+.dialog--form {
+  .dialog__content {
+    .form__group + .form__group {
+      margin-top: $space-5;
+    }
+    
+    .form__section + .form__section {
+      margin-top: $space-6;
+      padding-top: $space-6;
+      border-top: 1px solid rgba($neutral-700, 0.3);
+    }
+  }
+}
+
+// Loading Dialog
+.dialog--loading {
+  pointer-events: none;
+  
+  .dialog__content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: $space-8;
+    
+    .loading-spinner {
+      margin-right: $space-4;
+    }
+  }
+}
+
+// DIALOG ANIMATIONS
+// =================
+@keyframes overlay-enter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes overlay-exit {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes dialog-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes dialog-exit {
+  from {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95) translateY(-10px);
+  }
+}
+
+// RESPONSIVE DIALOG BEHAVIOR
+// ===========================
+@include mobile-only {
+  .dialog-overlay {
+    padding: $space-2;
+    align-items: flex-end;
+    
+    .dialog {
+      max-height: 85vh;
+      border-radius: $rounded-xl $rounded-xl 0 0;
+      
+      &--fullscreen {
+        align-self: stretch;
+        height: 100vh;
+        border-radius: 0;
+      }
+    }
+  }
+}
+
+// ACCESSIBILITY ENHANCEMENTS
+// ===========================
+@media (prefers-reduced-motion: reduce) {
+  .dialog-overlay,
+  .dialog {
+    animation: none;
+  }
+  
+  .dialog--exiting,
+  .dialog-overlay--exiting {
+    animation: none;
+    opacity: 0;
+  }
+}
+
+// Focus trap styling
+.dialog:focus {
+  outline: none;
+}
+
+// Prevent body scroll when dialog is open
+.body--dialog-open {
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
+}
+
+// TOAST/NOTIFICATION DIALOGS
+// ===========================
+.dialog--toast {
+  position: fixed;
+  top: $space-4;
+  right: $space-4;
+  max-width: 400px;
+  width: auto;
+  z-index: $z-50;
+  animation: toast-enter 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  
+  &--success {
+    border-left: 4px solid $success-500;
+  }
+  
+  &--warning {
+    border-left: 4px solid $warning-500;
+  }
+  
+  &--error {
+    border-left: 4px solid $error-500;
+  }
+  
+  &--info {
+    border-left: 4px solid $info-500;
+  }
+  
+  .dialog__header {
+    padding: $space-4 $space-5 $space-2 $space-5;
+    border: none;
+    
+    .dialog__title {
+      font-size: $text-sm;
+      font-weight: $font-medium;
+    }
+    
+    .dialog__close {
+      width: 24px;
+      height: 24px;
+      padding: $space-1;
+    }
+  }
+  
+  .dialog__content {
+    padding: 0 $space-5 $space-4 $space-5;
+    
+    .dialog__message {
+      @include body-small;
+      color: $neutral-300;
+    }
+  }
+}
+
+@keyframes toast-enter {
+  from {
+    opacity: 0;
+    transform: translateX(100%) translateY(-50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) translateY(0);
+  }
+}
