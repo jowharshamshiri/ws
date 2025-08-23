@@ -1,0 +1,59 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Tasks Table Schema - Simple Task Records",
+  "description": "Schema for TASKS.md as simple table of task records with feature links",
+  "type": "object",
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "date": { "type": "string", "format": "date" },
+        "purpose": { "type": "string" },
+        "totalTasks": { "type": "integer", "minimum": 0 },
+        "activeTasks": { "type": "integer", "minimum": 0 },
+        "completedTasks": { "type": "integer", "minimum": 0 }
+      },
+      "required": ["date", "purpose", "totalTasks", "activeTasks", "completedTasks"]
+    },
+    "tasks": {
+      "type": "array",
+      "description": "Task records table",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { 
+            "type": "string", 
+            "pattern": "^T\\d{6}$",
+            "description": "Task ID in T###### format"
+          },
+          "feature": { 
+            "type": "string", 
+            "pattern": "^F\\d{5}$",
+            "description": "Related feature ID"
+          },
+          "task": { "type": "string" },
+          "priority": { 
+            "type": "string", 
+            "enum": ["high", "medium", "low"] 
+          },
+          "status": { 
+            "type": "string", 
+            "enum": ["pending", "in_progress", "blocked", "completed", "cancelled"] 
+          },
+          "category": { "type": "string" },
+          "dependencies": { "type": "string" },
+          "assigned": { "type": "string" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" },
+          "notes": { 
+            "type": "string",
+            "maxLength": 100,
+            "description": "Brief operational notes only"
+          }
+        },
+        "required": ["id", "feature", "task", "priority", "status", "category", "createdAt", "updatedAt"]
+      }
+    }
+  },
+  "required": ["metadata", "tasks"]
+}

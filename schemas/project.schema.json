@@ -1,0 +1,247 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Project Database Schema - Parent Entity",
+  "description": "Project as parent entity containing all child entities (features, tasks, directives, metrics, etc.)",
+  "type": "object",
+  "properties": {
+    "id": { 
+      "type": "string", 
+      "pattern": "^P\\d{3}$",
+      "description": "Project ID in P### format (P001, P002, etc.)"
+    },
+    "name": { "type": "string" },
+    "description": { "type": "string" },
+    "status": { 
+      "type": "string", 
+      "enum": ["active", "paused", "completed", "archived"] 
+    },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "updatedAt": { "type": "string", "format": "date-time" },
+    "currentPhase": { "type": "string" },
+    "features": {
+      "type": "array",
+      "description": "All features belonging to this project",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { 
+            "type": "string", 
+            "pattern": "^F\\d{5}$",
+            "description": "Feature ID in F##### format"
+          },
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "state": { 
+            "type": "string", 
+            "enum": ["not_implemented", "implemented_no_tests", "implemented_failing_tests", "implemented_passing_tests", "tests_broken", "critical_issue"],
+            "description": "Feature implementation and test status"
+          },
+          "notes": { 
+            "type": "string",
+            "maxLength": 100,
+            "description": "Brief operational notes only"
+          },
+          "projectId": {
+            "type": "string",
+            "pattern": "^P\\d{3}$",
+            "description": "Reference to parent project"
+          }
+        },
+        "required": ["id", "name", "description", "state", "projectId"]
+      }
+    },
+    "tasks": {
+      "type": "array",
+      "description": "All tasks belonging to this project",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { 
+            "type": "string", 
+            "pattern": "^T\\d{6}$",
+            "description": "Task ID in T###### format"
+          },
+          "featureId": { 
+            "type": "string", 
+            "pattern": "^F\\d{5}$",
+            "description": "Related feature ID"
+          },
+          "task": { "type": "string" },
+          "priority": { 
+            "type": "string", 
+            "enum": ["high", "medium", "low"] 
+          },
+          "status": { 
+            "type": "string", 
+            "enum": ["pending", "in_progress", "blocked", "completed", "cancelled"] 
+          },
+          "category": { "type": "string" },
+          "dependencies": { "type": "string" },
+          "assigned": { "type": "string" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" },
+          "notes": { 
+            "type": "string",
+            "maxLength": 100,
+            "description": "Brief operational notes only"
+          },
+          "projectId": {
+            "type": "string",
+            "pattern": "^P\\d{3}$",
+            "description": "Reference to parent project"
+          }
+        },
+        "required": ["id", "featureId", "task", "priority", "status", "category", "createdAt", "updatedAt", "projectId"]
+      }
+    },
+    "directives": {
+      "type": "array",
+      "description": "All development directives for this project",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { 
+            "type": "string", 
+            "pattern": "^D\\d{3}$",
+            "description": "Directive ID in D### format"
+          },
+          "title": { "type": "string" },
+          "rule": { "type": "string" },
+          "priority": { 
+            "type": "string", 
+            "enum": ["critical", "high", "medium", "low"] 
+          },
+          "status": { 
+            "type": "string", 
+            "enum": ["active", "inactive", "archived"] 
+          },
+          "context": { "type": "string" },
+          "rationale": { "type": "string" },
+          "projectId": {
+            "type": "string",
+            "pattern": "^P\\d{3}$",
+            "description": "Reference to parent project"
+          }
+        },
+        "required": ["id", "title", "rule", "priority", "status", "projectId"]
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "description": "Project metrics data",
+      "properties": {
+        "universalMetrics": {
+          "type": "array", 
+          "description": "M001-M010 hardcoded universal metrics",
+          "items": {
+            "type": "object",
+            "properties": {
+              "code": { 
+                "type": "string", 
+                "pattern": "^M\\d{2}$",
+                "description": "Universal metric code M01-M10"
+              },
+              "metric": { "type": "string" },
+              "value": { "type": "string" },
+              "target": { "type": "string" },
+              "calculation": { "type": "string" },
+              "lastUpdated": { "type": "string", "format": "date" },
+              "notes": { "type": "string" },
+              "projectId": {
+                "type": "string",
+                "pattern": "^P\\d{3}$",
+                "description": "Reference to parent project"
+              }
+            },
+            "required": ["code", "metric", "value", "target", "calculation", "lastUpdated", "projectId"]
+          }
+        },
+        "projectMetrics": {
+          "type": "array",
+          "description": "P001+ project-specific metrics",
+          "items": {
+            "type": "object", 
+            "properties": {
+              "code": { 
+                "type": "string", 
+                "pattern": "^P\\d{2}$",
+                "description": "Project-specific metric code P01+"
+              },
+              "metric": { "type": "string" },
+              "value": { "type": "string" },
+              "target": { "type": "string" },
+              "calculation": { "type": "string" },
+              "lastUpdated": { "type": "string", "format": "date" },
+              "notes": { "type": "string" },
+              "projectId": {
+                "type": "string",
+                "pattern": "^P\\d{3}$",
+                "description": "Reference to parent project"
+              }
+            },
+            "required": ["code", "metric", "value", "target", "calculation", "lastUpdated", "notes", "projectId"]
+          }
+        }
+      }
+    },
+    "architecture": {
+      "type": "object",
+      "description": "Project architectural decisions and design documentation",
+      "properties": {
+        "decisions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "title": { "type": "string" },
+              "decision": { "type": "string" },
+              "rationale": { "type": "string" },
+              "tradeoffs": { "type": "string" },
+              "date": { "type": "string", "format": "date" },
+              "projectId": {
+                "type": "string",
+                "pattern": "^P\\d{3}$"
+              }
+            }
+          }
+        }
+      }
+    },
+    "progress": {
+      "type": "object",
+      "description": "Project progress tracking and session history",
+      "properties": {
+        "sessions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^S\\d{6}$"
+              },
+              "date": { "type": "string", "format": "date" },
+              "focus": { "type": "string" },
+              "achievements": { "type": "array", "items": { "type": "string" } },
+              "status": { "type": "string", "enum": ["completed", "in_progress"] },
+              "projectId": {
+                "type": "string",
+                "pattern": "^P\\d{3}$"
+              }
+            }
+          }
+        }
+      }
+    },
+    "testing": {
+      "type": "object",
+      "description": "Project testing procedures and results",
+      "properties": {
+        "procedures": { "type": "array", "items": { "type": "string" } },
+        "standards": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  },
+  "required": ["id", "name", "description", "status", "createdAt", "updatedAt", "features", "tasks", "directives", "metrics"]
+}

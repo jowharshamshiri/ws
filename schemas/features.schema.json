@@ -1,0 +1,55 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Features Table Schema - Simple Feature Records",
+  "description": "Schema for FEATURES.md as simple table of feature records",
+  "type": "object",
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "date": { "type": "string", "format": "date" },
+        "purpose": { "type": "string" },
+        "totalFeatures": { "type": "integer", "minimum": 0 }
+      },
+      "required": ["date", "purpose", "totalFeatures"]
+    },
+    "features": {
+      "type": "array",
+      "description": "Feature records table",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { 
+            "type": "string", 
+            "pattern": "^F\\d{5}$",
+            "description": "Feature ID in F##### format"
+          },
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "state": { 
+            "type": "string", 
+            "enum": ["not_implemented", "implemented_no_tests", "implemented_failing_tests", "implemented_passing_tests", "tests_broken", "critical_issue"],
+            "description": "Feature implementation and test status"
+          },
+          "notes": { 
+            "type": "string",
+            "maxLength": 100,
+            "description": "Brief operational notes only"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp when feature was created"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp when feature was last updated"
+          }
+        },
+        "required": ["id", "name", "description", "state", "createdAt", "updatedAt"]
+      }
+    }
+  },
+  "required": ["metadata", "features"]
+}

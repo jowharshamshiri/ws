@@ -1,0 +1,53 @@
+{
+  "metadata": {
+    "title": "Critical Development Rules - DIRECTIVES",
+    "purpose": "Development rules and constraints that override default AI behavior",
+    "lastUpdated": "2025-08-21"
+  },
+  "directives": [
+    {
+      "id": "D001",
+      "title": "Absolute File Creation Constraint",
+      "rule": "NEVER create files unless absolutely necessary for task completion",
+      "priority": "critical",
+      "status": "active",
+      "context": "Applies to all file creation operations during development sessions",
+      "rationale": "Prevents unnecessary file proliferation and maintains clean project structure",
+      "createdAt": "2025-07-31T08:00:00Z",
+      "updatedAt": "2025-08-21T14:00:00Z"
+    },
+    {
+      "id": "D005",
+      "title": "Canonical File System Enforcement", 
+      "rule": "NEVER create new files - use only canonical file structure",
+      "priority": "critical",
+      "status": "active",
+      "context": "All information must go to designated canonical files",
+      "rationale": "Prevents documentation sprawl and maintains organized structure",
+      "createdAt": "2025-08-02T10:30:00Z",
+      "updatedAt": "2025-08-21T14:15:00Z"
+    },
+    {
+      "id": "D039",
+      "title": "Complexity Preservation Standards",
+      "rule": "NEVER simplify implementations to get them to run. ALWAYS preserve the complexity and intricacy of the project unless explicitly ordered to simplify by the user",
+      "priority": "critical", 
+      "status": "active",
+      "context": "Applies to all implementation, testing, and architectural decisions",
+      "rationale": "Complexity exists for reasons and must be maintained for system integrity",
+      "createdAt": "2025-07-31T16:00:00Z",
+      "updatedAt": "2025-08-21T14:30:00Z"
+    },
+    {
+      "id": "D101",
+      "title": "TodoWrite Prohibition",
+      "rule": "PROHIBIT TodoWrite tool usage - exclusive task command authority",
+      "priority": "critical",
+      "status": "active", 
+      "context": "All task management operations must use task command exclusively",
+      "rationale": "Prevents conflicts between multiple task management systems",
+      "createdAt": "2025-08-21T13:00:00Z",
+      "updatedAt": "2025-08-21T14:45:00Z"
+    }
+  ]
+}

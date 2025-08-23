@@ -1,0 +1,508 @@
+{
+  "metadata": {
+    "title": "Testing Procedures and Methodologies",
+    "purpose": "Testing procedures, methodologies, and test documentation",
+    "lastUpdated": "2025-08-21",
+    "testFramework": "Custom command validation framework",
+    "testEnvironment": "Local development with file system validation"
+  },
+  "testingStrategy": {
+    "approach": "Feature-driven testing with automatic state synchronization and tautological test detection",
+    "levels": [
+      {
+        "level": "unit",
+        "description": "Individual command functionality testing",
+        "tools": ["Command execution validation", "File system checks", "ID format validation"],
+        "coverage": "All 6 core commands",
+        "automationLevel": "partial"
+      },
+      {
+        "level": "integration",
+        "description": "Cross-command workflow testing and feature-task coordination",
+        "tools": ["Multi-command sequences", "File state validation", "Feature state transitions"],
+        "coverage": "Complete workflows from start to end",
+        "automationLevel": "partial"
+      },
+      {
+        "level": "system",
+        "description": "End-to-end project management lifecycle testing",
+        "tools": ["Full project setup", "Session continuity validation", "Archive management"],
+        "coverage": "Complete project lifecycle",
+        "automationLevel": "manual"
+      },
+      {
+        "level": "acceptance",
+        "description": "User workflow validation and persistent knowledge management",
+        "tools": ["User scenario validation", "Cross-session continuity", "Project recovery"],
+        "coverage": "Real-world usage scenarios",
+        "automationLevel": "manual"
+      }
+    ],
+    "testDataManagement": {
+      "approach": "File-based test data with canonical structure validation",
+      "dataGeneration": "Generate test projects with features, tasks, and progress data",
+      "dataCleanup": "Archive test artifacts in test-specific directories",
+      "sensitiveData": "No sensitive data in test scenarios"
+    }
+  },
+  "testProcedures": [
+    {
+      "procedureId": "TP-001",
+      "name": "Command System Validation",
+      "type": "validation",
+      "purpose": "Validate all 6 core commands are operational and follow specifications",
+      "frequency": "per-session",
+      "prerequisites": [
+        "Commands installed in ~/.claude/commands/",
+        "Test project structure available",
+        "Canonical files present"
+      ],
+      "steps": [
+        {
+          "stepNumber": 1,
+          "action": "Execute start command with test project",
+          "expectedResult": "Session initializes successfully with context loading",
+          "validation": "Check for successful FEATURES.md analysis and METRICS.md creation",
+          "automation": true
+        },
+        {
+          "stepNumber": 2,
+          "action": "Execute task command to add new task",
+          "expectedResult": "Task added to TASKS.md with proper ID format (T######)",
+          "validation": "Verify task entry in TASKS.md table with correct format",
+          "automation": true
+        },
+        {
+          "stepNumber": 3,
+          "action": "Execute status command for project health check",
+          "expectedResult": "Status report generated with metrics and feature analysis",
+          "validation": "Check metrics consistency and feature state reporting",
+          "automation": true
+        },
+        {
+          "stepNumber": 4,
+          "action": "Execute end command to close session",
+          "expectedResult": "Session summary created with feature progress updates",
+          "validation": "Verify PROGRESS_TRACKING.md updated and METRICS.md recalculated",
+          "automation": true
+        }
+      ],
+      "acceptanceCriteria": [
+        "All 6 commands execute without errors",
+        "File structure remains canonical",
+        "ID formats are consistent throughout",
+        "Metrics calculations are accurate"
+      ],
+      "relatedFeatures": ["F00001", "F00002", "F00053", "F00054"],
+      "commands": [
+        {
+          "command": "start --debug-mode",
+          "purpose": "Initialize session with detailed diagnostic output",
+          "expectedOutput": "Session initialization report with validation results"
+        },
+        {
+          "command": "task --add 'Test task creation' --priority high --category test",
+          "purpose": "Test task creation with proper formatting",
+          "expectedOutput": "Task T###### created successfully"
+        },
+        {
+          "command": "status --detailed",
+          "purpose": "Generate comprehensive project status",
+          "expectedOutput": "Detailed status with metrics and feature analysis"
+        }
+      ]
+    },
+    {
+      "procedureId": "TP-002",
+      "name": "ID Format Validation",
+      "type": "validation",
+      "purpose": "Ensure all ID formats follow standardized patterns across all files",
+      "frequency": "per-commit",
+      "prerequisites": [
+        "Project files with various ID references",
+        "Commands operational"
+      ],
+      "steps": [
+        {
+          "stepNumber": 1,
+          "action": "Scan all canonical files for ID format compliance",
+          "expectedResult": "All IDs follow proper zero-padded formats",
+          "validation": "Regex validation: F##### (features), T###### (tasks), D### (directives)",
+          "automation": true
+        },
+        {
+          "stepNumber": 2,
+          "action": "Test ID format correction in commands",
+          "expectedResult": "Commands automatically correct malformed IDs",
+          "validation": "Verify F001 → F00001, T01 → T000001 corrections",
+          "automation": true
+        },
+        {
+          "stepNumber": 3,
+          "action": "Validate cross-references between files",
+          "expectedResult": "All ID references are consistent across files",
+          "validation": "Check TASKS.md feature references match FEATURES.md IDs",
+          "automation": false
+        }
+      ],
+      "acceptanceCriteria": [
+        "Zero malformed ID formats in any canonical file",
+        "Commands enforce ID format standards",
+        "Cross-references are valid and consistent"
+      ],
+      "relatedFeatures": ["F00103"],
+      "commands": [
+        {
+          "command": "status --format-validation",
+          "purpose": "Validate all ID formats in project",
+          "expectedOutput": "ID format compliance report"
+        }
+      ]
+    },
+    {
+      "procedureId": "TP-003",
+      "name": "Feature State Transition Testing",
+      "type": "feature",
+      "purpose": "Validate feature state changes based on task completion",
+      "frequency": "on-demand",
+      "prerequisites": [
+        "FEATURES.md with test features",
+        "TASKS.md with linked tasks",
+        "Task command operational"
+      ],
+      "steps": [
+        {
+          "stepNumber": 1,
+          "action": "Create test feature in ❌ (not implemented) state",
+          "expectedResult": "Feature F##### added to FEATURES.md with ❌ state",
+          "validation": "Verify feature entry with correct initial state",
+          "automation": false
+        },
+        {
+          "stepNumber": 2,
+          "action": "Complete implementation task for the feature",
+          "expectedResult": "Feature state transitions from ❌ to 🟠 (implemented)",
+          "validation": "Check FEATURES.md for automatic state update",
+          "automation": true
+        },
+        {
+          "stepNumber": 3,
+          "action": "Complete test task with passing tests",
+          "expectedResult": "Feature state transitions from 🟠 to 🟢 (tested)",
+          "validation": "Verify feature reaches fully validated state",
+          "automation": true
+        },
+        {
+          "stepNumber": 4,
+          "action": "Complete test task with failing tests",
+          "expectedResult": "Feature state transitions from 🟠 to 🟡 (failing tests)",
+          "validation": "Check proper handling of test failures",
+          "automation": true
+        }
+      ],
+      "acceptanceCriteria": [
+        "Feature states update automatically on task completion",
+        "State transitions follow defined workflow (❌→🟠→🟢/🟡/⚠️)",
+        "Evidence is recorded for all state changes",
+        "Metrics recalculate correctly after state changes"
+      ],
+      "relatedFeatures": ["F00002", "F00021"],
+      "commands": [
+        {
+          "command": "task --complete T###### --notes 'Implementation complete with evidence'",
+          "purpose": "Complete implementation task and trigger feature update",
+          "expectedOutput": "Task completed, feature state updated"
+        }
+      ]
+    }
+  ],
+  "testSuites": [
+    {
+      "suiteId": "TS-001",
+      "name": "Core Command Functionality",
+      "description": "Test suite for all 6 core commands basic operations",
+      "testCases": [
+        {
+          "testId": "TC-001",
+          "name": "Start Command Context Loading",
+          "featureId": "F00001",
+          "type": "positive",
+          "priority": "critical",
+          "automated": true,
+          "testData": "Empty project directory with minimal CLAUDE.md",
+          "expectedResult": "Context loads successfully, missing files created",
+          "actualResult": "✅ Context loaded, METRICS.md created",
+          "status": "pass",
+          "lastRun": "2025-08-21T14:30:00Z",
+          "executionTime": 2.5,
+          "issues": []
+        },
+        {
+          "testId": "TC-002", 
+          "name": "Task Command with Feature Linking",
+          "featureId": "F00002",
+          "type": "positive",
+          "priority": "critical",
+          "automated": true,
+          "testData": "Existing FEATURES.md and TASKS.md",
+          "expectedResult": "Task created with proper feature link",
+          "actualResult": "✅ Task T000001 created, linked to F00001",
+          "status": "pass",
+          "lastRun": "2025-08-21T14:30:00Z",
+          "executionTime": 1.8,
+          "issues": []
+        },
+        {
+          "testId": "TC-003",
+          "name": "Metrics Calculation Accuracy",
+          "featureId": "F00054",
+          "type": "positive",
+          "priority": "high",
+          "automated": false,
+          "testData": "FEATURES.md with known feature states",
+          "expectedResult": "Metrics calculated correctly from feature data",
+          "actualResult": "Pending validation",
+          "status": "skip",
+          "lastRun": "2025-08-21T10:00:00Z",
+          "executionTime": 0,
+          "issues": [
+            {
+              "issue": "Awaiting implementation of metric validation test",
+              "severity": "minor",
+              "resolution": "Test development in progress"
+            }
+          ]
+        }
+      ],
+      "coverage": {
+        "statement": 85.5,
+        "branch": 72.3,
+        "function": 90.1,
+        "line": 88.7
+      },
+      "health": {
+        "score": 92,
+        "passingTests": 2,
+        "failingTests": 0,
+        "tautologicalTests": 0,
+        "blockedTests": 1
+      }
+    },
+    {
+      "suiteId": "TS-002",
+      "name": "File System Integrity",
+      "description": "Test suite for canonical file system enforcement and validation",
+      "testCases": [
+        {
+          "testId": "TC-010",
+          "name": "Canonical File Creation Only",
+          "featureId": "F00046",
+          "type": "negative",
+          "priority": "high",
+          "automated": true,
+          "testData": "Commands attempting to create non-canonical files",
+          "expectedResult": "Non-canonical file creation prevented",
+          "actualResult": "✅ Commands respect canonical file constraints",
+          "status": "pass",
+          "lastRun": "2025-08-21T14:30:00Z",
+          "executionTime": 1.2,
+          "issues": []
+        },
+        {
+          "testId": "TC-011",
+          "name": "ID Format Enforcement",
+          "featureId": "F00103",
+          "type": "positive",
+          "priority": "high",
+          "automated": true,
+          "testData": "Mixed ID formats in test files",
+          "expectedResult": "All IDs corrected to proper zero-padded formats",
+          "actualResult": "✅ F001 → F00001, T1 → T000001 corrections applied",
+          "status": "pass",
+          "lastRun": "2025-08-21T14:30:00Z",
+          "executionTime": 0.8,
+          "issues": []
+        }
+      ],
+      "coverage": {
+        "statement": 78.2,
+        "branch": 65.4,
+        "function": 82.1,
+        "line": 79.9
+      },
+      "health": {
+        "score": 88,
+        "passingTests": 2,
+        "failingTests": 0,
+        "tautologicalTests": 0,
+        "blockedTests": 0
+      }
+    }
+  ],
+  "validationProtocols": [
+    {
+      "protocolId": "VP-001",
+      "name": "Session End Validation",
+      "scope": "feature",
+      "triggers": ["feature-complete", "session-end"],
+      "validationSteps": [
+        {
+          "step": "Verify feature state transitions recorded",
+          "method": "Check FEATURES.md for updated states with evidence",
+          "criteria": "All completed tasks have corresponding feature updates",
+          "evidence": "Feature notes contain task completion evidence",
+          "automatable": true
+        },
+        {
+          "step": "Validate metrics recalculation",
+          "method": "Compare calculated metrics against actual FEATURES.md data",
+          "criteria": "M002-M004 scores match feature state distribution",
+          "evidence": "METRICS.md calculations are mathematically correct",
+          "automatable": true
+        },
+        {
+          "step": "Check session documentation completeness",
+          "method": "Verify PROGRESS_TRACKING.md has session entry with achievements",
+          "criteria": "Session has major achievement, file changes, and next steps documented",
+          "evidence": "Complete session record with validation results",
+          "automatable": false
+        }
+      ],
+      "successCriteria": [
+        "All feature state changes have evidence",
+        "Metrics calculations are accurate",
+        "Session documentation is complete",
+        "No broken file references"
+      ],
+      "failureHandling": {
+        "escalation": "Flag validation failures as critical issues",
+        "rollback": "Revert changes if validation fails",
+        "notification": "Document validation failures in session notes"
+      }
+    },
+    {
+      "protocolId": "VP-002",
+      "name": "Tautological Test Detection",
+      "scope": "system",
+      "triggers": ["test-creation", "test-validation"],
+      "validationSteps": [
+        {
+          "step": "Analyze test implementation for meaningful validation",
+          "method": "Check if test actually validates feature functionality",
+          "criteria": "Test can fail when feature is broken",
+          "evidence": "Test has meaningful assertions and failure conditions",
+          "automatable": false
+        },
+        {
+          "step": "Verify test independence",
+          "method": "Ensure test doesn't just check if code exists",
+          "criteria": "Test validates behavior, not just presence",
+          "evidence": "Test exercises feature functionality meaningfully",
+          "automatable": false
+        }
+      ],
+      "successCriteria": [
+        "Tests validate actual functionality",
+        "Tests can detect feature failures",
+        "Tests are not just existence checks"
+      ],
+      "failureHandling": {
+        "escalation": "Mark feature as ⚠️ (tautological)",
+        "rollback": "Remove tautological test designation",
+        "notification": "Document test repair requirements"
+      }
+    }
+  ],
+  "qualityGates": [
+    {
+      "gateId": "QG-001",
+      "name": "Feature Completion Gate",
+      "stage": "development",
+      "conditions": [
+        {
+          "metric": "Implementation Evidence",
+          "operator": "=",
+          "threshold": 1,
+          "unit": "validation"
+        },
+        {
+          "metric": "Test Coverage",
+          "operator": ">=",
+          "threshold": 1,
+          "unit": "test"
+        }
+      ],
+      "actions": {
+        "onPass": "Allow feature state transition to 🟢",
+        "onFail": "Keep feature in 🟠 or 🟡 state",
+        "notification": "Update feature notes with gate status"
+      }
+    },
+    {
+      "gateId": "QG-002",
+      "name": "Session Quality Gate",
+      "stage": "integration",
+      "conditions": [
+        {
+          "metric": "File Creation Compliance",
+          "operator": "=",
+          "threshold": 100,
+          "unit": "%"
+        },
+        {
+          "metric": "ID Format Compliance",
+          "operator": "=",
+          "threshold": 100,
+          "unit": "%"
+        },
+        {
+          "metric": "Completed Tasks Evidence",
+          "operator": ">=",
+          "threshold": 1,
+          "unit": "evidence per task"
+        }
+      ],
+      "actions": {
+        "onPass": "Allow session closure",
+        "onFail": "Require validation before session end",
+        "notification": "Document compliance status in session notes"
+      }
+    }
+  ],
+  "testEnvironments": [
+    {
+      "environmentId": "ENV-001",
+      "name": "Local Development Testing",
+      "purpose": "development",
+      "configuration": {
+        "infrastructure": "Local file system with ~/.claude/commands/ installation",
+        "dataSet": "Test project with sample FEATURES.md, TASKS.md, canonical files",
+        "externalDependencies": ["File system access", "Command execution permissions"]
+      },
+      "setupInstructions": "Install commands to ~/.claude/commands/, create test project directory with canonical file structure",
+      "teardownInstructions": "Archive test artifacts, reset commands to clean state",
+      "access": {
+        "url": "file://local",
+        "credentials": "Local user permissions",
+        "restrictions": "No network access required"
+      }
+    },
+    {
+      "environmentId": "ENV-002",
+      "name": "Integration Testing Environment",
+      "purpose": "integration",
+      "configuration": {
+        "infrastructure": "Isolated directory with complete project simulation",
+        "dataSet": "Full project lifecycle data with multiple sessions",
+        "externalDependencies": ["Git repository simulation", "Archive management"]
+      },
+      "setupInstructions": "Create isolated project with full history, simulate multi-session development",
+      "teardownInstructions": "Validate all artifacts created, archive test results",
+      "access": {
+        "url": "file://test-isolation",
+        "credentials": "Test environment permissions",
+        "restrictions": "Isolated from production project files"
+      }
+    }
+  ]
+}

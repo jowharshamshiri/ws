@@ -1,0 +1,169 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Progress Tracking Schema",
+  "type": "object", 
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "purpose": { "type": "string" },
+        "maxActiveSessions": { "type": "integer", "minimum": 4, "maximum": 4 },
+        "archiveLocation": { "type": "string" }
+      },
+      "required": ["title", "purpose", "maxActiveSessions"]
+    },
+    "activeSessions": {
+      "type": "array",
+      "maxItems": 4,
+      "items": {
+        "type": "object", 
+        "properties": {
+          "sessionId": { "type": "string", "pattern": "^S\\d{6}$" },
+          "title": { "type": "string" },
+          "date": { "type": "string", "format": "date" },
+          "startTime": { "type": "string" },
+          "endTime": { "type": "string" },
+          "status": { "type": "string", "enum": ["in_progress", "completed", "cancelled"] },
+          "focus": { "type": "string" },
+          "majorAchievement": { "type": "string" },
+          "completedTasks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "taskId": { "type": "string", "pattern": "^T\\d{6}$" },
+                "description": { "type": "string" },
+                "evidence": { "type": "string" },
+                "validationResults": { "type": "string" }
+              },
+              "required": ["taskId", "description"]
+            }
+          },
+          "keyAchievements": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "achievement": { "type": "string" },
+                "impact": { "type": "string" },
+                "validation": { "type": "string" }
+              },
+              "required": ["achievement"]
+            }
+          },
+          "filesModified": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "filePath": { "type": "string" },
+                "linesChanged": { "type": "string" },
+                "change": { "type": "string" },
+                "reason": { "type": "string" },
+                "validation": { "type": "string" },
+                "featureId": { "type": "string", "pattern": "^F\\d{5}$" }
+              },
+              "required": ["filePath", "change", "reason"]
+            }
+          },
+          "issuesResolved": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "issue": { "type": "string" },
+                "rootCause": { "type": "string" },
+                "solution": { "type": "string" },
+                "evidence": { "type": "string" }
+              },
+              "required": ["issue", "solution"]
+            }
+          },
+          "newRulesEstablished": {
+            "type": "array",
+            "items": {
+              "type": "object", 
+              "properties": {
+                "directiveId": { "type": "string", "pattern": "^D\\d{3}$" },
+                "rule": { "type": "string" },
+                "context": { "type": "string" },
+                "application": { "type": "string" }
+              },
+              "required": ["rule", "context"]
+            }
+          },
+          "testingEvidence": {
+            "type": "object",
+            "properties": {
+              "testSuiteStatus": { "type": "string" },
+              "testCoverage": { "type": "number", "minimum": 0, "maximum": 100 },
+              "newTestsCreated": {
+                "type": "array",
+                "items": { "type": "string" }
+              },
+              "testHealth": { "type": "number", "minimum": 0, "maximum": 100 },
+              "commands": {
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            }
+          },
+          "sessionMetrics": {
+            "type": "object",
+            "properties": {
+              "duration": { "type": "string" },
+              "tasksCompleted": { "type": "integer", "minimum": 0 },
+              "criticalFixes": { "type": "integer", "minimum": 0 },
+              "filesChanged": { "type": "integer", "minimum": 0 },
+              "featuresAdvanced": { "type": "integer", "minimum": 0 }
+            }
+          },
+          "nextSessionPreparation": {
+            "type": "object",
+            "properties": {
+              "immediatePriority": { "type": "string" },
+              "prerequisites": {
+                "type": "array",
+                "items": { "type": "string" }
+              },
+              "expectedChallenges": {
+                "type": "array",
+                "items": { "type": "string" }
+              },
+              "reminders": {
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            }
+          },
+          "featureProgress": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "featureId": { "type": "string", "pattern": "^F\\d{5}$" },
+                "name": { "type": "string" },
+                "stateTransition": { "type": "string" },
+                "progress": { "type": "string" },
+                "evidence": { "type": "string" }
+              },
+              "required": ["featureId", "name"]
+            }
+          }
+        },
+        "required": ["sessionId", "title", "date", "status", "focus"]
+      }
+    },
+    "archiveReference": {
+      "type": "object",
+      "properties": {
+        "archiveFile": { "type": "string" },
+        "archiveDescription": { "type": "string" },
+        "lastArchiveDate": { "type": "string", "format": "date" },
+        "totalArchivedSessions": { "type": "integer", "minimum": 0 }
+      }
+    }
+  },
+  "required": ["metadata", "activeSessions"]
+}

@@ -1,0 +1,778 @@
+{
+  "metadata": {
+    "title": "Architectural Decisions",
+    "purpose": "Design decisions, technical content, and architectural discussion",
+    "lastUpdated": "2025-08-21",
+    "version": "2.0",
+    "projectPhase": "Command System Enhancement with Universal Metrics"
+  },
+  "designPhilosophy": {
+    "corePhilosophy": "Implement persistent knowledge management methodology for AI-assisted development with feature-centric organization and universal standardized metrics",
+    "designPrinciples": [
+      {
+        "principle": "Centralized Project Memory System",
+        "rationale": "Complex projects span multiple AI conversations with context limits, requiring external knowledge management for continuity",
+        "application": "Use CLAUDE.md as primary project state file with internal/ folder for detailed documentation",
+        "tradeoffs": "Additional file management overhead vs. maintained project context across sessions"
+      },
+      {
+        "principle": "Feature-Centric Development Organization",
+        "rationale": "ALL project work organized around FEATURES.md as central repository for project state, progress tracking, and work prioritization",
+        "application": "Every session, task, and development activity references and updates feature codes with automatic detection workflow",
+        "tradeoffs": "Feature management discipline requirement vs. comprehensive project state visibility"
+      },
+      {
+        "principle": "Universal Standardized Metrics Framework", 
+        "rationale": "Consistent metrics across all projects with hardcoded reference codes (M001-M010) enable cross-project comparison and universal targets",
+        "application": "Commands create/manage METRICS.md with standard template, calculate metrics from FEATURES.md and TASKS.md data",
+        "tradeoffs": "Universal metric constraints vs. consistent project measurement and performance standards"
+      },
+      {
+        "principle": "Canonical File System Enforcement",
+        "rationale": "Prevents documentation sprawl and ensures information is organized in designated locations with strict table discipline",
+        "application": "ALL information must go to designated canonical files, TASKS.md and FEATURES.md contain ONLY data tables",
+        "tradeoffs": "File organization flexibility vs. consistent project structure and information placement"
+      }
+    ]
+  },
+  "architecturalDecisions": [
+    {
+      "decisionId": "ADR-001",
+      "title": "Adopt Feature-Centric Project Management Framework",
+      "date": "2025-08-02",
+      "status": "accepted",
+      "context": "Need to organize project work around central repository with automatic feature detection and state synchronization to replace scattered task management",
+      "decision": "Implement FEATURES.md as central repository for all project features with automatic state machine workflow and emoji-based state tracking",
+      "rationale": "Provides comprehensive tracking, automatic feature detection, clear project state visibility, and eliminates command sprawl through consolidation",
+      "consequences": {
+        "positive": [
+          "Complete project state visibility through feature tracking with scores and metrics",
+          "Automatic feature detection when user mentions new capabilities",
+          "Clear project scores and progress metrics calculated from feature states",
+          "Unified development workflow around features eliminates scattered documentation",
+          "Command consolidation from 17 to 6 commands while preserving functionality"
+        ],
+        "negative": [
+          "Requires discipline in maintaining feature linkage and state updates",
+          "Additional overhead in feature state management and confirmation protocols",
+          "Learning curve for feature-centric development approach"
+        ],
+        "risks": [
+          "Feature management could become unwieldy with very large projects (>200 features)",
+          "Dependency on feature tracking for project continuity creates single point of failure"
+        ]
+      },
+      "alternativesConsidered": [
+        {
+          "alternative": "Task-centric development with separate feature tracking",
+          "reason": "Rejected - creates disconnect between daily work and feature progress, requires synchronization"
+        },
+        {
+          "alternative": "Traditional documentation approach with manual tracking",
+          "reason": "Rejected - insufficient visibility and automation for complex multi-session projects"
+        },
+        {
+          "alternative": "Hybrid approach with multiple tracking systems",
+          "reason": "Rejected - leads to conflicts and inconsistencies as seen with TodoWrite vs task command issues"
+        }
+      ],
+      "implementation": {
+        "approach": "Gradual migration from 17 commands to 6 feature-centric commands with consolidated functionality",
+        "timeline": "Session 6 implementation and deployment",
+        "effort": "Complete command system transformation with functionality preservation",
+        "prerequisites": ["Command consolidation analysis", "Feature state machine definition", "Test integration design"]
+      },
+      "validation": {
+        "criteria": "Command system operational with feature-centric capabilities and 100% functionality preservation",
+        "method": "Deploy and test feature-centric commands with real project usage",
+        "evidence": "✅ VERIFIED: Feature-centric command system operational in Session 6, successfully used through Session 8"
+      },
+      "relatedDecisions": ["ADR-002", "ADR-003", "ADR-004"]
+    },
+    {
+      "decisionId": "ADR-002",
+      "title": "Implement Universal Standardized Metrics System",
+      "date": "2025-08-21",
+      "status": "accepted",
+      "context": "Need consistent metrics tracking across all projects with hardcoded reference codes to enable cross-project comparison and universal performance targets",
+      "decision": "Implement universal metrics M001-M010 with standardized calculations, targets, and automatic calculation from project data",
+      "rationale": "Provides consistent project measurement framework across all projects with universal targets, eliminates metric conflicts, establishes clear authority hierarchy",
+      "consequences": {
+        "positive": [
+          "Consistent metrics across all projects enable comparison and benchmarking",
+          "Hardcoded reference codes (M001-M010) provide universal standards",
+          "Automatic metric calculation reduces errors and ensures accuracy",
+          "Universal targets (90% implementation, 80% coverage, 70% quality) provide clear goals",
+          "Clear data hierarchy: FEATURES.md + TASKS.md → METRICS.md → other files"
+        ],
+        "negative": [
+          "May not capture all project-specific nuances requiring P## metrics",
+          "Requires discipline in maintaining accurate metric calculations",
+          "Additional complexity in command system for metric management"
+        ],
+        "risks": [
+          "Universal metrics may not be appropriate for all project types",
+          "Metric calculation errors could affect project assessment and decision making"
+        ]
+      },
+      "alternativesConsidered": [
+        {
+          "alternative": "Project-specific metrics only without universal standards",
+          "reason": "Rejected - no consistency across projects for comparison and benchmarking"
+        },
+        {
+          "alternative": "Manual metric tracking without automation",
+          "reason": "Rejected - error-prone, inconsistent, and requires manual maintenance"
+        },
+        {
+          "alternative": "Mixed metric authority across multiple files",
+          "reason": "Rejected - causes conflicts and inconsistencies as documented in Session 8"
+        }
+      ],
+      "implementation": {
+        "approach": "Commands create/update METRICS.md with standard template if missing, self-sufficient for any project",
+        "timeline": "Session 8 implementation with command system audit",
+        "effort": "Universal metrics integration across all commands with calculation automation",
+        "prerequisites": ["Feature tracking system operational", "Task management system stable", "Canonical file structure enforced"]
+      },
+      "validation": {
+        "criteria": "METRICS.md created with M001-M010 universal metrics, calculations accurate, targets enforced",
+        "method": "Test metric calculation accuracy and validation against known project data",
+        "evidence": "✅ VERIFIED: METRICS.md created with universal metrics system in current session"
+      },
+      "relatedDecisions": ["ADR-001", "ADR-003", "ADR-004"]
+    },
+    {
+      "decisionId": "ADR-003",
+      "title": "Establish Exclusive Task Command Authority",
+      "date": "2025-08-21",
+      "status": "accepted", 
+      "context": "Conflicts between TodoWrite tool and task command causing inconsistencies, multiple task management systems creating synchronization issues",
+      "decision": "Prohibit TodoWrite usage and establish exclusive task command authority for all task operations via TASKS.md table system",
+      "rationale": "Eliminates conflicts, ensures single source of truth, provides better integration with feature tracking, maintains consistency",
+      "consequences": {
+        "positive": [
+          "Single unified task management system eliminates conflicts",
+          "No synchronization issues between multiple task tracking tools",
+          "Consistent task state across all operations and commands",
+          "Clear authority hierarchy for task management with feature integration",
+          "Better integration with FEATURES.md and automatic state updates"
+        ],
+        "negative": [
+          "Loss of TodoWrite tool functionality and existing workflows",
+          "All task operations must go through task command exclusively",
+          "Learning curve for exclusive task command usage",
+          "No fallback task management option if task command issues arise"
+        ],
+        "risks": [
+          "Task command must be robust enough to handle all task management use cases",
+          "No redundancy in task management if task command fails",
+          "Workflow disruption during transition from TodoWrite"
+        ]
+      },
+      "alternativesConsidered": [
+        {
+          "alternative": "Allow both TodoWrite and task command with synchronization",
+          "reason": "Rejected - too complex and error-prone to maintain synchronization, conflicts demonstrated in practice"
+        },
+        {
+          "alternative": "Use TodoWrite exclusively without task command",
+          "reason": "Rejected - lacks integration with feature tracking system and canonical file structure"
+        },
+        {
+          "alternative": "Hybrid approach with different tools for different task types",
+          "reason": "Rejected - increases complexity and potential for conflicts"
+        }
+      ],
+      "implementation": {
+        "approach": "Add D101 directive prohibiting TodoWrite, remove all TodoWrite references from commands, update integration points",
+        "timeline": "Session 8 implementation with command system audit",
+        "effort": "Update all commands to remove TodoWrite integration and establish task command exclusivity",
+        "prerequisites": ["Task command fully functional", "TASKS.md table system operational", "Feature linking working"]
+      },
+      "validation": {
+        "criteria": "Zero TodoWrite references in commands, all task operations via task command, TASKS.md is authoritative",
+        "method": "Audit all commands for TodoWrite references and task management integration",
+        "evidence": "✅ VERIFIED: No TodoWrite references remain in any command, D101 directive enforced"
+      },
+      "relatedDecisions": ["ADR-001", "ADR-002", "ADR-004"]
+    },
+    {
+      "decisionId": "ADR-004",
+      "title": "Standardize ID Formats with Zero-Padding",
+      "date": "2025-08-21",
+      "status": "accepted",
+      "context": "Inconsistent ID formats across commands (F001 vs F00001, T1 vs T000001) causing reference problems and formatting inconsistencies",
+      "decision": "Standardize all ID formats with proper zero-padding: F##### (features), T###### (tasks), D### (directives), M##/P## (metrics), S###### (sessions), G### (diagrams)",
+      "rationale": "Ensures consistent identification, proper sorting, clear referencing, and eliminates format conflicts across all project elements",
+      "consequences": {
+        "positive": [
+          "Consistent ID formats across all commands and documentation",
+          "Proper sorting behavior with zero-padded numbers",
+          "Clear cross-referencing between files and systems",
+          "Eliminates confusion from mixed ID formats",
+          "Professional appearance and consistent project standards"
+        ],
+        "negative": [
+          "Requires updating existing references to use new formats",
+          "Slight increase in ID length for readability",
+          "Need to maintain format discipline in future development"
+        ],
+        "risks": [
+          "Existing references may break if not updated properly",
+          "Format inconsistencies could reappear without enforcement"
+        ]
+      },
+      "alternativesConsidered": [
+        {
+          "alternative": "Keep mixed ID formats for backward compatibility",
+          "reason": "Rejected - maintains confusion and inconsistency problems"
+        },
+        {
+          "alternative": "Use shorter IDs without zero-padding",
+          "reason": "Rejected - causes sorting problems and inconsistent formatting"
+        },
+        {
+          "alternative": "Use UUID or hash-based IDs",
+          "reason": "Rejected - reduces human readability and sequential understanding"
+        }
+      ],
+      "implementation": {
+        "approach": "Update all command templates and examples to use proper formats, add format validation and correction",
+        "timeline": "Session 8 implementation with command system audit",
+        "effort": "Systematic update of all ID references across all commands and documentation",
+        "prerequisites": ["Command system operational", "Reference tracking system", "Cross-file validation"]
+      },
+      "validation": {
+        "criteria": "All commands use consistent ID formats, all examples follow proper patterns, cross-references are valid",
+        "method": "Comprehensive audit of all commands and documentation for ID format compliance",
+        "evidence": "✅ VERIFIED: All commands use unified ID formats, malformed IDs corrected throughout"
+      },
+      "relatedDecisions": ["ADR-001", "ADR-002", "ADR-003"]
+    }
+  ],
+  "systemComponents": {
+    "overview": "CLI command management system with persistent knowledge management methodology, feature-centric organization, and universal metrics",
+    "components": [
+      {
+        "componentId": "CMD-START",
+        "name": "Session Start Command",
+        "type": "service",
+        "purpose": "Initialize development sessions with context loading, validation, and canonical file system setup",
+        "responsibilities": [
+          "Load project context from all canonical files",
+          "Validate canonical file structure and create missing files",
+          "Initialize METRICS.md with universal metrics if missing",
+          "Perform comprehensive project audit if FEATURES.md missing",
+          "Enforce ID format standards and correct malformed IDs",
+          "Validate file references and detect broken documentation"
+        ],
+        "interfaces": [
+          {
+            "interfaceType": "file",
+            "description": "Reads CLAUDE.md, internal/FEATURES.md, internal/DIRECTIVES.md, internal/PROGRESS_TRACKING.md, internal/TASKS.md",
+            "contract": "Must handle missing files gracefully, create canonical structure, enforce table discipline"
+          },
+          {
+            "interfaceType": "file", 
+            "description": "Creates/updates internal/METRICS.md with universal metrics template",
+            "contract": "Must use standardized M01-M10 template, calculate from FEATURES.md data"
+          }
+        ],
+        "dependencies": [
+          {
+            "componentId": "FEAT-SYSTEM",
+            "type": "strong",
+            "description": "Requires FEATURES.md for feature state analysis and metrics calculation"
+          },
+          {
+            "componentId": "METRICS-SYSTEM",
+            "type": "strong", 
+            "description": "Creates/updates METRICS.md with universal metrics framework"
+          },
+          {
+            "componentId": "TASK-SYSTEM",
+            "type": "weak",
+            "description": "Coordinates with TASKS.md for session context"
+          }
+        ],
+        "technologies": ["Markdown parsing", "JSON schema validation", "File system operations"],
+        "constraints": [
+          "Must not create non-canonical files", 
+          "Must validate all file references before usage",
+          "Must enforce ID format standards",
+          "Must preserve table discipline in FEATURES.md and TASKS.md"
+        ]
+      },
+      {
+        "componentId": "FEAT-SYSTEM",
+        "name": "Feature Tracking System",
+        "type": "module",
+        "purpose": "Central repository for ALL project features and development state with automatic state management",
+        "responsibilities": [
+          "Track feature implementation and test status with emoji indicators",
+          "Calculate project scores and metrics (implementation %, test coverage %, quality %)",
+          "Manage feature state transitions (❌→🟠→🟢/🟡/⚠️)",
+          "Provide feature-based project prioritization and next action determination",
+          "Serve as authoritative source for all project metrics and requirements",
+          "Coordinate with task system for automatic state updates"
+        ],
+        "interfaces": [
+          {
+            "interfaceType": "file",
+            "description": "FEATURES.md table with ID, Name, Description, State, Notes columns - pure table format only",
+            "contract": "Must maintain data table format only, no prose sections, notes < 100 characters"
+          },
+          {
+            "interfaceType": "api",
+            "description": "State transition API for task completion integration",
+            "contract": "Task completion triggers automatic feature state updates with evidence"
+          }
+        ],
+        "dependencies": [
+          {
+            "componentId": "TASK-SYSTEM",
+            "type": "weak",
+            "description": "Tasks link to feature codes for coordination and automatic state updates"
+          },
+          {
+            "componentId": "METRICS-SYSTEM",
+            "type": "strong",
+            "description": "Provides raw data for metrics calculation"
+          }
+        ],
+        "technologies": ["Markdown table format", "Emoji state indicators", "State machine logic"],
+        "constraints": [
+          "Single source of truth for all project metrics and requirements",
+          "Table discipline enforcement - no prose content",
+          "User confirmation required for structural changes",
+          "Feature breakdown must be granular and testable"
+        ]
+      },
+      {
+        "componentId": "TASK-SYSTEM",
+        "name": "Unified Task Management System",
+        "type": "module", 
+        "purpose": "Exclusive task management via internal/TASKS.md with feature integration and dependency tracking",
+        "responsibilities": [
+          "Manage all project tasks with T###### ID format",
+          "Enforce single in_progress task constraint",
+          "Link tasks to feature codes for automatic coordination",
+          "Track task dependencies and validate completion prerequisites",
+          "Update feature states automatically on task completion",
+          "Provide task statistics and completion rate tracking"
+        ],
+        "interfaces": [
+          {
+            "interfaceType": "file",
+            "description": "TASKS.md table with ID, Feature, Task, Priority, Status, Category, Dependencies, etc.",
+            "contract": "Pure table format only, maximum 100 character notes, proper ID formats"
+          },
+          {
+            "interfaceType": "api",
+            "description": "Task operations API for add, update, complete, list, view operations",
+            "contract": "All operations update TASKS.md directly, validate dependencies, enforce constraints"
+          }
+        ],
+        "dependencies": [
+          {
+            "componentId": "FEAT-SYSTEM",
+            "type": "strong",
+            "description": "All tasks must link to valid feature codes"
+          }
+        ],
+        "technologies": ["Markdown table format", "Dependency validation", "Status state machine"],
+        "constraints": [
+          "TodoWrite tool PROHIBITED - exclusive authority via D101 directive",
+          "Maximum ONE task in_progress at any time",
+          "All tasks must link to valid feature codes",
+          "Task completion requires validation evidence"
+        ]
+      },
+      {
+        "componentId": "METRICS-SYSTEM",
+        "name": "Universal Standardized Metrics System",
+        "type": "module",
+        "purpose": "Calculate and track standardized project metrics with hardcoded reference codes M001-M010",
+        "responsibilities": [
+          "Calculate universal metrics from FEATURES.md and TASKS.md data",
+          "Track metrics against universal targets (90% implementation, 80% coverage, 70% quality)",
+          "Provide trend analysis and compliance monitoring",
+          "Generate standardized METRICS.md with M001-M010 template",
+          "Flag metric violations below universal targets as critical issues",
+          "Support project-specific metrics P001+ when universal metrics insufficient"
+        ],
+        "interfaces": [
+          {
+            "interfaceType": "file", 
+            "description": "METRICS.md table with Code, Metric, Value, Target, Calculation, Last Updated, Notes",
+            "contract": "Table format only, M01-M10 universal metrics, P01+ project-specific when needed"
+          },
+          {
+            "interfaceType": "api",
+            "description": "Metric calculation API for automatic updates and validation",
+            "contract": "Calculate from authoritative sources, validate against targets, track trends"
+          }
+        ],
+        "dependencies": [
+          {
+            "componentId": "FEAT-SYSTEM",
+            "type": "strong",
+            "description": "Source of feature state data for metrics calculation"
+          },
+          {
+            "componentId": "TASK-SYSTEM",
+            "type": "strong",
+            "description": "Source of task completion data for metrics calculation"
+          }
+        ],
+        "technologies": ["Mathematical calculations", "Target validation", "Trend analysis"],
+        "constraints": [
+          "Universal metrics M01-M10 are hardcoded and identical across projects",
+          "Project-specific metrics P01+ allowed only when universal insufficient",
+          "Must be self-sufficient - create template if missing from project",
+          "Authority hierarchy: FEATURES.md + TASKS.md → METRICS.md → other files"
+        ]
+      }
+    ]
+  },
+  "dataModel": {
+    "approach": "File-based data model with JSON schema validation, markdown table storage, and strict canonical file system",
+    "entities": [
+      {
+        "entityId": "Feature",
+        "name": "Feature",
+        "description": "Individual project feature with implementation and test tracking, central to all project organization",
+        "attributes": [
+          {
+            "name": "id",
+            "type": "string",
+            "required": true,
+            "constraints": "Pattern: F##### (5 digits, zero-padded), unique within project",
+            "description": "Unique feature identifier for cross-referencing"
+          },
+          {
+            "name": "name",
+            "type": "string", 
+            "required": true,
+            "constraints": "Descriptive feature name, avoid marketing language",
+            "description": "Human-readable feature name"
+          },
+          {
+            "name": "description",
+            "type": "string",
+            "required": true,
+            "constraints": "Clear, actionable description of feature functionality",
+            "description": "Detailed feature description for implementation guidance"
+          },
+          {
+            "name": "state",
+            "type": "enum",
+            "required": true,
+            "constraints": "Values: not_implemented, implemented, failing_tests, passing_tests, tautological, critical",
+            "description": "Feature implementation and test state"
+          },
+          {
+            "name": "stateEmoji",
+            "type": "string",
+            "required": true,
+            "constraints": "Values: ❌ (not implemented), 🟠 (implemented), 🟡 (failing tests), 🟢 (passing tests), ⚠️ (tautological), 🔴 (critical)",
+            "description": "Visual state indicator for quick status assessment"
+          },
+          {
+            "name": "notes",
+            "type": "string",
+            "required": false,
+            "constraints": "Maximum 100 characters, operational information only",
+            "description": "Operational notes for dependencies, issues, progress"
+          }
+        ],
+        "relationships": [
+          {
+            "relatedEntity": "Task",
+            "relationshipType": "one-to-many",
+            "description": "Features can have multiple tasks for implementation and testing"
+          },
+          {
+            "relatedEntity": "Metric",
+            "relationshipType": "one-to-many", 
+            "description": "Features contribute to multiple calculated metrics"
+          }
+        ]
+      },
+      {
+        "entityId": "Task",
+        "name": "Task",
+        "description": "Individual task with feature linking, dependency tracking, and exclusive task command management",
+        "attributes": [
+          {
+            "name": "id",
+            "type": "string",
+            "required": true,
+            "constraints": "Pattern: T###### (6 digits, zero-padded), unique within project",
+            "description": "Unique task identifier for tracking and dependencies"
+          },
+          {
+            "name": "featureId",
+            "type": "string",
+            "required": true,
+            "constraints": "Pattern: F##### (5 digits, zero-padded), must exist in FEATURES.md",
+            "description": "Associated feature identifier for coordination"
+          },
+          {
+            "name": "task",
+            "type": "string",
+            "required": true,
+            "constraints": "Clear, actionable task description",
+            "description": "Specific task description with success criteria"
+          },
+          {
+            "name": "status",
+            "type": "enum",
+            "required": true,
+            "constraints": "Values: pending, in_progress, blocked, completed, cancelled. Maximum ONE in_progress globally",
+            "description": "Task completion status with workflow constraints"
+          },
+          {
+            "name": "priority",
+            "type": "enum",
+            "required": true,
+            "constraints": "Values: high, medium, low",
+            "description": "Task priority for scheduling and resource allocation"
+          },
+          {
+            "name": "category",
+            "type": "enum", 
+            "required": true,
+            "constraints": "Values: feature, bug, refactor, test, docs, setup",
+            "description": "Task type for organization and workflow"
+          }
+        ],
+        "relationships": [
+          {
+            "relatedEntity": "Feature",
+            "relationshipType": "many-to-one",
+            "description": "Tasks belong to specific features and update feature states"
+          },
+          {
+            "relatedEntity": "Task",
+            "relationshipType": "many-to-many",
+            "description": "Tasks can depend on other tasks for completion"
+          }
+        ]
+      },
+      {
+        "entityId": "Metric",
+        "name": "Metric",
+        "description": "Standardized project measurement with universal codes and targets",
+        "attributes": [
+          {
+            "name": "code",
+            "type": "string",
+            "required": true,
+            "constraints": "Pattern: M## (universal) or P## (project-specific), zero-padded",
+            "description": "Standardized metric identifier"
+          },
+          {
+            "name": "value",
+            "type": "number",
+            "required": true,
+            "constraints": "Calculated from authoritative sources (FEATURES.md, TASKS.md)",
+            "description": "Current metric value"
+          },
+          {
+            "name": "target",
+            "type": "number",
+            "required": false,
+            "constraints": "Universal targets for M02-M10, project-specific targets for P01+",
+            "description": "Target value for compliance assessment"
+          },
+          {
+            "name": "calculation",
+            "type": "string",
+            "required": true,
+            "constraints": "Mathematical formula for metric derivation",
+            "description": "How metric is calculated from source data"
+          }
+        ],
+        "relationships": [
+          {
+            "relatedEntity": "Feature",
+            "relationshipType": "many-to-many",
+            "description": "Metrics calculated from feature state data"
+          },
+          {
+            "relatedEntity": "Task",
+            "relationshipType": "many-to-many",
+            "description": "Metrics calculated from task completion data"
+          }
+        ]
+      }
+    ],
+    "dataFlow": [
+      {
+        "flowId": "DF-001",
+        "name": "Session Initialization Data Flow",
+        "source": "start command execution",
+        "destination": "FEATURES.md analysis, METRICS.md creation/update, context validation",
+        "dataType": "Project state and context information",
+        "transformation": "Context loading, validation, missing file creation, metrics calculation",
+        "frequency": "Per session start",
+        "volumeEstimate": "Small (< 1MB per session), scales with project size"
+      },
+      {
+        "flowId": "DF-002",
+        "name": "Feature State Update Flow",
+        "source": "task command completion",
+        "destination": "FEATURES.md state update, METRICS.md recalculation",
+        "dataType": "Feature state transitions and evidence",
+        "transformation": "Task completion triggers feature state change, metrics update",
+        "frequency": "Per task completion",
+        "volumeEstimate": "Minimal (individual feature updates, metric recalculation)"
+      },
+      {
+        "flowId": "DF-003",
+        "name": "Metrics Calculation Flow",
+        "source": "FEATURES.md + TASKS.md data",
+        "destination": "METRICS.md calculated values, other file references",
+        "dataType": "Raw counts and states converted to percentages and scores",
+        "transformation": "Mathematical calculations, target compliance assessment, trend analysis",
+        "frequency": "After each session with changes",
+        "volumeEstimate": "Small (calculation results and trends)"
+      },
+      {
+        "flowId": "DF-004",
+        "name": "Session Documentation Flow", 
+        "source": "Session work and achievements",
+        "destination": "PROGRESS_TRACKING.md, CLAUDE.md updates",
+        "dataType": "Session summary, file changes, achievements, evidence",
+        "transformation": "Session activities documented with timestamps and validation",
+        "frequency": "Per session end",
+        "volumeEstimate": "Medium (detailed session documentation)"
+      }
+    ]
+  },
+  "integrationPatterns": [
+    {
+      "patternId": "IP-001",
+      "name": "Command-File Integration Pattern",
+      "type": "synchronous",
+      "description": "Commands read and update canonical files directly with validation and constraints enforcement",
+      "components": ["All 6 commands", "Canonical file system", "Validation framework"],
+      "protocol": "Direct file I/O with schema validation, constraint enforcement, and error handling",
+      "errorHandling": "Graceful degradation with missing file creation, format correction, and user notification",
+      "performance": {
+        "throughput": "Low volume operations, high consistency requirements",
+        "latency": "Immediate file operations with validation overhead",
+        "availability": "File system dependent, no external service requirements"
+      }
+    },
+    {
+      "patternId": "IP-002",
+      "name": "Feature-Task Coordination Pattern",
+      "type": "asynchronous",
+      "description": "Task completion automatically updates feature states with evidence recording and metrics recalculation",
+      "components": ["task command", "FEATURES.md", "TASKS.md", "METRICS.md"],
+      "protocol": "State synchronization on task completion with automatic metrics update",
+      "errorHandling": "Rollback on update failure, validation of state transitions, evidence requirements",
+      "performance": {
+        "throughput": "Per task operation with feature and metrics updates",
+        "latency": "Real-time updates within session",
+        "availability": "High availability (file-based, no external dependencies)"
+      }
+    },
+    {
+      "patternId": "IP-003",
+      "name": "Universal Metrics Integration Pattern",
+      "type": "batch",
+      "description": "Commands create and update METRICS.md with standardized universal metrics calculated from project data",
+      "components": ["All commands", "METRICS.md", "FEATURES.md", "TASKS.md"],
+      "protocol": "Automatic metric calculation and validation against universal targets",
+      "errorHandling": "Create missing METRICS.md with template, validate calculations, flag target violations",
+      "performance": {
+        "throughput": "Batch metric calculation per session",
+        "latency": "Calculation time scales with project size",
+        "availability": "Self-sufficient, no external dependencies"
+      }
+    }
+  ],
+  "technicalConstraints": [
+    {
+      "constraintId": "TC-001",
+      "type": "technical",
+      "description": "Maximum ONE task in_progress at any time across entire project",
+      "impact": "Enforces focused work approach, prevents context switching, ensures clear work state",
+      "mitigation": "Task command validates and prevents multiple in_progress tasks, automatic constraint enforcement",
+      "validation": "Check TASKS.md for multiple in_progress entries, validate before status transitions"
+    },
+    {
+      "constraintId": "TC-002",
+      "type": "compliance",
+      "description": "All ID formats must follow zero-padded patterns with proper lengths",
+      "impact": "Consistent identification, proper sorting, clear cross-referencing across all project elements",
+      "mitigation": "Commands validate and correct ID formats automatically, format enforcement in all operations",
+      "validation": "Regex validation: F##### (features), T###### (tasks), D### (directives), M##/P## (metrics)"
+    },
+    {
+      "constraintId": "TC-003",
+      "type": "technical",
+      "description": "Canonical file system only - no creation of non-canonical .md files",
+      "impact": "Prevents documentation sprawl, ensures information organization, maintains project structure",
+      "mitigation": "Commands prevent non-canonical file creation, move content to appropriate canonical files",
+      "validation": "Scan for non-canonical files, validate information placement in designated files"
+    },
+    {
+      "constraintId": "TC-004",
+      "type": "compliance",
+      "description": "Table discipline for TASKS.md and FEATURES.md - data tables only, no prose",
+      "impact": "Clean data structure, prevents information bloat, maintains table readability",
+      "mitigation": "Commands strip prose sections, move detailed content to appropriate canonical files",
+      "validation": "Check table files for prose content, validate notes column length limits"
+    },
+    {
+      "constraintId": "TC-005",
+      "type": "technical", 
+      "description": "TodoWrite tool prohibited - exclusive task command authority",
+      "impact": "Single source of truth for task management, eliminates conflicts and synchronization issues",
+      "mitigation": "D101 directive enforcement, remove all TodoWrite references, task command exclusivity",
+      "validation": "Audit commands for TodoWrite references, ensure all task operations via task command"
+    }
+  ],
+  "diagrams": {
+    "directory": "internal/diagrams/",
+    "available": [
+      {
+        "diagramId": "G001",
+        "name": "Command System Architecture",
+        "type": "system",
+        "filename": "command_system_architecture.dot",
+        "description": "Overview of 6 core commands, their relationships, and canonical file interactions",
+        "lastUpdated": "2025-08-21"
+      },
+      {
+        "diagramId": "G002",
+        "name": "Feature-Task Data Flow",
+        "type": "dataflow", 
+        "filename": "feature_task_dataflow.dot",
+        "description": "How feature states update based on task completion with automatic coordination",
+        "lastUpdated": "2025-08-21"
+      },
+      {
+        "diagramId": "G003",
+        "name": "Metrics Calculation System",
+        "type": "component",
+        "filename": "metrics_calculation.dot",
+        "description": "Universal metrics calculation from FEATURES.md and TASKS.md data sources",
+        "lastUpdated": "2025-08-21"
+      },
+      {
+        "diagramId": "G004",
+        "name": "Canonical File System Structure",
+        "type": "system",
+        "filename": "canonical_file_structure.dot", 
+        "description": "Complete canonical file organization with information flow and authority hierarchy",
+        "lastUpdated": "2025-08-21"
+      }
+    ]
+  }
+}

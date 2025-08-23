@@ -1,0 +1,285 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Architecture Documentation Schema",
+  "type": "object",
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "purpose": { "type": "string" },
+        "lastUpdated": { "type": "string", "format": "date" },
+        "version": { "type": "string" },
+        "projectPhase": { "type": "string" }
+      },
+      "required": ["title", "purpose", "lastUpdated"]
+    },
+    "designPhilosophy": {
+      "type": "object",
+      "properties": {
+        "corePhilosophy": { "type": "string" },
+        "designPrinciples": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "principle": { "type": "string" },
+              "rationale": { "type": "string" },
+              "application": { "type": "string" },
+              "tradeoffs": { "type": "string" }
+            },
+            "required": ["principle", "rationale"]
+          }
+        }
+      }
+    },
+    "architecturalDecisions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "decisionId": { "type": "string" },
+          "title": { "type": "string" },
+          "date": { "type": "string", "format": "date" },
+          "status": { "type": "string", "enum": ["proposed", "accepted", "deprecated", "superseded"] },
+          "context": { "type": "string" },
+          "decision": { "type": "string" },
+          "rationale": { "type": "string" },
+          "consequences": {
+            "type": "object",
+            "properties": {
+              "positive": {
+                "type": "array",
+                "items": { "type": "string" }
+              },
+              "negative": {
+                "type": "array",
+                "items": { "type": "string" }
+              },
+              "risks": {
+                "type": "array", 
+                "items": { "type": "string" }
+              }
+            }
+          },
+          "alternativesConsidered": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "alternative": { "type": "string" },
+                "reason": { "type": "string" }
+              },
+              "required": ["alternative", "reason"]
+            }
+          },
+          "implementation": {
+            "type": "object",
+            "properties": {
+              "approach": { "type": "string" },
+              "timeline": { "type": "string" },
+              "effort": { "type": "string" },
+              "prerequisites": {
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            }
+          },
+          "validation": {
+            "type": "object",
+            "properties": {
+              "criteria": { "type": "string" },
+              "method": { "type": "string" },
+              "evidence": { "type": "string" }
+            }
+          },
+          "relatedDecisions": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        },
+        "required": ["decisionId", "title", "date", "status", "decision", "rationale"]
+      }
+    },
+    "systemComponents": {
+      "type": "object",
+      "properties": {
+        "overview": { "type": "string" },
+        "components": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "componentId": { "type": "string" },
+              "name": { "type": "string" },
+              "type": { "type": "string", "enum": ["service", "module", "library", "interface", "database", "external"] },
+              "purpose": { "type": "string" },
+              "responsibilities": {
+                "type": "array",
+                "items": { "type": "string" }
+              },
+              "interfaces": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "interfaceType": { "type": "string", "enum": ["api", "event", "file", "database", "message"] },
+                    "description": { "type": "string" },
+                    "contract": { "type": "string" }
+                  },
+                  "required": ["interfaceType", "description"]
+                }
+              },
+              "dependencies": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "componentId": { "type": "string" },
+                    "type": { "type": "string", "enum": ["strong", "weak", "optional"] },
+                    "description": { "type": "string" }
+                  },
+                  "required": ["componentId", "type"]
+                }
+              },
+              "technologies": {
+                "type": "array",
+                "items": { "type": "string" }
+              },
+              "constraints": {
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            },
+            "required": ["componentId", "name", "type", "purpose"]
+          }
+        }
+      }
+    },
+    "dataModel": {
+      "type": "object",
+      "properties": {
+        "approach": { "type": "string" },
+        "entities": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "entityId": { "type": "string" },
+              "name": { "type": "string" },
+              "description": { "type": "string" },
+              "attributes": {
+                "type": "array", 
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": { "type": "string" },
+                    "type": { "type": "string" },
+                    "required": { "type": "boolean" },
+                    "constraints": { "type": "string" },
+                    "description": { "type": "string" }
+                  },
+                  "required": ["name", "type"]
+                }
+              },
+              "relationships": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "relatedEntity": { "type": "string" },
+                    "relationshipType": { "type": "string", "enum": ["one-to-one", "one-to-many", "many-to-many"] },
+                    "description": { "type": "string" }
+                  },
+                  "required": ["relatedEntity", "relationshipType"]
+                }
+              }
+            },
+            "required": ["entityId", "name", "description"]
+          }
+        },
+        "dataFlow": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "flowId": { "type": "string" },
+              "name": { "type": "string" },
+              "source": { "type": "string" },
+              "destination": { "type": "string" },
+              "dataType": { "type": "string" },
+              "transformation": { "type": "string" },
+              "frequency": { "type": "string" },
+              "volumeEstimate": { "type": "string" }
+            },
+            "required": ["flowId", "name", "source", "destination", "dataType"]
+          }
+        }
+      }
+    },
+    "integrationPatterns": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "patternId": { "type": "string" },
+          "name": { "type": "string" },
+          "type": { "type": "string", "enum": ["synchronous", "asynchronous", "batch", "streaming"] },
+          "description": { "type": "string" },
+          "components": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "protocol": { "type": "string" },
+          "errorHandling": { "type": "string" },
+          "performance": {
+            "type": "object",
+            "properties": {
+              "throughput": { "type": "string" },
+              "latency": { "type": "string" },
+              "availability": { "type": "string" }
+            }
+          }
+        },
+        "required": ["patternId", "name", "type", "description"]
+      }
+    },
+    "technicalConstraints": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "constraintId": { "type": "string" },
+          "type": { "type": "string", "enum": ["performance", "security", "compliance", "technical", "business"] },
+          "description": { "type": "string" },
+          "impact": { "type": "string" },
+          "mitigation": { "type": "string" },
+          "validation": { "type": "string" }
+        },
+        "required": ["constraintId", "type", "description"]
+      }
+    },
+    "diagrams": {
+      "type": "object",
+      "properties": {
+        "directory": { "type": "string" },
+        "available": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "diagramId": { "type": "string", "pattern": "^G\\d{3}$" },
+              "name": { "type": "string" },
+              "type": { "type": "string", "enum": ["system", "component", "sequence", "deployment", "dataflow"] },
+              "filename": { "type": "string" },
+              "description": { "type": "string" },
+              "lastUpdated": { "type": "string", "format": "date" }
+            },
+            "required": ["diagramId", "name", "type", "filename"]
+          }
+        }
+      }
+    }
+  },
+  "required": ["metadata", "designPhilosophy", "architecturalDecisions"]
+}

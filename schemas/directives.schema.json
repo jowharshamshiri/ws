@@ -1,0 +1,66 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Development Directives Schema - Flat Rule List",
+  "description": "Simple flat array of development rules without artificial categorization",
+  "type": "object",
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "purpose": { "type": "string" },
+        "lastUpdated": { "type": "string", "format": "date" }
+      },
+      "required": ["title", "purpose", "lastUpdated"]
+    },
+    "directives": {
+      "type": "array",
+      "description": "Flat list of all development rules",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { 
+            "type": "string", 
+            "pattern": "^D\\d{3}$",
+            "description": "Directive ID in D### format"
+          },
+          "title": { "type": "string" },
+          "rule": { "type": "string" },
+          "priority": { 
+            "type": "string", 
+            "enum": ["critical", "high", "medium", "low"] 
+          },
+          "status": { 
+            "type": "string", 
+            "enum": ["active", "inactive", "archived"] 
+          },
+          "context": { "type": "string" },
+          "rationale": { "type": "string" },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp when directive was created"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp when directive was last updated"
+          },
+          "category": { 
+            "type": "string",
+            "description": "Optional category for organization (TEST, BUILD, ARCH, etc.)"
+          },
+          "examples": {
+            "type": "object",
+            "properties": {
+              "good": { "type": "array", "items": { "type": "string" } },
+              "bad": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        },
+        "required": ["id", "title", "rule", "priority", "status", "createdAt", "updatedAt"]
+      }
+    }
+  },
+  "required": ["metadata", "directives"]
+}

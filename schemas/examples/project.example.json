@@ -1,0 +1,191 @@
+{
+  "id": "P001",
+  "name": "Claude Commands Project",
+  "description": "CLI command management system for AI-assisted development with persistent knowledge management methodology",
+  "status": "active",
+  "created": "2025-07-31",
+  "lastActivity": "2025-08-21",
+  "currentPhase": "Command system deployment ready with standardized specifications",
+  "features": [
+    {
+      "id": "F00001",
+      "name": "Session Start Command",
+      "description": "Initialize development sessions with context loading and validation",
+      "state": "implemented_passing_tests",
+      "notes": "Updated with UPPERCASE file references, Current Status integration",
+      "projectId": "P001"
+    },
+    {
+      "id": "F00002", 
+      "name": "Task Management System",
+      "description": "Add, update, complete tasks with priority and dependency tracking",
+      "state": "implemented_passing_tests",
+      "notes": "Converted to TASKS.md table system, eliminated TodoWrite dependency",
+      "projectId": "P001"
+    },
+    {
+      "id": "F00053",
+      "name": "Universal Metrics Table",
+      "description": "Commands create/manage METRICS.md with 10 universal project metrics",
+      "state": "implemented_no_tests",
+      "notes": "Self-sufficient commands for any project",
+      "projectId": "P001"
+    },
+    {
+      "id": "F00066",
+      "name": "Project Schema Definition",
+      "description": "Top-level schema for managing multiple projects with all entities",
+      "state": "implemented_passing_tests",
+      "notes": "Complete project abstraction layer implemented",
+      "projectId": "P001"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "T000001",
+      "featureId": "F00053",
+      "task": "Test universal metrics table calculation accuracy",
+      "priority": "high",
+      "status": "in_progress",
+      "category": "testing",
+      "dependencies": "",
+      "assigned": "claude",
+      "created": "2025-08-21",
+      "updated": "2025-08-21",
+      "notes": "Verify METRICS.md calculations match FEATURES.md data",
+      "projectId": "P001"
+    },
+    {
+      "id": "T000002",
+      "featureId": "F00067",
+      "task": "Implement multi-project entity management in commands",
+      "priority": "high", 
+      "status": "pending",
+      "category": "implementation",
+      "dependencies": "T000001",
+      "assigned": "claude",
+      "created": "2025-08-21",
+      "updated": "2025-08-21",
+      "notes": "Commands need project context switching capability",
+      "projectId": "P001"
+    }
+  ],
+  "directives": [
+    {
+      "id": "D001",
+      "title": "Absolute File Creation Constraint",
+      "rule": "NEVER create files unless absolutely necessary for task completion",
+      "priority": "critical",
+      "status": "active",
+      "context": "Applies to all file creation operations during development sessions",
+      "rationale": "Prevents unnecessary file proliferation and maintains clean project structure",
+      "projectId": "P001"
+    },
+    {
+      "id": "D005",
+      "title": "Canonical File System Enforcement", 
+      "rule": "NEVER create new files - use only canonical file structure",
+      "priority": "critical",
+      "status": "active",
+      "context": "All information must go to designated canonical files",
+      "rationale": "Prevents documentation sprawl and maintains organized structure",
+      "projectId": "P001"
+    },
+    {
+      "id": "D101",
+      "title": "TodoWrite Prohibition",
+      "rule": "PROHIBIT TodoWrite tool usage - exclusive task command authority",
+      "priority": "critical",
+      "status": "active", 
+      "context": "All task management operations must use task command exclusively",
+      "rationale": "Prevents conflicts between multiple task management systems",
+      "projectId": "P001"
+    }
+  ],
+  "metrics": {
+    "universalMetrics": [
+      {
+        "code": "M01",
+        "metric": "Total Features",
+        "value": "70",
+        "target": "-",
+        "calculation": "Count of all feature IDs in project",
+        "lastUpdated": "2025-08-21",
+        "notes": "Feature inventory size",
+        "projectId": "P001"
+      },
+      {
+        "code": "M02", 
+        "metric": "Implementation Score",
+        "value": "96%",
+        "target": "90%+",
+        "calculation": "(implemented_passing_tests + implemented_no_tests) / Total Features * 100",
+        "lastUpdated": "2025-08-21",
+        "notes": "Features with working code",
+        "projectId": "P001"
+      },
+      {
+        "code": "M03",
+        "metric": "Test Coverage Score", 
+        "value": "13%",
+        "target": "80%+",
+        "calculation": "(implemented_passing_tests + implemented_failing_tests + implemented_no_tests) / Total Features * 100",
+        "lastUpdated": "2025-08-21",
+        "notes": "Features with any tests",
+        "projectId": "P001"
+      }
+    ],
+    "projectMetrics": [
+      {
+        "code": "P01",
+        "metric": "Command System Efficiency",
+        "value": "100%",
+        "target": "95%+",
+        "calculation": "Commands working / Total commands * 100",
+        "lastUpdated": "2025-08-21",
+        "notes": "Command operability",
+        "projectId": "P001"
+      }
+    ]
+  },
+  "architecture": {
+    "decisions": [
+      {
+        "id": "ARCH001",
+        "title": "Persistent Knowledge Management Methodology",
+        "decision": "Use CLAUDE.md as primary project state file with internal/ folder for detailed documentation",
+        "rationale": "Complex projects span multiple AI conversations with context limits, requiring external knowledge management for continuity",
+        "tradeoffs": "Additional file management overhead vs. maintained project context across sessions",
+        "date": "2025-07-31",
+        "projectId": "P001"
+      }
+    ]
+  },
+  "progress": {
+    "sessions": [
+      {
+        "id": "S000008",
+        "date": "2025-08-21",
+        "focus": "Command system audit and standardization",
+        "achievements": [
+          "Command system audited and standardized with unified ID formats",
+          "TodoWrite prohibition enforced with exclusive task command authority",
+          "ID format standardization implemented across all commands"
+        ],
+        "status": "completed",
+        "projectId": "P001"
+      }
+    ]
+  },
+  "testing": {
+    "procedures": [
+      "Evidence-based validation required for all completion claims",
+      "Fresh test case generation before validation", 
+      "Complexity preservation during testing - no test simplification"
+    ],
+    "standards": [
+      "Real-time status updates during test execution",
+      "Feature state synchronization with test outcomes"
+    ]
+  }
+}

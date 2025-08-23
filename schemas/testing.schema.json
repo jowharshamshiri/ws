@@ -1,0 +1,275 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Testing Procedures Schema",
+  "type": "object",
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "purpose": { "type": "string" },
+        "lastUpdated": { "type": "string", "format": "date" },
+        "testFramework": { "type": "string" },
+        "testEnvironment": { "type": "string" }
+      },
+      "required": ["title", "purpose", "lastUpdated"]
+    },
+    "testingStrategy": {
+      "type": "object",
+      "properties": {
+        "approach": { "type": "string" },
+        "levels": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "level": { "type": "string", "enum": ["unit", "integration", "system", "acceptance", "performance", "security"] },
+              "description": { "type": "string" },
+              "tools": {
+                "type": "array",
+                "items": { "type": "string" }
+              },
+              "coverage": { "type": "string" },
+              "automationLevel": { "type": "string", "enum": ["full", "partial", "manual"] }
+            },
+            "required": ["level", "description"]
+          }
+        },
+        "testDataManagement": {
+          "type": "object",
+          "properties": {
+            "approach": { "type": "string" },
+            "dataGeneration": { "type": "string" },
+            "dataCleanup": { "type": "string" },
+            "sensitiveData": { "type": "string" }
+          }
+        }
+      }
+    },
+    "testProcedures": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "procedureId": { "type": "string" },
+          "name": { "type": "string" },
+          "type": { "type": "string", "enum": ["validation", "regression", "smoke", "load", "security", "feature"] },
+          "purpose": { "type": "string" },
+          "frequency": { "type": "string", "enum": ["per-commit", "daily", "weekly", "release", "on-demand"] },
+          "prerequisites": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "stepNumber": { "type": "integer", "minimum": 1 },
+                "action": { "type": "string" },
+                "expectedResult": { "type": "string" },
+                "validation": { "type": "string" },
+                "automation": { "type": "boolean" }
+              },
+              "required": ["stepNumber", "action", "expectedResult"]
+            }
+          },
+          "acceptanceCriteria": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "relatedFeatures": {
+            "type": "array",
+            "items": { "type": "string", "pattern": "^F\\d{5}$" }
+          },
+          "commands": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "command": { "type": "string" },
+                "purpose": { "type": "string" },
+                "expectedOutput": { "type": "string" }
+              },
+              "required": ["command", "purpose"]
+            }
+          }
+        },
+        "required": ["procedureId", "name", "type", "purpose", "steps"]
+      }
+    },
+    "testSuites": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "suiteId": { "type": "string" },
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "testCases": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "testId": { "type": "string" },
+                "name": { "type": "string" },
+                "featureId": { "type": "string", "pattern": "^F\\d{5}$" },
+                "type": { "type": "string", "enum": ["positive", "negative", "boundary", "performance", "security"] },
+                "priority": { "type": "string", "enum": ["critical", "high", "medium", "low"] },
+                "automated": { "type": "boolean" },
+                "testData": { "type": "string" },
+                "expectedResult": { "type": "string" },
+                "actualResult": { "type": "string" },
+                "status": { "type": "string", "enum": ["pass", "fail", "blocked", "skip", "tautological"] },
+                "lastRun": { "type": "string", "format": "date-time" },
+                "executionTime": { "type": "number", "minimum": 0 },
+                "issues": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "issue": { "type": "string" },
+                      "severity": { "type": "string", "enum": ["critical", "major", "minor", "trivial"] },
+                      "resolution": { "type": "string" }
+                    },
+                    "required": ["issue", "severity"]
+                  }
+                }
+              },
+              "required": ["testId", "name", "type", "priority", "expectedResult", "status"]
+            }
+          },
+          "coverage": {
+            "type": "object",
+            "properties": {
+              "statement": { "type": "number", "minimum": 0, "maximum": 100 },
+              "branch": { "type": "number", "minimum": 0, "maximum": 100 },
+              "function": { "type": "number", "minimum": 0, "maximum": 100 },
+              "line": { "type": "number", "minimum": 0, "maximum": 100 }
+            }
+          },
+          "health": {
+            "type": "object",
+            "properties": {
+              "score": { "type": "number", "minimum": 0, "maximum": 100 },
+              "passingTests": { "type": "integer", "minimum": 0 },
+              "failingTests": { "type": "integer", "minimum": 0 },
+              "tautologicalTests": { "type": "integer", "minimum": 0 },
+              "blockedTests": { "type": "integer", "minimum": 0 }
+            }
+          }
+        },
+        "required": ["suiteId", "name", "description", "testCases"]
+      }
+    },
+    "validationProtocols": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "protocolId": { "type": "string" },
+          "name": { "type": "string" },
+          "scope": { "type": "string", "enum": ["feature", "integration", "system", "deployment"] },
+          "triggers": {
+            "type": "array",
+            "items": { "type": "string", "enum": ["code-change", "feature-complete", "release-candidate", "on-demand"] }
+          },
+          "validationSteps": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "step": { "type": "string" },
+                "method": { "type": "string" },
+                "criteria": { "type": "string" },
+                "evidence": { "type": "string" },
+                "automatable": { "type": "boolean" }
+              },
+              "required": ["step", "method", "criteria"]
+            }
+          },
+          "successCriteria": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "failureHandling": {
+            "type": "object",
+            "properties": {
+              "escalation": { "type": "string" },
+              "rollback": { "type": "string" },
+              "notification": { "type": "string" }
+            }
+          }
+        },
+        "required": ["protocolId", "name", "scope", "validationSteps", "successCriteria"]
+      }
+    },
+    "qualityGates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "gateId": { "type": "string" },
+          "name": { "type": "string" },
+          "stage": { "type": "string", "enum": ["development", "integration", "staging", "production"] },
+          "conditions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "metric": { "type": "string" },
+                "operator": { "type": "string", "enum": [">=", "<=", "=", ">", "<"] },
+                "threshold": { "type": "number" },
+                "unit": { "type": "string" }
+              },
+              "required": ["metric", "operator", "threshold"]
+            }
+          },
+          "actions": {
+            "type": "object",
+            "properties": {
+              "onPass": { "type": "string" },
+              "onFail": { "type": "string" },
+              "notification": { "type": "string" }
+            }
+          }
+        },
+        "required": ["gateId", "name", "stage", "conditions"]
+      }
+    },
+    "testEnvironments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "environmentId": { "type": "string" },
+          "name": { "type": "string" },
+          "purpose": { "type": "string", "enum": ["development", "testing", "staging", "integration", "performance"] },
+          "configuration": {
+            "type": "object",
+            "properties": {
+              "infrastructure": { "type": "string" },
+              "dataSet": { "type": "string" },
+              "externalDependencies": {
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            }
+          },
+          "setupInstructions": { "type": "string" },
+          "teardownInstructions": { "type": "string" },
+          "access": {
+            "type": "object",
+            "properties": {
+              "url": { "type": "string", "format": "uri" },
+              "credentials": { "type": "string" },
+              "restrictions": { "type": "string" }
+            }
+          }
+        },
+        "required": ["environmentId", "name", "purpose"]
+      }
+    }
+  },
+  "required": ["metadata", "testingStrategy", "testProcedures"]
+}

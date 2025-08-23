@@ -1,0 +1,80 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Metrics Table Schema - Universal and Project Metrics",
+  "description": "Schema for METRICS.md with universal M### and project-specific P### metrics",
+  "type": "object",
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "date": { "type": "string", "format": "date" },
+        "purpose": { "type": "string" },
+        "updateFrequency": { "type": "string" }
+      },
+      "required": ["date", "purpose", "updateFrequency"]
+    },
+    "universalMetrics": {
+      "type": "array", 
+      "description": "M001-M010 hardcoded universal metrics",
+      "items": {
+        "type": "object",
+        "properties": {
+          "code": { 
+            "type": "string", 
+            "pattern": "^M\\d{2}$",
+            "description": "Universal metric code M01-M10"
+          },
+          "metric": { "type": "string" },
+          "value": { "type": "string" },
+          "target": { "type": "string" },
+          "calculation": { "type": "string" },
+          "lastUpdated": { "type": "string", "format": "date" },
+          "notes": { "type": "string" },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp when metric was created"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp when metric was last updated"
+          }
+        },
+        "required": ["code", "metric", "value", "target", "calculation", "lastUpdated", "createdAt", "updatedAt"]
+      }
+    },
+    "projectMetrics": {
+      "type": "array",
+      "description": "P001+ project-specific metrics",
+      "items": {
+        "type": "object", 
+        "properties": {
+          "code": { 
+            "type": "string", 
+            "pattern": "^P\\d{2}$",
+            "description": "Project-specific metric code P01+"
+          },
+          "metric": { "type": "string" },
+          "value": { "type": "string" },
+          "target": { "type": "string" },
+          "calculation": { "type": "string" },
+          "lastUpdated": { "type": "string", "format": "date" },
+          "notes": { "type": "string" },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp when metric was created"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp when metric was last updated"
+          }
+        },
+        "required": ["code", "metric", "value", "target", "calculation", "lastUpdated", "notes", "createdAt", "updatedAt"]
+      }
+    }
+  },
+  "required": ["metadata", "universalMetrics"]
+}

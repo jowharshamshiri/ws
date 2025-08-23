@@ -10,7 +10,7 @@ async fn test_http_server_basic_functionality() -> Result<()> {
     
     // Start server in background
     let server_handle = tokio::spawn(async move {
-        workspace::mcp_server::start_mcp_server(port, false).await
+        workspace::start_mcp_server(port, false).await
     });
     
     // Give server time to start
