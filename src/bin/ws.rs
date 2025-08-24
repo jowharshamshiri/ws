@@ -1255,9 +1255,27 @@ fn update_state(no_git: bool, git_add: bool) -> Result<()> {
             files_to_add.push(path_str.to_string());
         }
         
+        // Add .ws directory files (logs, database, state files)
+        let ws_files = vec![
+            ".ws/logs/ws.log".to_string(),
+            ".ws/project.db".to_string(),
+            ".ws/project.db-shm".to_string(),
+            ".ws/project.db-wal".to_string(),
+            ".ws/workspace.db".to_string(),
+            ".ws/state.json".to_string(),
+        ];
+        
+        for ws_file in ws_files {
+            let ws_path = project_root.join(&ws_file);
+            if ws_path.exists() {
+                files_to_add.push(ws_file);
+            }
+        }
+        
         if !files_to_add.is_empty() {
             let added_files = add_files_to_git(&files_to_add)?;
             if !added_files.is_empty() {
+                log::info!("Added {} files to git staging area: {}", added_files.len(), added_files.join(", "));
                 println!("{}: Added {} files to git staging area", "Info".blue(), added_files.len());
                 for file in added_files {
                     println!("  - {}", file);
