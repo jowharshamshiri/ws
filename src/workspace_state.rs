@@ -32,10 +32,10 @@ impl WorkspaceState {
             .context("Failed to create .ws directory")?;
         
         // Create subdirectories
-        fs::create_dir_all(workspace_dir.join("st8").join("templates"))
-            .context("Failed to create st8 templates directory")?;
-        fs::create_dir_all(workspace_dir.join("st8").join("logs"))
-            .context("Failed to create st8 logs directory")?;
+        fs::create_dir_all(workspace_dir.join("templates"))
+            .context("Failed to create templates directory")?;
+        fs::create_dir_all(workspace_dir.join("logs"))
+            .context("Failed to create logs directory")?;
         
         let mut state = Self::default();
         state.project_root = project_root.to_path_buf();
@@ -174,7 +174,7 @@ mod tests {
         assert_eq!(state.version, 1);
         assert_eq!(state.project_root, temp_dir.path());
         assert!(temp_dir.path().join(".ws").exists());
-        assert!(temp_dir.path().join(".ws").join("st8").join("templates").exists());
+        assert!(temp_dir.path().join(".ws").join("templates").exists());
         assert!(temp_dir.path().join(".ws").join("state.json").exists());
     }
     

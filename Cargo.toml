@@ -85,7 +85,7 @@ license = "MIT"
 name = "workspace"
 readme = "README.md"
 repository = "https://github.com/jowharshamshiri/workspace"
-version = "0.55.147140"
+version = "0.56.181850"
 
 [profile.dev]
 debug = true

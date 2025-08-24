@@ -28,7 +28,7 @@ pub struct TemplateManager {
 impl TemplateManager {
     /// Initialize template manager for a project
     pub fn new(workspace_state: &WorkspaceState) -> Result<Self> {
-        let templates_dir = workspace_state.tool_dir("st8").join("templates");
+        let templates_dir = workspace_state.workspace_dir().join("templates");
         fs::create_dir_all(&templates_dir)
             .context("Failed to create templates directory")?;
         
@@ -144,7 +144,7 @@ impl TemplateManager {
                         rendered_files.push(output_path);
                     }
                     Err(e) => {
-                        eprintln!("Warning: Failed to render template '{}': {}", template_config.name, e);
+                        log::warn!("Failed to render template '{}': {}", template_config.name, e);
                     }
                 }
             }

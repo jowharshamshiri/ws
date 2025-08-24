@@ -11,7 +11,7 @@ use sqlx::SqlitePool;
 use sqlx::Row;
 use std::collections::HashMap;
 use std::env;
-use std::fs::{self, OpenOptions};
+use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{self, Command};
@@ -1215,9 +1215,9 @@ fn update_state(no_git: bool, git_add: bool) -> Result<()> {
     
     if !rendered_files.is_empty() {
         log::info!("Rendered {} templates: {}", rendered_files.len(), rendered_files.join(", "));
-        println!("{}: Rendered {} templates", "Info".blue(), rendered_files.len());
+        // Log instead of print to avoid VSCode detecting as error during git operations
         for file in &rendered_files {
-            println!("  - {}", file);
+            log::info!("Template rendered: {}", file);
         }
     }
     
@@ -1544,7 +1544,7 @@ fn show_status() -> Result<()> {
     let enabled_count = templates.iter().filter(|t| t.enabled).count();
     
     if !templates.is_empty() {
-        println!("{}: {} total, {} enabled", "Templates".blue(), templates.len(), enabled_count);
+        log::info!("Templates: {} total, {} enabled", templates.len(), enabled_count);
     } else {
         println!("{}: None configured", "Templates".blue());
     }
@@ -1579,23 +1579,8 @@ fn log_action(message: &str) {
 }
 
 fn log_to_file(message: &str) -> Result<()> {
-    if let Ok(project_root) = get_project_root() {
-        let state = WorkspaceState::load(&project_root)?;
-        let log_dir = state.tool_dir("st8").join("logs");
-        
-        if let Err(_) = fs::create_dir_all(&log_dir) {
-            return Ok(()); // Silently fail if we can't create log directory
-        }
-        
-        let log_file = log_dir.join("st8.log");
-        let timestamp = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC");
-        let log_entry = format!("[{}] {}\n", timestamp, message);
-        
-        if let Ok(mut file) = OpenOptions::new().create(true).append(true).open(log_file) {
-            let _ = file.write_all(log_entry.as_bytes());
-        }
-    }
-    
+    // Use structured logging instead of custom file logging
+    log::info!("{}", message);
     Ok(())
 }
 
@@ -1864,7 +1849,7 @@ async fn generate_status_report(
 }
 
 fn handle_init_docs(_force: bool) -> Result<()> {
-    println!("Documentation template initialization not yet implemented");
+    log::info!("Documentation template initialization not yet implemented");
     Ok(())
 }
 

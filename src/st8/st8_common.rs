@@ -566,7 +566,7 @@ async fn load_st8_config_from_db(db_path: &std::path::Path) -> Result<St8Config>
     
     // Try to get config from existing project
     let result = sqlx::query(r#"
-        SELECT st8_enabled, version_file, auto_detect_project_files, project_files 
+        SELECT version_file, auto_detect_project_files, project_files 
         FROM projects 
         LIMIT 1
     "#)
@@ -582,7 +582,7 @@ async fn load_st8_config_from_db(db_path: &std::path::Path) -> Result<St8Config>
         
         Ok(St8Config {
             version: 1,
-            enabled: row.get::<bool, _>("st8_enabled"),
+            enabled: true, // Default to enabled since column removed
             version_file: row.get::<String, _>("version_file"),
             auto_detect_project_files: row.get::<bool, _>("auto_detect_project_files"),
             project_files,
@@ -605,14 +605,12 @@ async fn save_st8_config_to_db(db_path: &std::path::Path, config: &St8Config) ->
     
     sqlx::query(r#"
         UPDATE projects 
-        SET st8_enabled = ?, 
-            version_file = ?, 
+        SET version_file = ?, 
             auto_detect_project_files = ?, 
             project_files = ?,
             updated_at = datetime('now')
         WHERE id = (SELECT id FROM projects LIMIT 1)
     "#)
-    .bind(config.enabled)
     .bind(&config.version_file)
     .bind(config.auto_detect_project_files)
     .bind(project_files_json)
@@ -628,13 +626,12 @@ async fn create_default_project_with_config(pool: &sqlx::SqlitePool, config: &St
     sqlx::query(r#"
         INSERT INTO projects (
             id, name, description, status, version, major_version,
-            st8_enabled, version_file, auto_detect_project_files, project_files
+            version_file, auto_detect_project_files, project_files
         ) VALUES (
             'P001', 'Default Project', 'Auto-created project', 'active', '0.1.0', 0,
-            ?, ?, ?, ?
+            ?, ?, ?
         )
     "#)
-    .bind(config.enabled)
     .bind(&config.version_file)
     .bind(config.auto_detect_project_files)
     .bind(project_files_json)
