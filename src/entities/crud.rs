@@ -724,7 +724,8 @@ pub mod directives {
         .execute(pool)
         .await?;
 
-        Ok(directive)
+        // Fetch the created directive from database to get all fields properly set
+        get_by_id(pool, &directive.id).await?.ok_or_else(|| anyhow::anyhow!("Failed to retrieve created directive"))
     }
 
     /// Get directive by ID

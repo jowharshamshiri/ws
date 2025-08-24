@@ -1,4 +1,5 @@
 use indicatif::{ProgressBar, ProgressStyle, MultiProgress};
+use log;
 use std::cell::RefCell;
 use std::time::Duration;
 use colored::*;
@@ -216,28 +217,34 @@ impl SimpleOutput {
     }
 
     pub fn print_error(&self, message: &str) {
+        log::error!("Refac: {}", message);
         eprintln!("{} {}", "ERROR:".red().bold(), message);
     }
 
     pub fn print_warning(&self, message: &str) {
+        log::warn!("Refac: {}", message);
         println!("{} {}", "WARNING:".yellow().bold(), message);
     }
 
     pub fn print_info(&self, message: &str) {
+        log::info!("Refac: {}", message);
         println!("{} {}", "INFO:".blue().bold(), message);
     }
 
     pub fn print_success(&self, message: &str) {
+        log::info!("Refac success: {}", message);
         println!("{} {}", "SUCCESS:".green().bold(), message);
     }
 
     pub fn print_verbose(&self, message: &str) {
         if self.verbose {
+            log::debug!("Refac verbose: {}", message);
             println!("{} {}", "VERBOSE:".cyan(), message);
         }
     }
 
     pub fn print_step(&self, step: usize, total: usize, message: &str) {
+        log::debug!("Refac step [{}/{}]: {}", step, total, message);
         println!("[{}/{}] {}", step, total, message);
     }
 }

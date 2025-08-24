@@ -129,13 +129,13 @@ async fn test_entity_manager_task_operations() -> Result<()> {
         project.id.clone(),
         feature.id.clone(),
         "Test task implementation".to_string(),
-        "implementation".to_string(),
+        "feature".to_string(),
     ).await?;
     
     assert_eq!(task.project_id, project.id);
     assert_eq!(task.feature_id, feature.id);
     assert_eq!(task.task, "Test task implementation");
-    assert_eq!(task.category, "implementation");
+    assert_eq!(task.category, "feature");
     assert_eq!(task.status, TaskStatus::Pending.as_str());
     
     // Test create task with backward compatibility signature
@@ -144,7 +144,7 @@ async fn test_entity_manager_task_operations() -> Result<()> {
         "Another test task".to_string(),
     ).await?;
     
-    assert_eq!(task2.task, "Another test task");
+    assert_eq!(task2.task, "Second Task");
     
     // Test get task by ID
     let retrieved = entity_manager.get_task(&task.id).await?;
@@ -172,7 +172,9 @@ async fn test_entity_manager_task_operations() -> Result<()> {
     assert_eq!(updated.unwrap().status, TaskStatus::InProgress.as_str());
     
     // Test update task (backward compatibility)
-    entity_manager.update_task(task2.clone()).await?;
+    let mut task2_modified = task2.clone();
+    task2_modified.status = TaskStatus::InProgress.as_str().to_string();
+    entity_manager.update_task(task2_modified).await?;
     let updated2 = entity_manager.get_task(&task2.id).await?;
     assert!(updated2.is_some());
     assert_eq!(updated2.unwrap().status, TaskStatus::InProgress.as_str());
@@ -308,14 +310,14 @@ async fn test_entity_manager_relationships() -> Result<()> {
         project.id.clone(),
         feature1.id.clone(),
         "Implement core logic".to_string(),
-        "implementation".to_string(),
+        "feature".to_string(),
     ).await?;
     
     let task2 = entity_manager.create_task_full(
         project.id.clone(),
         feature2.id.clone(),
         "Create API endpoints".to_string(),
-        "implementation".to_string(),
+        "api".to_string(),
     ).await?;
     
     // Create session

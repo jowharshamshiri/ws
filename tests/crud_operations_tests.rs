@@ -115,11 +115,11 @@ async fn test_feature_crud_operations() -> Result<()> {
     
     // Test feature notes update (with length validation) - DISABLED: function not implemented in new architecture
     // features::update_notes(&pool, "F00001", Some("Short note".to_string())).await?;
-    let updated = features::get_by_id(&pool, "F00001").await?;
+    let _updated = features::get_by_id(&pool, "F00001").await?;
     // Note: The feature retrieval doesn't include notes in current implementation
     
     // Test notes length validation (should fail for >100 characters) - DISABLED
-    let long_note = "a".repeat(101);
+    let _long_note = "a".repeat(101);
     // let long_note_result = features::update_notes(&pool, "F00001", Some(long_note)).await;
     // assert!(long_note_result.is_err(), "Long notes should be rejected");
     

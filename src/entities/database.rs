@@ -49,6 +49,14 @@ pub async fn initialize_tables(pool: &SqlitePool) -> Result<()> {
             current_phase TEXT,
             repository_url TEXT,
             version TEXT NOT NULL DEFAULT '0.1.0',
+            major_version INTEGER NOT NULL DEFAULT 0,
+            
+            -- St8 Configuration fields (migrated from .st8.json)
+            st8_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+            version_file TEXT NOT NULL DEFAULT 'version.txt',
+            auto_detect_project_files BOOLEAN NOT NULL DEFAULT TRUE,
+            project_files TEXT, -- JSON array of manual project files
+            
             created_at TEXT NOT NULL DEFAULT (datetime('now')),
             updated_at TEXT NOT NULL DEFAULT (datetime('now')),
             archived BOOLEAN NOT NULL DEFAULT FALSE,

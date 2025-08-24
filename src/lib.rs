@@ -2,6 +2,7 @@ pub mod refac;
 pub mod scrap;
 pub mod st8;
 pub mod ldiff;
+pub mod logging;
 pub mod workspace_state;
 // Entity system
 pub mod entities;

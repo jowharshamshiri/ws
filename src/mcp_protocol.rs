@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+use log;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tokio::io::{AsyncBufReadExt, BufReader};
@@ -132,7 +133,7 @@ impl McpProtocolHandler {
         
         // Automatically initialize session on startup
         if let Err(e) = handler.initialize_session_automatically().await {
-            eprintln!("Warning: Failed to initialize session automatically: {}", e);
+            log::warn!("Failed to initialize session automatically: {}", e);
         } else {
             handler.session_active = true;
         }
@@ -140,7 +141,7 @@ impl McpProtocolHandler {
         // Start periodic consolidation check task in background
         tokio::spawn(async move {
             if let Err(e) = Self::run_periodic_consolidation_checks().await {
-                eprintln!("Periodic consolidation check task failed: {}", e);
+                log::error!("Periodic consolidation check task failed: {}", e);
             }
         });
         
@@ -155,7 +156,7 @@ impl McpProtocolHandler {
         // MCP protocol uses stdio for communication with Claude
         self.stdin_writer = Some(tokio::io::stdin());
         
-        eprintln!("MCP server initialized with stdio communication");
+        log::info!("MCP server initialized with stdio communication");
         Ok(())
     }
 
@@ -169,7 +170,7 @@ impl McpProtocolHandler {
         let initialized_message = self.create_initialized_message().await?;
         self.send_message_to_claude(&initialized_message).await?;
         
-        eprintln!("MCP server registration completed successfully");
+        log::info!("MCP server registration completed successfully");
         Ok(())
     }
 
@@ -179,7 +180,7 @@ impl McpProtocolHandler {
         let reader = BufReader::new(stdin);
         let mut lines = reader.lines();
         
-        eprintln!("MCP server listening for messages from Claude...");
+        log::info!("MCP server listening for messages from Claude...");
         
         while let Some(line) = lines.next_line().await? {
             if line.trim().is_empty() {
@@ -189,11 +190,11 @@ impl McpProtocolHandler {
             match serde_json::from_str::<McpMessage>(&line) {
                 Ok(message) => {
                     if let Err(e) = self.handle_message(message).await {
-                        eprintln!("Error handling message: {}", e);
+                        log::error!("Error handling message: {}", e);
                     }
                 }
                 Err(e) => {
-                    eprintln!("Failed to parse MCP message: {} - Line: {}", e, line);
+                    log::error!("Failed to parse MCP message: {} - Line: {}", e, line);
                 }
             }
         }
@@ -226,7 +227,7 @@ impl McpProtocolHandler {
                 self.send_message_to_claude(&response).await?;
             }
             _ => {
-                eprintln!("Unhandled MCP method: {:?}", message.method);
+                log::debug!("Unhandled MCP method: {:?}", message.method);
             }
         }
         
@@ -780,9 +781,9 @@ impl McpProtocolHandler {
             let error_text = result.content.first()
                 .map(|c| c.text.as_str())
                 .unwrap_or("Unknown error");
-            eprintln!("Warning: Automatic session initialization failed: {}", error_text);
+            log::warn!("Automatic session initialization failed: {}", error_text);
         } else {
-            eprintln!("Automatic session initialization completed successfully");
+            log::info!("Automatic session initialization completed successfully");
         }
         
         Ok(())

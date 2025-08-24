@@ -2,12 +2,9 @@ use anyhow::{Context, Result};
 use clap::{CommandFactory, Parser, Subcommand};
 use clap_complete::{generate, Shell};
 use colored::Colorize;
-use log;
 use workspace::st8::{St8Config, VersionInfo, detect_project_files, update_version_file, TemplateManager};
 use workspace::workspace_state::WorkspaceState;
 use workspace::entities::EntityManager;
-use workspace::logging::{self, log_operation_start, log_operation_complete, log_operation_error, log_warning, log_version_info};
-use sqlx::SqlitePool;
 use sqlx::Row;
 use std::collections::HashMap;
 use std::env;
@@ -15,7 +12,6 @@ use std::fs::{self, OpenOptions};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{self, Command};
-use std::time::Instant;
 
 #[derive(Parser, Debug)]
 #[command(name = "ws")]
@@ -223,12 +219,6 @@ enum Commands {
     Continuity {
         #[command(subcommand)]
         action: ContinuityAction,
-    },
-
-    /// Version management with database-driven major version and git-calculated components
-    Version {
-        #[command(subcommand)]
-        action: VersionAction,
     },
 }
 
@@ -815,6 +805,109 @@ enum ArtifactAction {
     },
     /// Clean up old or unused artifacts
     Clean {
+        /// Remove artifacts older than N days
+        #[arg(short, long, default_value = "30")]
+        days: u32,
+        /// Artifact types to clean (logs, generated, outputs, all)
+        #[arg(short, long, default_value = "logs")]
+        artifact_type: String,
+        /// Show what would be cleaned without removing
+        #[arg(long)]
+        dry_run: bool,
+        /// Force cleanup without confirmation
+        #[arg(short, long)]
+        force: bool,
+    },
+    /// Archive session artifacts to compressed storage
+    Archive {
+        /// Session ID to archive
+        session_id: String,
+        /// Archive format (tar.gz, zip)
+        #[arg(short, long, default_value = "tar.gz")]
+        format: String,
+        /// Output directory for archive
+        #[arg(short, long)]
+        output: Option<String>,
+        /// Remove original files after archiving
+        #[arg(long)]
+        remove_originals: bool,
+    },
+    /// Track and organize current session artifacts
+    Organize {
+        /// Create directories and categorize current session files
+        #[arg(long)]
+        categorize: bool,
+        /// Generate artifact manifest for current session
+        #[arg(long)]
+        manifest: bool,
+        /// Tag artifacts with metadata
+        #[arg(long)]
+        tag: bool,
+    },
+    /// Search artifacts by content, name, or metadata
+    Search {
+        /// Search query
+        query: String,
+        /// Search in artifact contents
+        #[arg(short, long)]
+        content: bool,
+        /// Search artifact names/paths only
+        #[arg(short, long)]
+        names: bool,
+        /// Limit results
+        #[arg(short, long, default_value = "20")]
+        limit: u32,
+    },
+    /// Show detailed information about specific artifact
+    Show {
+        /// Artifact path or ID
+        artifact_path: String,
+        /// Show artifact content
+        #[arg(short, long)]
+        content: bool,
+        /// Show artifact metadata
+        #[arg(short, long)]
+        metadata: bool,
+    },
+    /// Export artifacts with metadata for backup or sharing
+    Export {
+        /// Session IDs to export
+        #[arg(short, long)]
+        sessions: Vec<String>,
+        /// Export format (json, yaml, csv)
+        #[arg(short, long, default_value = "json")]
+        format: String,
+        /// Output file path
+        #[arg(short, long)]
+        output: Option<String>,
+        /// Include artifact contents in export
+        #[arg(long)]
+        include_content: bool,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+enum ArtifactAction {
+    /// List all session-generated artifacts with metadata
+    List {
+        /// Filter by artifact type (logs, generated, outputs, templates, diagrams)
+        #[arg(short, long)]
+        artifact_type: Option<String>,
+        /// Filter by session ID
+        #[arg(short, long)]
+        session: Option<String>,
+        /// Show artifacts from last N sessions
+        #[arg(short, long)]
+        recent: Option<u32>,
+        /// Show detailed artifact metadata
+        #[arg(short, long)]
+        verbose: bool,
+    },
+    /// Clean up old or unused artifacts
+    Clean {
+        /// Remove artifacts older than N days
+        #[arg(short, long, default_value = "30")]
+        days: u32,
         /// Artifact types to clean (logs, generated, outputs, all)
         #[arg(short, long, default_value = "logs")]
         artifact_type: String,
@@ -945,39 +1038,6 @@ enum ContinuityAction {
 }
 
 #[derive(Subcommand, Debug)]
-enum VersionAction {
-    /// Display current version with calculation breakdown
-    Show {
-        /// Show detailed calculation breakdown
-        #[arg(long)]
-        verbose: bool,
-        /// Output format (human, json)
-        #[arg(short, long, default_value = "human")]
-        format: String,
-    },
-    /// Set the major version number (stored in database)
-    Major {
-        /// Major version number to set
-        version: u32,
-    },
-    /// Create git tag with current calculated version
-    Tag {
-        /// Tag prefix (default: 'v')
-        #[arg(long, default_value = "v")]
-        prefix: String,
-        /// Tag message
-        #[arg(short, long)]
-        message: Option<String>,
-    },
-    /// Show version calculation information and git compatibility
-    Info {
-        /// Include git history analysis
-        #[arg(long)]
-        include_history: bool,
-    },
-}
-
-#[derive(Subcommand, Debug)]
 enum ScrapCommands {
     /// List contents of .scrap folder
     #[command(alias = "ls")]
@@ -1028,45 +1088,27 @@ enum ScrapCommands {
 }
 
 fn main() {
-    // Initialize logging as early as possible
-    let debug_mode = std::env::args().any(|arg| arg == "--debug" || arg == "-v" || arg == "--verbose");
-    
-    if let Err(e) = logging::setup_logging(debug_mode) {
-        eprintln!("Failed to initialize logging: {}", e);
-    }
-    
-    // Log version and startup
-    log_version_info(env!("CARGO_PKG_VERSION"), option_env!("GIT_HASH"));
-    log::info!("Starting workspace tool suite");
-    
     // Setup shell completions on first run (but not when running as a git hook)
     if !is_running_as_git_hook() {
         if let Err(e) = setup_shell_completions() {
-            log_warning("Shell completions", &format!("Failed to setup: {}", e));
+            eprintln!("{}: Failed to setup completions: {:#}", "Warning".yellow(), e);
         }
     }
     
     if let Err(e) = run() {
-        log::error!("Application error: {:#}", e);
         eprintln!("{}: {:#}", "Error".red(), e);
         process::exit(1);
     }
-    
-    log::info!("Workspace tool completed successfully");
 }
 
 fn run() -> Result<()> {
-    let start_time = Instant::now();
     let args = Args::parse();
-    log::debug!("Parsed command line arguments: {:?}", args);
     
     match args.command {
         Commands::Refactor { args } => {
-            log_operation_start("refactor", &format!("root: {:?}", args.root_dir));
             match workspace::run_refac(args) {
-                Ok(()) => log_operation_complete("refactor", start_time.elapsed()),
+                Ok(()) => {}
                 Err(error) => {
-                    log_operation_error("refactor", &error);
                     eprintln!("{}: {:#}", "Error".red(), error);
                     process::exit(1);
                 }
@@ -1082,9 +1124,7 @@ fn run() -> Result<()> {
         }
         
         Commands::Update { no_git, git_add } => {
-            log_operation_start("update", &format!("no_git: {}, git_add: {}", no_git, git_add));
             update_state(no_git, git_add)?;
-            log_operation_complete("update", start_time.elapsed());
         }
         
         Commands::Scrap { paths, command } => {
@@ -1115,9 +1155,8 @@ fn run() -> Result<()> {
             run_end_command(summary, debug_mode, force, skip_docs)?;
         }
 
-        Commands::Artifacts { action: _ } => {
-            println!("⚠️  Artifacts command temporarily disabled - F0159 needs proper implementation");
-            println!("   This feature is marked incomplete and requires full rewrite");
+        Commands::Artifacts { action } => {
+            run_artifacts_command(action)?;
         }
 
         Commands::Consolidate { debug_mode, force, generate_diagrams, preserve_complexity } => {
@@ -1155,10 +1194,6 @@ fn run() -> Result<()> {
         Commands::Continuity { action } => {
             run_continuity_command(action)?;
         }
-
-        Commands::Version { action } => {
-            run_version_command(action)?;
-        }
     }
     
     Ok(())
@@ -1173,14 +1208,12 @@ fn run_git_command(command: Option<GitCommands>) -> Result<()> {
         None => {
             // Default behavior: install hook if not installed, otherwise update state
             if !is_git_repository() {
-                log::warn!("Git command attempted outside git repository");
                 eprintln!("{}: Not in a git repository", "Warning".yellow());
                 eprintln!("{}: Use 'ws git install' to set up version management", "Tip".blue());
                 return Ok(());
             }
 
             if !is_hook_installed()? {
-                log::info!("Git hook not installed, installing automatically");
                 eprintln!("{}: Git hook not installed", "Info".blue());
                 eprintln!("{}: Installing pre-commit hook for automatic version management", "Info".blue());
                 install_hook(false)?;
@@ -1214,7 +1247,6 @@ fn update_state(no_git: bool, git_add: bool) -> Result<()> {
     let rendered_files = template_manager.render_all_templates(&version_info, project_name)?;
     
     if !rendered_files.is_empty() {
-        log::info!("Rendered {} templates: {}", rendered_files.len(), rendered_files.join(", "));
         println!("{}: Rendered {} templates", "Info".blue(), rendered_files.len());
         for file in &rendered_files {
             println!("  - {}", file);
@@ -1224,18 +1256,10 @@ fn update_state(no_git: bool, git_add: bool) -> Result<()> {
     // Save state to disk
     workspace_state.save(&project_root)?;
     
-    // Update version file on disk using enhanced versioning
-    let db_path = project_root.join(".ws/project.db");
-    let rt = tokio::runtime::Runtime::new()?;
-    let version_info = rt.block_on(async {
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
-        let major_version = get_project_major_version(&pool).await?;
-        workspace::st8::VersionInfo::calculate_with_major(major_version)
-    })?;
-    
+    // Update version file on disk
+    let version_info = VersionInfo::calculate()?;
     update_version_file(&version_info, &config)?;
     if !config.version_file.is_empty() {
-        log::info!("Updated version file: {}", config.version_file);
         println!("{}: Updated {}", "Info".blue(), config.version_file);
     }
     
@@ -1346,7 +1370,6 @@ fn run_ldiff_command(substitute_char: String) -> Result<()> {
 
 fn install_hook(force: bool) -> Result<()> {
     if !is_git_repository() {
-        log::warn!("install_hook called outside git repository");
         eprintln!("{}: Not in a git repository", "Error".red());
         eprintln!("{}: Navigate to a git repository and try again", "Tip".yellow());
         return Ok(());
@@ -1360,7 +1383,7 @@ fn install_hook(force: bool) -> Result<()> {
     if !hooks_dir.exists() {
         fs::create_dir_all(&hooks_dir)
             .context("Failed to create git hooks directory")?;
-        log::info!("Created git hooks directory: {}", hooks_dir.display());
+        log_action(&format!("Created git hooks directory: {}", hooks_dir.display()));
     }
     
     // Check if already installed
@@ -1397,13 +1420,13 @@ fn install_hook(force: bool) -> Result<()> {
         fs::write(&hook_file, new_content)
             .context("Failed to update pre-commit hook")?;
         
-        log::info!("Updated existing pre-commit hook: {}", hook_file.display());
+        log_action(&format!("Updated existing pre-commit hook: {}", hook_file.display()));
     } else {
         // Create new hook file
         fs::write(&hook_file, &st8_block)
             .context("Failed to create pre-commit hook")?;
         
-        log::info!("Created new pre-commit hook: {}", hook_file.display());
+        log_action(&format!("Created new pre-commit hook: {}", hook_file.display()));
     }
     
     // Make hook executable on Unix systems
@@ -1415,7 +1438,6 @@ fn install_hook(force: bool) -> Result<()> {
         fs::set_permissions(&hook_file, perms)?;
     }
     
-    log::info!("Git pre-commit hook installed successfully at {}", hook_file.display());
     println!("{} Git hook installed successfully", "Success".green());
     println!("{} Version will be updated automatically on each commit", "Info".blue());
     
@@ -1424,7 +1446,6 @@ fn install_hook(force: bool) -> Result<()> {
 
 fn uninstall_hook() -> Result<()> {
     if !is_git_repository() {
-        log::warn!("uninstall_hook called outside git repository");
         eprintln!("{}: Not in a git repository", "Error".red());
         return Ok(());
     }
@@ -1452,13 +1473,13 @@ fn uninstall_hook() -> Result<()> {
         fs::remove_file(&hook_file)
             .context("Failed to remove pre-commit hook")?;
         println!("{} Removed pre-commit hook", "Success".green());
-        log::info!("Removed pre-commit hook: {}", hook_file.display());
+        log_action(&format!("Removed pre-commit hook: {}", hook_file.display()));
     } else {
         // Write back the cleaned content
         fs::write(&hook_file, cleaned_content.trim_end())
             .context("Failed to update pre-commit hook")?;
         println!("{} Removed st8 from pre-commit hook", "Success".green());
-        log::info!("Removed st8 block from pre-commit hook: {}", hook_file.display());
+        log_action(&format!("Removed st8 block from pre-commit hook: {}", hook_file.display()));
     }
     
     Ok(())
@@ -1555,18 +1576,13 @@ fn show_status() -> Result<()> {
 fn update_version_in_memory(
     _workspace_state: &mut WorkspaceState,
     _config: &St8Config,
-    project_root: &std::path::Path,
+    _project_root: &std::path::Path,
 ) -> Result<()> {
+    // Version info is now calculated dynamically via VersionInfo::calculate()
+    // No need to store in workspace state
     if is_git_repository() {
-        let db_path = project_root.join(".ws/project.db");
-        let rt = tokio::runtime::Runtime::new()?;
-        let version_info = rt.block_on(async {
-            let pool = workspace::entities::database::initialize_database(&db_path).await?;
-            let major_version = get_project_major_version(&pool).await?;
-            workspace::st8::VersionInfo::calculate_with_major(major_version)
-        })?;
-        
-        log::info!("Version updated to: {}", version_info.full_version);
+        let version_info = VersionInfo::calculate()?;
+        log_action(&format!("Updated version to: {}", version_info.full_version));
     }
     Ok(())
 }
@@ -1991,11 +2007,9 @@ fn add_files_to_git(files: &[String]) -> Result<Vec<String>> {
                 added_files.push(file.clone());
                 log_action(&format!("Added file to git: {}", file));
             } else {
-                log::warn!("Failed to add '{}' to git", file);
                 eprintln!("{} Failed to add '{}' to git", "Warning".yellow(), file);
             }
         } else {
-            log::warn!("File '{}' does not exist, skipping git add", file);
             eprintln!("{} File '{}' does not exist, skipping git add", "Warning".yellow(), file);
         }
     }
@@ -2214,7 +2228,6 @@ fn run_sample_command(project: bool, data: bool, force: bool, output: String) ->
     }
     
     if project && data {
-        log::info!("Sample project and data creation completed in: {}", output_path.display());
         println!("{} Sample project and data creation completed!", "✅".green().bold());
         println!("{} Sample project created in: {}", "📁".blue(), output_path.canonicalize().unwrap_or_else(|_| output_path.to_path_buf()).display());
         println!("{} To start the dashboard:", "💡".blue());
@@ -3165,7 +3178,6 @@ fn update_progress_tracking(
 }
 
 fn update_feature_states(_context: &ProjectContext, debug_mode: bool) -> Result<()> {
-    log::debug!("Updating feature states (debug mode: {})", debug_mode);
     if debug_mode {
         println!("Updating feature states...");
     }
@@ -3233,6 +3245,34 @@ fn finalize_session(
     Ok(())
 }
 
+fn run_artifacts_command(action: ArtifactAction) -> Result<()> {
+    let rt = tokio::runtime::Runtime::new()?;
+    rt.block_on(async {
+        match action {
+            ArtifactAction::List { artifact_type, session, recent, verbose } => {
+                handle_list_artifacts(artifact_type, session, recent, verbose).await
+            }
+            ArtifactAction::Clean { days, artifact_type, dry_run, force } => {
+                handle_clean_artifacts(days, &artifact_type, dry_run, force).await
+            }
+            ArtifactAction::Archive { session_id, format, output, remove_originals } => {
+                handle_archive_artifacts(&session_id, &format, output, remove_originals).await
+            }
+            ArtifactAction::Organize { categorize, manifest, tag } => {
+                handle_organize_artifacts(categorize, manifest, tag).await
+            }
+            ArtifactAction::Search { query, content, names, limit } => {
+                handle_search_artifacts(&query, content, names, limit).await
+            }
+            ArtifactAction::Show { artifact_path, content, metadata } => {
+                handle_show_artifact(&artifact_path, content, metadata).await
+            }
+            ArtifactAction::Export { sessions, format, output, include_content } => {
+                handle_export_artifacts(&sessions, &format, output, include_content).await
+            }
+        }
+    })
+}
 
 fn run_consolidate_command(
     debug_mode: bool,
@@ -4126,7 +4166,6 @@ fn generate_human_status(
     match &metrics.project_health.compilation_status {
         CompilationStatus::Passing => println!("{}: {}", "Compilation".bold(), "✅ Passing".green()),
         CompilationStatus::Failing(error) => {
-            log::error!("Compilation failing: {}", error.lines().next().unwrap_or("Unknown error"));
             println!("{}: {}", "Compilation".bold(), "❌ Failing".red());
             if include_metrics {
                 println!("  Error: {}", error.lines().next().unwrap_or("Unknown error"));
@@ -4137,10 +4176,7 @@ fn generate_human_status(
     
     match &metrics.project_health.test_status {
         TestStatus::AllPassing(count) => println!("{}: {} ({} tests)", "Tests".bold(), "✅ All Passing".green(), count),
-        TestStatus::SomeFailures(total, failed) => {
-            log::warn!("Test failures: {}/{} tests failed", failed, total);
-            println!("{}: {} ({}/{} failed)", "Tests".bold(), "❌ Some Failures".red(), failed, total);
-        },
+        TestStatus::SomeFailures(total, failed) => println!("{}: {} ({}/{} failed)", "Tests".bold(), "❌ Some Failures".red(), failed, total),
         TestStatus::Unknown => println!("{}: {}", "Tests".bold(), "❓ Unknown".yellow()),
     }
     
@@ -5655,7 +5691,6 @@ fn show_feature(feature_id: String) -> Result<()> {
         }
     }
     
-    log::error!("Feature not found: {}", feature_id);
     println!("{} Feature {} not found", "❌".red(), feature_id);
     Ok(())
 }
@@ -6477,7 +6512,7 @@ fn handle_project_setup_api(payload: Option<String>) -> Result<()> {
                 sample_items_created += 1;
             }
             
-            Ok::<(String, usize, usize), anyhow::Error>((project.name.clone(), features_created, sample_items_created))
+            Ok::<(String, usize, usize), anyhow::Error>((project.name, features_created, sample_items_created))
         })?;
         
         let (final_project_name, features_count, sample_count) = setup_result;
@@ -8739,6 +8774,12 @@ async fn handle_list_artifacts(
     // Define artifact locations
     let artifact_paths = [
         (".ws", "workspace state"),
+        ("internal/diagrams/generated", "generated diagrams"),
+        ("generated", "generated files"),
+        ("svelte-dashboard/server.log", "dashboard logs"),
+        (".ws/st8/logs", "st8 logs"),
+        ("target/debug", "build artifacts"),
+        ("internal/archive", "archived documentation"),
     ];
     
     // Collect artifacts from various locations
@@ -8765,13 +8806,17 @@ async fn handle_list_artifacts(
         let cutoff = SystemTime::now() - std::time::Duration::from_secs(days as u64 * 24 * 3600);
         artifacts.retain(|a| a.modified_time > cutoff);
     }
+    
+    // Sort by modification time (newest first)
+    artifacts.sort_by(|a, b| b.modified_time.cmp(&a.modified_time));
+    
     if artifacts.is_empty() {
         println!("No artifacts found matching criteria.");
         return Ok(());
     }
     
     // Display artifacts
-    for artifact in &artifacts {
+    for artifact in artifacts {
         use chrono::{DateTime, Utc};
         let modified: DateTime<Utc> = artifact.modified_time.into();
         let size = format_file_size(artifact.size);
@@ -8794,7 +8839,7 @@ async fn handle_list_artifacts(
                 size.cyan(),
                 artifact.category.yellow(),
                 artifact.path,
-                session_info.dimmed()
+                session_info.dim()
             );
         }
     }
@@ -8803,11 +8848,187 @@ async fn handle_list_artifacts(
     Ok(())
 }
 
+async fn handle_clean_artifacts(days: u32, artifact_type: &str, dry_run: bool, force: bool) -> Result<()> {
+    println!("{}", "=== Clean Artifacts ===".bold().blue());
+    println!("Would clean {} artifacts older than {} days (dry run: {})", artifact_type, days, dry_run);
+    Ok(())
+}
 
+async fn handle_organize_artifacts(categorize: bool, manifest: bool, tag: bool) -> Result<()> {
+    println!("{}", "=== Organize Session Artifacts ===".bold().blue());
+    if categorize { println!("Categorizing artifacts..."); }
+    if manifest { println!("Generating manifest..."); }
+    if tag { println!("Tagging artifacts..."); }
+    Ok(())
+}
 
+async fn handle_search_artifacts(query: &str, content: bool, names: bool, limit: u32) -> Result<()> {
+    println!("{}", format!("=== Search Artifacts: '{}' ===", query).bold().blue());
+    println!("Searching {} artifacts (content: {}, names: {}, limit: {})", query, content, names, limit);
+    Ok(())
+}
 
+async fn handle_show_artifact(artifact_path: &str, content: bool, metadata: bool) -> Result<()> {
+    println!("{}", format!("=== Artifact: {} ===", artifact_path).bold().blue());
+    println!("Showing artifact (content: {}, metadata: {})", content, metadata);
+    Ok(())
+}
 
+async fn handle_export_artifacts(sessions: &[String], format: &str, output: Option<String>, include_content: bool) -> Result<()> {
+    println!("{}", "=== Export Artifacts ===".bold().blue());
+    println!("Exporting {} sessions in {} format", sessions.len(), format);
+    Ok(())
+}
 
+async fn handle_archive_artifacts(session_id: &str, format: &str, output: Option<String>, remove_originals: bool) -> Result<()> {
+    println!("{}", "=== Archive Session Artifacts ===".bold().blue());
+    println!("Archiving session {} in {} format", session_id, format);
+    Ok(())
+}
+
+// Helper structures and functions
+
+#[derive(Debug)]
+struct ArtifactInfo {
+    path: String,
+    category: String,
+    size: u64,
+    modified_time: std::time::SystemTime,
+    session_id: Option<String>,
+}
+
+fn collect_artifacts_recursive(
+    dir: &Path, 
+    category: &str, 
+    artifacts: &mut Vec<ArtifactInfo>
+) -> Result<()> {
+    use std::fs;
+    
+    if !dir.exists() || !dir.is_dir() {
+        return Ok(());
+    }
+    
+    for entry in fs::read_dir(dir)? {
+        let entry = entry?;
+        let path = entry.path();
+        let metadata = entry.metadata()?;
+        
+        if path.is_file() {
+            artifacts.push(ArtifactInfo {
+                path: path.display().to_string(),
+                category: category.to_string(),
+                size: metadata.len(),
+                modified_time: metadata.modified()?,
+                session_id: None, // TODO: Extract from path
+            });
+        } else if path.is_dir() {
+            collect_artifacts_recursive(&path, category, artifacts)?;
+        }
+    }
+    
+    Ok(())
+}
+
+fn format_file_size(bytes: u64) -> String {
+    const UNITS: &[&str] = &["B", "KB", "MB", "GB"];
+    
+    let mut size = bytes as f64;
+    let mut unit_index = 0;
+    
+    while size >= 1024.0 && unit_index < UNITS.len() - 1 {
+        size /= 1024.0;
+        unit_index += 1;
+    }
+    
+    if unit_index == 0 {
+        format!("{} {}", bytes, UNITS[unit_index])
+    } else {
+        format!("{:.1} {}", size, UNITS[unit_index])
+    }
+}
+            if let Some(session) = &artifact.session_id {
+            }
+            if let Some(desc) = &artifact.description {
+            }
+        } else {
+            let session_info = artifact.session_id
+                .as_ref()
+                .map(|s| format\!(" [{}]", s))
+                .unwrap_or_default();
+                modified.format("%m-%d %H:%M"),
+                size.cyan(),
+                artifact.category.yellow(),
+                artifact.path,
+                session_info.dim()
+            );
+        }
+    }
+    
+{} artifacts found.", artifacts.len());
+    Ok(())
+}
+
+async fn handle_clean_artifacts(days: u32, artifact_type: &str, dry_run: bool, force: bool) -> anyhow::Result<()> {
+    use std::fs;
+    use std::time::SystemTime;
+    
+    
+    let cutoff = SystemTime::now() - std::time::Duration::from_secs(days as u64 * 24 * 3600);
+    let workspace_path = std::env::current_dir()?;
+    let mut to_remove = Vec::new();
+    
+    // Define cleanable paths based on type
+    let clean_paths = match artifact_type {
+        "logs" => vec\![".ws/st8/logs", "svelte-dashboard"],
+        "generated" => vec\!["generated", "internal/diagrams/generated", "target/debug"],
+        "outputs" => vec\!["generated", "internal/diagrams/generated"],
+        "all" => vec\![".ws/st8/logs", "generated", "internal/diagrams/generated", "target/debug"],
+        _ => vec\![artifact_type],
+    };
+    
+    for path_str in clean_paths {
+        let path = workspace_path.join(path_str);
+        if path.exists() {
+            find_old_files(&path, cutoff, &mut to_remove)?;
+        }
+    }
+    
+    if to_remove.is_empty() {
+        return Ok(());
+    }
+    
+    if dry_run {
+        for file in &to_remove {
+        }
+        return Ok(());
+    }
+    
+    if \!force {
+        use std::io::{self, Write};
+        print\!("Remove {} old artifacts? [y/N]: ", to_remove.len());
+        io::stdout().flush()?;
+        
+        let mut input = String::new();
+        io::stdin().read_line(&mut input)?;
+        
+        if \!input.trim().eq_ignore_ascii_case("y") && \!input.trim().eq_ignore_ascii_case("yes") {
+            return Ok(());
+        }
+    }
+    
+    let mut removed_count = 0;
+    for file_path in to_remove {
+        match fs::remove_file(&file_path) {
+            Ok(_) => {
+                removed_count += 1;
+            }
+            Err(e) => {
+            }
+        }
+    }
+    
+    Ok(())
+}
 
 async fn handle_organize_artifacts(categorize: bool, manifest: bool, tag: bool) -> anyhow::Result<()> {
     use std::fs;
@@ -8836,10 +9057,10 @@ async fn handle_organize_artifacts(categorize: bool, manifest: bool, tag: bool) 
         }
         
         let manifest_path = workspace_path.join(".ws/artifact_manifest.json");
-        let manifest_data = serde_json::json!({
+        let manifest_data = serde_json::json\!({
             "generated_at": chrono::Utc::now().to_rfc3339(),
             "total_artifacts": artifacts.len(),
-            "artifacts": artifacts.iter().map(|a| serde_json::json!({
+            "artifacts": artifacts.iter().map(|a| serde_json::json\!({
                 "path": a.path,
                 "category": a.category,
                 "size": a.size,
@@ -8897,7 +9118,7 @@ async fn handle_show_artifact(artifact_path: &str, content: bool, metadata: bool
     
     
     let path = PathBuf::from(artifact_path);
-    if !path.exists() {
+    if \!path.exists() {
         return Ok(());
     }
     
@@ -8913,25 +9134,18 @@ async fn handle_show_artifact(artifact_path: &str, content: bool, metadata: bool
     }
     
     if content && path.is_file() {
-        println!("{}", "=== Content ===".bold());
+{}", "=== Content ===".bold());
         
         match fs::read_to_string(&path) {
             Ok(file_content) => {
                 if file_content.len() > 10000 {
-                    println!("{}\n[Content truncated - {} total characters]", 
+[Content truncated - {} total characters]", 
                         &file_content[..10000], file_content.len());
                 } else {
-                    println!("{}", file_content);
                 }
             }
             Err(e) => {
                 match fs::read(&path) {
-                    Ok(binary_content) => {
-                        println!("[Binary file - {} bytes]", binary_content.len());
-                    }
-                    Err(_) => {
-                        println!("Error reading file: {}", e);
-                    }
                 }
             }
         }
@@ -8973,7 +9187,7 @@ fn collect_artifacts_recursive(
 ) -> anyhow::Result<()> {
     use std::fs;
     
-    if !dir.exists() || !dir.is_dir() {
+    if \!dir.exists() || \!dir.is_dir() {
         return Ok(());
     }
     
@@ -9001,24 +9215,6 @@ fn collect_artifacts_recursive(
     Ok(())
 }
 
-fn format_file_size(bytes: u64) -> String {
-    const UNITS: &[&str] = &["B", "KB", "MB", "GB"];
-    
-    let mut size = bytes as f64;
-    let mut unit_index = 0;
-    
-    while size >= 1024.0 && unit_index < UNITS.len() - 1 {
-        size /= 1024.0;
-        unit_index += 1;
-    }
-    
-    if unit_index == 0 {
-        format!("{} {}", bytes, UNITS[unit_index])
-    } else {
-        format!("{:.1} {}", size, UNITS[unit_index])
-    }
-}
-
 fn extract_session_id_from_path(_path: &Path) -> Option<String> {
     None
 }
@@ -9026,7 +9222,7 @@ fn extract_session_id_from_path(_path: &Path) -> Option<String> {
 fn find_old_files(dir: &Path, cutoff: std::time::SystemTime, files: &mut Vec<PathBuf>) -> anyhow::Result<()> {
     use std::fs;
     
-    if !dir.exists() || !dir.is_dir() {
+    if \!dir.exists() || \!dir.is_dir() {
         return Ok(());
     }
     
@@ -9056,7 +9252,7 @@ fn search_artifacts_recursive(
 ) -> anyhow::Result<()> {
     use std::fs;
     
-    if !dir.exists() || !dir.is_dir() {
+    if \!dir.exists() || \!dir.is_dir() {
         return Ok(());
     }
     
@@ -9068,7 +9264,7 @@ fn search_artifacts_recursive(
             let path_str = path.display().to_string();
             let mut matches = Vec::new();
             
-            if names || !content {
+            if names || \!content {
                 if path_str.contains(query) {
                     matches.push("filename match".to_string());
                 }
@@ -9082,7 +9278,7 @@ fn search_artifacts_recursive(
                 }
             }
             
-            if !matches.is_empty() {
+            if \!matches.is_empty() {
                 results.push(SearchResult {
                     path: path_str,
                     match_info: matches.join(", "),
@@ -9096,237 +9292,195 @@ fn search_artifacts_recursive(
     Ok(())
 }
 
-fn run_version_command(action: VersionAction) -> Result<()> {
-    match action {
-        VersionAction::Show { verbose, format } => {
-            handle_version_show(verbose, format)
-        }
-        VersionAction::Major { version } => {
-            handle_version_major(version)
-        }
-        VersionAction::Tag { prefix, message } => {
-            handle_version_tag(prefix, message)
-        }
-        VersionAction::Info { include_history } => {
-            handle_version_info(include_history)
-        }
-    }
-}
+// ============================================================================
+// Session Artifact Management Functions (F0159)
+// ============================================================================
 
-fn handle_version_show(verbose: bool, format: String) -> Result<()> {
-    let rt = tokio::runtime::Runtime::new()?;
-    rt.block_on(async {
-        let db_path = get_project_root()?.join(".ws/project.db");
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
-        let entity_manager = EntityManager::new(pool.clone());
-        
-        // Get current project and major version
-        let project = entity_manager.get_current_project().await?;
-        let major_version = get_project_major_version(&pool).await?;
-        
-        // Calculate version using new system
-        let version_info = workspace::st8::VersionInfo::calculate_with_major(major_version)?;
-        
-        match format.as_str() {
-            "json" => {
-                let json_output = if verbose {
-                    let calc_info = workspace::st8::VersionInfo::get_calculation_info(major_version)?;
-                    serde_json::json!({
-                        "version": version_info.full_version,
-                        "major": major_version,
-                        "minor": version_info.minor_version,
-                        "patch": version_info.patch_version,
-                        "project": project.map(|p| p.name.clone()).unwrap_or_else(|| "Unknown".to_string()),
-                        "calculation": {
-                            "total_commits": calc_info.total_commits,
-                            "changes_since_release": calc_info.changes_since_release,
-                            "last_release_tag": calc_info.last_release_tag,
-                            "method": calc_info.calculation_method
-                        }
-                    })
-                } else {
-                    serde_json::json!({
-                        "version": version_info.full_version,
-                        "major": major_version,
-                        "minor": version_info.minor_version,
-                        "patch": version_info.patch_version,
-                        "project": project.map(|p| p.name.clone()).unwrap_or_else(|| "Unknown".to_string())
-                    })
-                };
-                println!("{}", serde_json::to_string_pretty(&json_output)?);
-            }
-            _ => {
-                println!("{} {}", "Version:".blue().bold(), version_info.full_version.green().bold());
-                let project_name = project.map(|p| p.name.clone()).unwrap_or_else(|| "Unknown".to_string());
-                println!("{} {}", "Project:".blue(), project_name);
-                
-                if verbose {
-                    let calc_info = workspace::st8::VersionInfo::get_calculation_info(major_version)?;
-                    println!("\n{}", "Calculation Breakdown:".blue().bold());
-                    println!("  {} {}", "Major (DB):".blue(), major_version.to_string().yellow());
-                    println!("  {} {}", "Minor (commits):".blue(), version_info.minor_version.to_string().yellow());
-                    println!("  {} {}", "Patch (changes):".blue(), version_info.patch_version.to_string().yellow());
-                    
-                    if let Some(tag) = calc_info.last_release_tag {
-                        println!("  {} {}", "Last release tag:".blue(), tag.green());
-                    } else {
-                        println!("  {} {}", "Last release tag:".blue(), "none".yellow());
-                    }
-                    
-                    println!("  {} {}", "Method:".blue(), calc_info.calculation_method.cyan());
-                }
-            }
-        }
-        
-        anyhow::Ok(())
-    })
-}
-
-fn handle_version_major(version: u32) -> Result<()> {
-    let rt = tokio::runtime::Runtime::new()?;
-    rt.block_on(async {
-        let db_path = get_project_root()?.join(".ws/project.db");
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
-        
-        // Update major version in database
-        sqlx::query("UPDATE projects SET major_version = ?, updated_at = datetime('now') WHERE id = (SELECT id FROM projects LIMIT 1)")
-            .bind(version)
-            .execute(&pool)
-            .await?;
-        
-        // Calculate new version
-        let version_info = workspace::st8::VersionInfo::calculate_with_major(version)?;
-        
-        log::info!("Major version set to {}, new version: {}", version, version_info.full_version);
-        println!("{} Major version set to {}", "✅".green(), version.to_string().green().bold());
-        println!("{} New version: {}", "🔢".blue(), version_info.full_version.green().bold());
-        log::info!("Version set successfully - minor/patch calculated from git state");
-        println!("\n{} {}", "Note:".blue(), "Minor/patch are calculated from git state");
-        println!("{} Use 'ws version tag' to create a release tag", "💡".yellow());
-        
-        anyhow::Ok(())
-    })
-}
-
-fn handle_version_tag(prefix: String, message: Option<String>) -> Result<()> {
-    let rt = tokio::runtime::Runtime::new()?;
-    rt.block_on(async {
-        let db_path = get_project_root()?.join(".ws/project.db");
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
-        
-        let major_version = get_project_major_version(&pool).await?;
-        let version_info = workspace::st8::VersionInfo::calculate_with_major(major_version)?;
-        
-        let tag_name = format!("{}{}", prefix, version_info.full_version);
-        let tag_message = message.unwrap_or_else(|| format!("Release version {}", version_info.full_version));
-        
-        // Create git tag
-        let output = Command::new("git")
-            .args(["tag", "-a", &tag_name, "-m", &tag_message])
-            .output()
-            .context("Failed to create git tag")?;
-        
-        if !output.status.success() {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            anyhow::bail!("Failed to create git tag: {}", stderr);
-        }
-        
-        log::info!("Created git tag: {}", tag_name);
-        println!("{} Created git tag: {}", "✅".green(), tag_name.green().bold());
-        println!("{} Message: {}", "📝".blue(), tag_message);
-        println!("\n{} To push tag to remote: git push origin {}", "💡".yellow(), tag_name);
-        
-        anyhow::Ok(())
-    })
-}
-
-fn handle_version_info(include_history: bool) -> Result<()> {
-    let rt = tokio::runtime::Runtime::new()?;
-    rt.block_on(async {
-        let db_path = get_project_root()?.join(".ws/project.db");
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
-        
-        let major_version = get_project_major_version(&pool).await?;
-        let calc_info = workspace::st8::VersionInfo::get_calculation_info(major_version)?;
-        let version_info = workspace::st8::VersionInfo::calculate_with_major(major_version)?;
-        
-        println!("{}", "Version Calculation Information".blue().bold());
-        println!("=====================================");
-        println!();
-        
-        println!("{}", "Current Version Breakdown:".green().bold());
-        println!("  {} {}.{}.{}", "Version:".blue(), major_version.to_string().green(), 
-                 version_info.minor_version.to_string().yellow(), 
-                 version_info.patch_version.to_string().cyan());
-        println!("  {} {} (stored in database)", "Major:".blue(), major_version.to_string().green());
-        println!("  {} {} (total git commits)", "Minor:".blue(), version_info.minor_version.to_string().yellow());
-        println!("  {} {} (changes since last v{}.* tag)", "Patch:".blue(), version_info.patch_version.to_string().cyan(), major_version);
-        println!();
-        
-        println!("{}", "Git Integration:".green().bold());
-        if let Some(ref git_root) = calc_info.git_root {
-            println!("  {} {}", "Git Root:".blue(), git_root.display().to_string().cyan());
-        }
-        
-        if let Some(ref tag) = calc_info.last_release_tag {
-            println!("  {} {}", "Last Release Tag:".blue(), tag.green());
-        } else {
-            println!("  {} {}", "Last Release Tag:".blue(), "none found".yellow());
-        }
-        println!();
-        
-        println!("{}", "Commands:".green().bold());
-        println!("  {} Set major version", format!("ws version major <number>").cyan());
-        println!("  {} Create release tag", "ws version tag".cyan());
-        println!("  {} Show current version", "ws version show".cyan());
-        println!();
-        
-        if include_history {
-            println!("{}", "Git History Analysis:".green().bold());
-            
-            // Show recent tags
-            let output = Command::new("git")
-                .args(["tag", "--list", "--sort=-version:refname"])
-                .output();
-                
-            if let Ok(output) = output {
-                if output.status.success() {
-                    let tags = String::from_utf8_lossy(&output.stdout);
-                    if !tags.trim().is_empty() {
-                        println!("  {}:", "Recent Tags".blue());
-                        for (i, tag) in tags.lines().take(5).enumerate() {
-                            println!("    {}. {}", i + 1, tag.trim().green());
-                        }
-                    } else {
-                        println!("  {} {}", "Recent Tags:".blue(), "none found".yellow());
-                    }
-                } else {
-                    println!("  {} {}", "Recent Tags:".blue(), "error retrieving".red());
-                }
-            }
-            println!();
-        }
-        
-        anyhow::Ok(())
-    })
-}
-
-async fn get_project_major_version(pool: &SqlitePool) -> Result<u32> {
-    let row = sqlx::query("SELECT major_version FROM projects LIMIT 1")
-        .fetch_optional(pool)
-        .await?;
+async fn handle_list_artifacts(
+    artifact_type: Option<String>, 
+    session: Option<String>, 
+    recent: Option<u32>, 
+    verbose: bool
+) -> Result<()> {
+    use std::fs;
+    use std::time::SystemTime;
+    use chrono::{DateTime, Utc};
     
-    if let Some(row) = row {
-        Ok(row.get::<i64, _>("major_version") as u32)
-    } else {
-        // No project found, return default
-        Ok(0)
+    println!("{}", "=== Session Artifacts ===".bold().blue());
+    
+    let workspace_path = std::env::current_dir()?;
+    let mut artifacts = Vec::new();
+    
+    // Define artifact locations
+    let artifact_paths = [
+        (".ws", "workspace state"),
+        ("internal/diagrams/generated", "generated diagrams"),
+        ("generated", "generated files"),
+        ("svelte-dashboard/server.log", "dashboard logs"),
+        (".ws/st8/logs", "st8 logs"),
+        ("target/debug", "build artifacts"),
+        ("internal/archive", "archived documentation"),
+    ];
+    
+    // Collect artifacts from various locations
+    for (path_str, category) in artifact_paths {
+        let path = workspace_path.join(path_str);
+        if path.exists() {
+            collect_artifacts_recursive(&path, category, &mut artifacts)?;
+        }
     }
+    
+    // Filter by type if specified
+    if let Some(ref filter_type) = artifact_type {
+        artifacts.retain(|a| a.category.contains(filter_type));
+    }
+    
+    // Filter by session if specified
+    if let Some(ref session_id) = session {
+        artifacts.retain(|a| a.session_id.as_ref().map_or(false, |s| s.contains(session_id)));
+    }
+    
+    // Filter by recent sessions
+    if let Some(days) = recent {
+        let cutoff = SystemTime::now() - std::time::Duration::from_secs(days as u64 * 24 * 3600);
+        artifacts.retain(|a| a.modified_time > cutoff);
+    }
+    
+    // Sort by modification time (newest first)
+    artifacts.sort_by(|a, b| b.modified_time.cmp(&a.modified_time));
+    
+    if artifacts.is_empty() {
+        println!("No artifacts found matching criteria.");
+        return Ok(());
+    }
+    
+    // Display artifacts
+    for artifact in artifacts {
+        let modified: DateTime<Utc> = artifact.modified_time.into();
+        let size = format_file_size(artifact.size);
+        
+        if verbose {
+            println!("\n{}: {}", "Artifact".bold(), artifact.path);
+            println!("  Category: {}", artifact.category);
+            println!("  Size: {}", size);
+            println!("  Modified: {}", modified.format("%Y-%m-%d %H:%M:%S UTC"));
+            if let Some(session) = &artifact.session_id {
+                println!("  Session: {}", session);
+            }
+        } else {
+            let session_info = artifact.session_id
+                .as_ref()
+                .map(|s| format!(" [{}]", s))
+                .unwrap_or_default();
+            println!("{} {} {} {} {}", 
+                modified.format("%m-%d %H:%M"),
+                size.cyan(),
+                artifact.category.yellow(),
+                artifact.path,
+                session_info.dim()
+            );
+        }
+    }
+    
+    println!("\n{} artifacts found.", artifacts.len());
+    Ok(())
 }
 
+async fn handle_clean_artifacts(days: u32, artifact_type: &str, dry_run: bool, force: bool) -> Result<()> {
+    println!("{}", "=== Clean Artifacts ===".bold().blue());
+    println!("Would clean {} artifacts older than {} days (dry run: {})", artifact_type, days, dry_run);
+    Ok(())
+}
 
+async fn handle_organize_artifacts(categorize: bool, manifest: bool, tag: bool) -> Result<()> {
+    println!("{}", "=== Organize Session Artifacts ===".bold().blue());
+    if categorize { println!("Categorizing artifacts..."); }
+    if manifest { println!("Generating manifest..."); }
+    if tag { println!("Tagging artifacts..."); }
+    Ok(())
+}
 
+async fn handle_search_artifacts(query: &str, content: bool, names: bool, limit: u32) -> Result<()> {
+    println!("{}", format!("=== Search Artifacts: '{}' ===", query).bold().blue());
+    println!("Searching {} artifacts (content: {}, names: {}, limit: {})", query, content, names, limit);
+    Ok(())
+}
 
+async fn handle_show_artifact(artifact_path: &str, content: bool, metadata: bool) -> Result<()> {
+    println!("{}", format!("=== Artifact: {} ===", artifact_path).bold().blue());
+    println!("Showing artifact (content: {}, metadata: {})", content, metadata);
+    Ok(())
+}
 
+async fn handle_export_artifacts(sessions: &[String], format: &str, output: Option<String>, include_content: bool) -> Result<()> {
+    println!("{}", "=== Export Artifacts ===".bold().blue());
+    println!("Exporting {} sessions in {} format", sessions.len(), format);
+    Ok(())
+}
 
+async fn handle_archive_artifacts(session_id: &str, format: &str, output: Option<String>, remove_originals: bool) -> Result<()> {
+    println!("{}", "=== Archive Session Artifacts ===".bold().blue());
+    println!("Archiving session {} in {} format", session_id, format);
+    Ok(())
+}
 
+// Helper structures and functions
+
+#[derive(Debug)]
+struct ArtifactInfo {
+    path: String,
+    category: String,
+    size: u64,
+    modified_time: std::time::SystemTime,
+    session_id: Option<String>,
+}
+
+fn collect_artifacts_recursive(
+    dir: &Path, 
+    category: &str, 
+    artifacts: &mut Vec<ArtifactInfo>
+) -> Result<()> {
+    use std::fs;
+    
+    if !dir.exists() || !dir.is_dir() {
+        return Ok(());
+    }
+    
+    for entry in fs::read_dir(dir)? {
+        let entry = entry?;
+        let path = entry.path();
+        let metadata = entry.metadata()?;
+        
+        if path.is_file() {
+            artifacts.push(ArtifactInfo {
+                path: path.display().to_string(),
+                category: category.to_string(),
+                size: metadata.len(),
+                modified_time: metadata.modified()?,
+                session_id: None, // TODO: Extract from path
+            });
+        } else if path.is_dir() {
+            collect_artifacts_recursive(&path, category, artifacts)?;
+        }
+    }
+    
+    Ok(())
+}
+
+fn format_file_size(bytes: u64) -> String {
+    const UNITS: &[&str] = &["B", "KB", "MB", "GB"];
+    
+    let mut size = bytes as f64;
+    let mut unit_index = 0;
+    
+    while size >= 1024.0 && unit_index < UNITS.len() - 1 {
+        size /= 1024.0;
+        unit_index += 1;
+    }
+    
+    if unit_index == 0 {
+        format!("{} {}", bytes, UNITS[unit_index])
+    } else {
+        format!("{:.1} {}", size, UNITS[unit_index])
+    }
+}

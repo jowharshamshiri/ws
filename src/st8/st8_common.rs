@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+use log;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -34,27 +35,19 @@ impl Default for St8Config {
 
 impl St8Config {
     pub fn load(repo_root: &Path) -> Result<Self> {
-        let config_path = repo_root.join(".st8.json");
-        if !config_path.exists() {
-            return Ok(Self::default());
-        }
-
-        let content = fs::read_to_string(&config_path)
-            .context("Failed to read st8 config file")?;
-        
-        serde_json::from_str(&content)
-            .context("Failed to parse st8 config file")
+        let db_path = repo_root.join(".ws/project.db");
+        let rt = tokio::runtime::Runtime::new()?;
+        rt.block_on(async {
+            load_st8_config_from_db(&db_path).await
+        })
     }
 
     pub fn save(&self, repo_root: &Path) -> Result<()> {
-        let config_path = repo_root.join(".st8.json");
-        let content = serde_json::to_string_pretty(self)
-            .context("Failed to serialize st8 config")?;
-        
-        fs::write(&config_path, content)
-            .context("Failed to write st8 config file")?;
-        
-        Ok(())
+        let db_path = repo_root.join(".ws/project.db");
+        let rt = tokio::runtime::Runtime::new()?;
+        rt.block_on(async {
+            save_st8_config_to_db(&db_path, self).await
+        })
     }
 }
 
@@ -64,6 +57,16 @@ pub struct VersionInfo {
     pub minor_version: u32,
     pub patch_version: u32,
     pub full_version: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct VersionCalculationInfo {
+    pub major_version: u32,
+    pub total_commits: u32,
+    pub changes_since_release: u32,
+    pub last_release_tag: Option<String>,
+    pub git_root: Option<PathBuf>,
+    pub calculation_method: String,
 }
 
 impl VersionInfo {
@@ -83,6 +86,39 @@ impl VersionInfo {
             minor_version,
             patch_version,
             full_version,
+        })
+    }
+
+    /// Calculate version with database-stored major version
+    pub fn calculate_with_major(major: u32) -> Result<Self> {
+        let minor_version = get_total_commit_count()?;
+        let patch_version = get_changes_since_last_release_tag(major)?;
+        
+        let full_version = format!("{}.{}.{}", major, minor_version, patch_version);
+        let major_version = format!("v{}", major);
+
+        Ok(Self {
+            major_version,
+            minor_version,
+            patch_version,
+            full_version,
+        })
+    }
+
+    /// Get calculation breakdown for debugging
+    pub fn get_calculation_info(major: u32) -> Result<VersionCalculationInfo> {
+        let total_commits = get_total_commit_count()?;
+        let changes_since_release = get_changes_since_last_release_tag(major)?;
+        let last_release_tag = find_last_release_tag(major)?;
+        let git_root = get_git_root().ok();
+
+        Ok(VersionCalculationInfo {
+            major_version: major,
+            total_commits,
+            changes_since_release,
+            last_release_tag,
+            git_root,
+            calculation_method: "Database major + git commits + changes since release".to_string(),
         })
     }
 }
@@ -167,6 +203,7 @@ pub fn update_version_file(version_info: &VersionInfo, config: &St8Config) -> Re
     };
     
     if current_version_content == version_info.full_version {
+        log::info!("Version {} is already up to date", version_info.full_version);
         println!("Version {} is already up to date", version_info.full_version);
         return Ok(false);
     }
@@ -195,16 +232,19 @@ pub fn update_version_file(version_info: &VersionInfo, config: &St8Config) -> Re
                         match update_project_files(version_info, &project_files) {
                             Ok(updated_files) => {
                                 if !updated_files.is_empty() {
+                                    log::info!("Updated project files: {}", updated_files.join(", "));
                                     println!("Updated project files: {}", updated_files.join(", "));
                                 }
                             }
                             Err(e) => {
+                                log::warn!("Failed to update some project files: {}", e);
                                 eprintln!("Warning: Failed to update some project files: {}", e);
                             }
                         }
                     }
                 }
                 Err(e) => {
+                    log::warn!("Failed to detect project files: {}", e);
                     eprintln!("Warning: Failed to detect project files: {}", e);
                 }
             }
@@ -507,6 +547,185 @@ fn update_cmake_lists(content: &str, version: &str) -> Result<String> {
     });
     
     Ok(updated.to_string())
+}
+
+// Database integration functions for St8Config
+async fn load_st8_config_from_db(db_path: &std::path::Path) -> Result<St8Config> {
+    use sqlx::{SqlitePool, migrate::MigrateDatabase, Row};
+    
+    // Ensure database exists and is initialized
+    let database_url = format!("sqlite:{}", db_path.display());
+    if !sqlx::Sqlite::database_exists(&database_url).await.unwrap_or(false) {
+        sqlx::Sqlite::create_database(&database_url).await?;
+    }
+    
+    let pool = SqlitePool::connect(&database_url).await?;
+    
+    // Initialize database tables if needed
+    super::super::entities::database::initialize_database(db_path).await?;
+    
+    // Try to get config from existing project
+    let result = sqlx::query(r#"
+        SELECT st8_enabled, version_file, auto_detect_project_files, project_files 
+        FROM projects 
+        LIMIT 1
+    "#)
+    .fetch_optional(&pool)
+    .await?;
+    
+    if let Some(row) = result {
+        let project_files: Vec<String> = if let Some(json_str) = row.get::<Option<String>, _>("project_files") {
+            serde_json::from_str(&json_str).unwrap_or_default()
+        } else {
+            Vec::new()
+        };
+        
+        Ok(St8Config {
+            version: 1,
+            enabled: row.get::<bool, _>("st8_enabled"),
+            version_file: row.get::<String, _>("version_file"),
+            auto_detect_project_files: row.get::<bool, _>("auto_detect_project_files"),
+            project_files,
+        })
+    } else {
+        // No project exists, create default project with config
+        let default_config = St8Config::default();
+        create_default_project_with_config(&pool, &default_config).await?;
+        Ok(default_config)
+    }
+}
+
+async fn save_st8_config_to_db(db_path: &std::path::Path, config: &St8Config) -> Result<()> {
+    use sqlx::SqlitePool;
+    
+    let database_url = format!("sqlite:{}", db_path.display());
+    let pool = SqlitePool::connect(&database_url).await?;
+    
+    let project_files_json = serde_json::to_string(&config.project_files)?;
+    
+    sqlx::query(r#"
+        UPDATE projects 
+        SET st8_enabled = ?, 
+            version_file = ?, 
+            auto_detect_project_files = ?, 
+            project_files = ?,
+            updated_at = datetime('now')
+        WHERE id = (SELECT id FROM projects LIMIT 1)
+    "#)
+    .bind(config.enabled)
+    .bind(&config.version_file)
+    .bind(config.auto_detect_project_files)
+    .bind(project_files_json)
+    .execute(&pool)
+    .await?;
+    
+    Ok(())
+}
+
+async fn create_default_project_with_config(pool: &sqlx::SqlitePool, config: &St8Config) -> Result<()> {
+    let project_files_json = serde_json::to_string(&config.project_files)?;
+    
+    sqlx::query(r#"
+        INSERT INTO projects (
+            id, name, description, status, version, major_version,
+            st8_enabled, version_file, auto_detect_project_files, project_files
+        ) VALUES (
+            'P001', 'Default Project', 'Auto-created project', 'active', '0.1.0', 0,
+            ?, ?, ?, ?
+        )
+    "#)
+    .bind(config.enabled)
+    .bind(&config.version_file)
+    .bind(config.auto_detect_project_files)
+    .bind(project_files_json)
+    .execute(pool)
+    .await?;
+    
+    Ok(())
+}
+
+/// Get total commit count (each commit advances minor version)
+fn get_total_commit_count() -> Result<u32> {
+    let output = Command::new("git")
+        .args(["rev-list", "--count", "HEAD"])
+        .output()
+        .context("Failed to run git rev-list command")?;
+
+    if !output.status.success() {
+        return Ok(0);
+    }
+
+    let count_str = String::from_utf8(output.stdout)
+        .context("Invalid UTF-8 in git rev-list output")?
+        .trim()
+        .to_string();
+
+    count_str.parse::<u32>()
+        .context("Failed to parse commit count")
+}
+
+/// Get changes since last release tag for this major version
+fn get_changes_since_last_release_tag(major: u32) -> Result<u32> {
+    let last_tag = find_last_release_tag(major)?;
+    
+    let output = if let Some(tag) = last_tag {
+        // Count changes since the last release tag
+        let range = format!("{}..HEAD", tag);
+        Command::new("git")
+            .args(["log", "--pretty=tformat:", "--numstat", &range])
+            .output()
+            .context("Failed to run git log command")?
+    } else {
+        // No release tags for this major version, count all changes
+        Command::new("git")
+            .args(["log", "--pretty=tformat:", "--numstat"])
+            .output()
+            .context("Failed to run git log command")?
+    };
+
+    if !output.status.success() {
+        return Ok(0);
+    }
+
+    let log_stat = String::from_utf8(output.stdout)
+        .context("Invalid UTF-8 in git log output")?;
+
+    let mut total = 0u32;
+    for line in log_stat.lines() {
+        let parts: Vec<&str> = line.split_whitespace().collect();
+        if parts.len() >= 2 {
+            if let (Ok(additions), Ok(deletions)) = (parts[0].parse::<u32>(), parts[1].parse::<u32>()) {
+                total = total.saturating_add(additions).saturating_add(deletions);
+            }
+        }
+    }
+
+    Ok(total)
+}
+
+/// Find the most recent release tag for this major version (v{major}.*)
+fn find_last_release_tag(major: u32) -> Result<Option<String>> {
+    let output = Command::new("git")
+        .args(["tag", "--list", &format!("v{}.*", major), "--sort=-version:refname"])
+        .output()
+        .context("Failed to run git tag command")?;
+
+    if !output.status.success() {
+        return Ok(None);
+    }
+
+    let tags_output = String::from_utf8(output.stdout)
+        .context("Invalid UTF-8 in git tag output")?;
+
+    // Return the first (most recent) tag for this major version
+    for line in tags_output.lines() {
+        let tag = line.trim();
+        if !tag.is_empty() {
+            return Ok(Some(tag.to_string()));
+        }
+    }
+
+    Ok(None)
 }
 
 #[cfg(test)]

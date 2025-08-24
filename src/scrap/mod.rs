@@ -4,6 +4,7 @@ pub use scrap_common::{ScrapMetadata, ScrapEntry};
 
 use anyhow::{Context, Result};
 use chrono::Utc;
+use log;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -162,6 +163,7 @@ fn scrap_file_or_directory(path: &Path) -> Result<()> {
     metadata.add_entry(&scrapped_name, path.to_path_buf());
     metadata.save(&scrap_dir)?;
 
+    log::info!("Scrapped file: {} -> .scrap/{}", path.display(), scrapped_name);
     println!("Moved {} to .scrap/{}", path.display(), scrapped_name);
     Ok(())
 }
@@ -189,12 +191,14 @@ fn list_scrap_contents(sort_option: Option<&str>) -> Result<()> {
         fs::create_dir_all(&scrap_dir)
             .with_context(|| format!("Failed to create scrap directory: {}", scrap_dir.display()))?;
         update_gitignore(&scrap_dir)?;
+        log::info!("Scrap folder is empty (new)");
         println!("Scrap folder is empty");
         return Ok(());
     }
 
     let metadata = ScrapMetadata::load(&scrap_dir)?;
     if metadata.entries.is_empty() {
+        log::info!("Scrap folder is empty (exists but no entries)");
         println!("Scrap folder is empty");
         return Ok(());
     }
