@@ -1,1 +1,1 @@
-# workspace v0.58.182102
+# workspace v0.59.182186
