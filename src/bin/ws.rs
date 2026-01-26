@@ -2236,12 +2236,23 @@ fn output_activation_commands(shell: Shell, file_path: &std::path::Path) -> Resu
     // Output to stderr so it doesn't interfere with normal command output
     match shell {
         Shell::Bash => {
+            // Check if completion is already sourced via BASH_COMPLETION_COMPAT_DIR or similar
+            let completion_dir = file_path.parent().unwrap_or(std::path::Path::new(""));
+            let bash_comp_dir = env::var("BASH_COMPLETION_COMPAT_DIR").unwrap_or_default();
+            if bash_comp_dir.contains(&completion_dir.to_string_lossy().to_string()) {
+                return Ok(()); // Already set up
+            }
             eprintln!("# To enable ws completions for this session, run:");
             eprintln!("source '{}'", file_path.to_string_lossy());
             eprintln!("# To enable permanently, add the above line to your ~/.bashrc");
         },
         Shell::Zsh => {
             let completion_parent = file_path.parent().unwrap_or(std::path::Path::new(""));
+            // Check if completion directory is already in FPATH
+            let fpath = env::var("FPATH").unwrap_or_default();
+            if fpath.contains(&completion_parent.to_string_lossy().to_string()) {
+                return Ok(()); // Already set up in fpath
+            }
             eprintln!("# To enable ws completions for this session, run:");
             eprintln!("fpath=(\"{}\" $fpath)", completion_parent.to_string_lossy());
             eprintln!("autoload -U compinit && compinit");
@@ -9944,6 +9955,13 @@ fn determine_test_command(project_files: &[workspace::st8::ProjectFile]) -> Resu
                     "Java Gradle (build.gradle)".to_string(),
                 ));
             }
+            ProjectFileType::BuildGradleKts => {
+                return Ok((
+                    "./gradlew".to_string(),
+                    vec!["test".to_string()],
+                    "Kotlin Gradle (build.gradle.kts)".to_string(),
+                ));
+            }
             ProjectFileType::CMakeLists => {
                 return Ok((
                     "ctest".to_string(),
@@ -9951,9 +9969,65 @@ fn determine_test_command(project_files: &[workspace::st8::ProjectFile]) -> Resu
                     "C/C++ (CMakeLists.txt)".to_string(),
                 ));
             }
+            ProjectFileType::PackageSwift => {
+                return Ok((
+                    "swift".to_string(),
+                    vec!["test".to_string()],
+                    "Swift (Package.swift)".to_string(),
+                ));
+            }
+            ProjectFileType::Gemspec => {
+                return Ok((
+                    "bundle".to_string(),
+                    vec!["exec".to_string(), "rspec".to_string()],
+                    "Ruby (gemspec)".to_string(),
+                ));
+            }
+            ProjectFileType::Csproj => {
+                return Ok((
+                    "dotnet".to_string(),
+                    vec!["test".to_string()],
+                    ".NET (csproj)".to_string(),
+                ));
+            }
+            ProjectFileType::GoMod => {
+                return Ok((
+                    "go".to_string(),
+                    vec!["test".to_string(), "./...".to_string()],
+                    "Go (go.mod)".to_string(),
+                ));
+            }
+            ProjectFileType::MixExs => {
+                return Ok((
+                    "mix".to_string(),
+                    vec!["test".to_string()],
+                    "Elixir (mix.exs)".to_string(),
+                ));
+            }
+            ProjectFileType::BuildSbt => {
+                return Ok((
+                    "sbt".to_string(),
+                    vec!["test".to_string()],
+                    "Scala (build.sbt)".to_string(),
+                ));
+            }
+            ProjectFileType::ShardYml => {
+                return Ok((
+                    "crystal".to_string(),
+                    vec!["spec".to_string()],
+                    "Crystal (shard.yml)".to_string(),
+                ));
+            }
+            ProjectFileType::JuliaProject => {
+                return Ok((
+                    "julia".to_string(),
+                    vec!["--project=.".to_string(), "-e".to_string(), "using Pkg; Pkg.test()".to_string()],
+                    "Julia (Project.toml)".to_string(),
+                ));
+            }
         }
     }
-    
+
     anyhow::bail!("No supported test runner found for detected project files")
 }
 
