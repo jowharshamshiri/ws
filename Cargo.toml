@@ -4,10 +4,12 @@ path = "src/bin/ws.rs"
 
 [dependencies]
 anyhow = "1.0"
+ast-grep = "0.39.4"
 atty = "0.2"
 chardet = "0.2.4"
 colored = "2.0"
 content_inspector = "0.2"
+crossterm = "0.27"
 dialoguer = "0.11"
 encoding_rs = "0.8.35"
 env_logger = "0.10"
@@ -85,7 +87,7 @@ license = "MIT"
 name = "workspace"
 readme = "README.md"
 repository = "https://github.com/jowharshamshiri/workspace"
-version = "0.62.182680"
+version = "0.63.182724"
 
 [profile.dev]
 debug = true

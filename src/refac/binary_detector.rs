@@ -389,9 +389,9 @@ const BINARY_EXTENSIONS: &[&str] = &[
     "wps", "wpd", "sxw", "sxc", "sxi", "sxd", "stw", "stc", "sti", "std",
     "odf", "otg", "otp", "ots", "ott", "odm", "oth", "odb", "oxt",
     
-    // Databases
+    // Databases (binary formats only - .sql is text)
     "db", "sqlite", "sqlite3", "mdb", "accdb", "dbf", "fdb", "gdb", "nsf",
-    "odb", "pdb", "sql", "wdb", "bak", "dmp", "frm", "myd", "myi", "ibd",
+    "odb", "pdb", "wdb", "bak", "dmp", "frm", "myd", "myi", "ibd",
     "fpt", "cdx", "idx", "ndx", "mdx", "fox", "prg", "fxp", "dbc", "dct",
     
     // Development and build artifacts
@@ -405,8 +405,8 @@ const BINARY_EXTENSIONS: &[&str] = &[
     "pdb", "mdb", "nupkg", "snupkg", "vsix", "msi", "msm", "msp", "mst",
     "wixlib", "wixobj", "wixpdb", "cab", "msu", "exe", "dll", "winmd",
     
-    // Protocol Buffers and serialization
-    "pb", "protobuf", "proto", "avro", "parquet", "orc", "arrow", "cbor",
+    // Serialization
+    "avro", "parquet", "orc", "arrow", "cbor",
     "msgpack", "bson", "pickle", "pkl", "p", "joblib", "npy", "npz",
     
     // Virtual machines and containers

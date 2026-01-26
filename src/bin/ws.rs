@@ -85,6 +85,25 @@ enum Commands {
         substitute_char: String,
     },
 
+    /// AST-based code analysis and transformation
+    Code {
+        #[command(subcommand)]
+        action: Option<CodeAction>,
+    },
+    
+    /// Intelligent test runner based on project type
+    Test {
+        /// Show what test command would be run without executing
+        #[arg(long)]
+        dry_run: bool,
+        /// Install missing test runners if needed
+        #[arg(long)]
+        install: bool,
+        /// Additional arguments to pass to test command
+        #[arg(last = true)]
+        args: Vec<String>,
+    },
+
     /// MCP server for Claude integration with automatic session management
     McpServer {
         /// Port for HTTP server (default: 3000)
@@ -797,6 +816,93 @@ enum DatabaseAction {
 }
 
 #[derive(Subcommand, Debug)]
+enum CodeAction {
+    /// Show visual tree of current codebase structure
+    Tree {
+        /// Maximum depth to display (default: 3)
+        #[arg(short, long, default_value = "3")]
+        depth: usize,
+        /// Show hidden files and directories
+        #[arg(long)]
+        hidden: bool,
+        /// Show file sizes
+        #[arg(long)]
+        sizes: bool,
+        /// Filter by file extensions (e.g., "rs,py,js")
+        #[arg(long)]
+        extensions: Option<String>,
+        /// Ignore .gitignore rules (show all files, default respects .gitignore)
+        #[arg(long)]
+        no_ignore: bool,
+    },
+    /// Search for AST patterns in source code
+    Search {
+        /// AST pattern to search for
+        pattern: String,
+        /// Target files or directories
+        #[arg(short, long)]
+        files: Vec<PathBuf>,
+        /// Programming language (rust, javascript, python, etc.)
+        #[arg(short, long)]
+        language: Option<String>,
+        /// Include context lines around matches
+        #[arg(short, long, default_value = "3")]
+        context: usize,
+        /// Maximum number of matches to return
+        #[arg(short, long, default_value = "1000")]
+        max_matches: usize,
+        /// Output format (human, json)
+        #[arg(long, default_value = "human")]
+        format: String,
+    },
+    /// Transform code using AST-based patterns
+    Transform {
+        /// AST pattern to match
+        pattern: String,
+        /// Replacement text or pattern
+        replacement: String,
+        /// Target files or directories
+        #[arg(short, long)]
+        files: Vec<PathBuf>,
+        /// Programming language (rust, javascript, python, etc.)
+        #[arg(short, long)]
+        language: Option<String>,
+        /// Show what would be changed without making changes
+        #[arg(long)]
+        dry_run: bool,
+        /// Skip creating backup files before transformation
+        #[arg(long)]
+        no_backup: bool,
+        /// Maximum changes per file
+        #[arg(long, default_value = "100")]
+        max_changes: usize,
+    },
+    /// List common patterns for a programming language
+    Patterns {
+        /// Programming language to show patterns for
+        language: String,
+        /// Pattern category (search or transform)
+        #[arg(long, default_value = "search")]
+        category: String,
+    },
+    /// Analyze code structure and generate insights
+    Analyze {
+        /// Target files or directories
+        #[arg(short, long)]
+        files: Vec<PathBuf>,
+        /// Programming language (rust, javascript, python, etc.)
+        #[arg(short, long)]
+        language: Option<String>,
+        /// Analysis type (structure, complexity, patterns)
+        #[arg(long, default_value = "structure")]
+        analysis_type: String,
+        /// Output format (human, json)
+        #[arg(long, default_value = "human")]
+        format: String,
+    },
+}
+
+#[derive(Subcommand, Debug)]
 enum ArtifactAction {
     /// List all session-generated artifacts with metadata
     List {
@@ -1097,6 +1203,21 @@ fn run() -> Result<()> {
         
         Commands::Ldiff { substitute_char } => {
             run_ldiff_command(substitute_char)?;
+        }
+
+        Commands::Code { action } => {
+            let action = action.unwrap_or(CodeAction::Tree { 
+                depth: 3, 
+                hidden: false, 
+                sizes: false, 
+                extensions: None,
+                no_ignore: false
+            });
+            handle_code_command(action)?;
+        }
+        
+        Commands::Test { dry_run, install, args } => {
+            handle_test_command(dry_run, install, args)?;
         }
 
         Commands::McpServer { port, debug, migrate } => {
@@ -1886,22 +2007,9 @@ fn write_doc_file(file_path: &Path, content: &str, force: bool) -> Result<()> {
 }
 
 fn get_project_root() -> Result<PathBuf> {
-    let current_dir = std::env::current_dir()?;
-    let mut current_path = current_dir.as_path();
-    
-    loop {
-        if current_path.join("Cargo.toml").exists() {
-            return Ok(current_path.to_path_buf());
-        }
-        
-        if let Some(parent) = current_path.parent() {
-            current_path = parent;
-        } else {
-            break;
-        }
-    }
-    
-    anyhow::bail!("Could not find project root (no Cargo.toml found)")
+    // Always use current working directory as project root
+    // ws should work in any directory, even empty ones
+    std::env::current_dir().context("Failed to get current directory")
 }
 
 fn is_hook_installed() -> Result<bool> {
@@ -8951,6 +9059,395 @@ async fn handle_archive_artifacts(session_id: &str, format: &str, output: Option
     Ok(())
 }
 
+fn handle_code_command(action: CodeAction) -> Result<()> {
+    use workspace::code_analysis::{
+        SupportedLanguage,
+        search::{AstSearchEngine, SearchOptions},
+        transform::{AstTransformEngine, TransformOptions, TransformRule, CommonTransforms},
+    };
+
+    match action {
+        CodeAction::Tree { depth, hidden, sizes, extensions, no_ignore } => {
+            // Always use interactive tree
+            show_interactive_codebase_tree(depth, hidden, sizes, extensions, no_ignore)?;
+        }
+
+        CodeAction::Search { pattern, files, language, context, max_matches, format } => {
+            let lang = language.and_then(|l| match l.as_str() {
+                "rust" => Some(SupportedLanguage::Rust),
+                "javascript" | "js" => Some(SupportedLanguage::JavaScript),
+                "typescript" | "ts" => Some(SupportedLanguage::TypeScript),
+                "python" | "py" => Some(SupportedLanguage::Python),
+                "go" => Some(SupportedLanguage::Go),
+                "java" => Some(SupportedLanguage::Java),
+                "c" => Some(SupportedLanguage::C),
+                "cpp" | "c++" => Some(SupportedLanguage::Cpp),
+                _ => None,
+            });
+
+            let options = SearchOptions {
+                pattern,
+                language: lang,
+                include_context: context > 0,
+                context_lines: context,
+                max_matches: Some(max_matches),
+                ..Default::default()
+            };
+
+            let engine = AstSearchEngine::new(options);
+            let results = engine.search_files(&files)?;
+
+            match format.as_str() {
+                "json" => {
+                    println!("{}", serde_json::to_string_pretty(&results)?);
+                }
+                _ => {
+                    for (file_path, matches) in results {
+                        println!("\n{}:", file_path.display().to_string().bright_blue());
+                        for search_match in matches {
+                            println!("  {}:{} - {}", 
+                                search_match.line.to_string().yellow(),
+                                search_match.column.to_string().yellow(),
+                                search_match.matched_text.trim()
+                            );
+                            if !search_match.context_before.is_empty() {
+                                for line in search_match.context_before.lines() {
+                                    println!("    {}", line.dimmed());
+                                }
+                            }
+                            if !search_match.context_after.is_empty() {
+                                for line in search_match.context_after.lines() {
+                                    println!("    {}", line.dimmed());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        CodeAction::Transform { pattern, replacement, files, language, dry_run, no_backup, max_changes } => {
+            let lang = language.and_then(|l| match l.as_str() {
+                "rust" => Some(SupportedLanguage::Rust),
+                "javascript" | "js" => Some(SupportedLanguage::JavaScript),
+                "typescript" | "ts" => Some(SupportedLanguage::TypeScript),
+                "python" | "py" => Some(SupportedLanguage::Python),
+                "go" => Some(SupportedLanguage::Go),
+                "java" => Some(SupportedLanguage::Java),
+                "c" => Some(SupportedLanguage::C),
+                "cpp" | "c++" => Some(SupportedLanguage::Cpp),
+                _ => None,
+            }).unwrap_or(SupportedLanguage::Rust);
+
+            let options = TransformOptions {
+                dry_run,
+                backup_files: !no_backup,
+                max_changes_per_file: Some(max_changes),
+                ..Default::default()
+            };
+
+            let rule = TransformRule {
+                name: "user_transform".to_string(),
+                pattern,
+                replacement,
+                language: lang,
+            };
+
+            let engine = AstTransformEngine::new(options);
+            let results = engine.transform_files(&files, &rule)?;
+
+            for result in results {
+                if result.successful {
+                    println!("{}: {} changes applied", 
+                        result.file_path.display().to_string().green(),
+                        result.changes_made.to_string().yellow()
+                    );
+                    if dry_run {
+                        println!("  (dry run - no files modified)");
+                    }
+                } else {
+                    println!("{}: failed - {}", 
+                        result.file_path.display().to_string().red(),
+                        result.error_message.unwrap_or_default()
+                    );
+                }
+            }
+        }
+
+        CodeAction::Patterns { language, category } => {
+            let lang = match language.as_str() {
+                "rust" => SupportedLanguage::Rust,
+                "javascript" | "js" => SupportedLanguage::JavaScript,
+                "typescript" | "ts" => SupportedLanguage::TypeScript,
+                "python" | "py" => SupportedLanguage::Python,
+                "go" => SupportedLanguage::Go,
+                "java" => SupportedLanguage::Java,
+                "c" => SupportedLanguage::C,
+                "cpp" | "c++" => SupportedLanguage::Cpp,
+                _ => {
+                    eprintln!("Unsupported language: {}", language);
+                    return Ok(());
+                }
+            };
+
+            println!("Common {} patterns for {}:", category, language);
+            
+            if category == "transform" {
+                let transforms = CommonTransforms::for_language(lang);
+                for transform in transforms {
+                    println!("  {}: {} -> {}", 
+                        transform.name.bright_blue(),
+                        transform.pattern.yellow(),
+                        transform.replacement.green()
+                    );
+                }
+            } else {
+                println!("Search patterns will be available in full implementation");
+            }
+        }
+
+        CodeAction::Analyze { files, language: _language, analysis_type, format } => {
+            println!("Code Analysis ({}): analyzing {} files", analysis_type, files.len());
+            
+            for file in files {
+                if let Ok(content) = std::fs::read_to_string(&file) {
+                    let lines = content.lines().count();
+                    let chars = content.len();
+                    
+                    match format.as_str() {
+                        "json" => {
+                            println!("{{\"file\": \"{}\", \"lines\": {}, \"chars\": {}}}", 
+                                file.display(), lines, chars);
+                        }
+                        _ => {
+                            println!("{}: {} lines, {} characters", 
+                                file.display().to_string().bright_blue(),
+                                lines.to_string().yellow(),
+                                chars.to_string().yellow()
+                            );
+                        }
+                    }
+                } else {
+                    println!("{}: could not read file", file.display().to_string().red());
+                }
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn show_codebase_tree(depth: usize, show_hidden: bool, show_sizes: bool, extensions_filter: Option<String>, no_ignore: bool) -> Result<()> {
+    use colored::Colorize;
+    use ignore::gitignore::GitignoreBuilder;
+
+    let current_dir = std::env::current_dir()?;
+    let project_root = find_project_root(&current_dir);
+    
+    // Show project information
+    println!("{}", "📁 Codebase Structure".bright_blue().bold());
+    println!("{} {}", "Project Root:".bright_green(), project_root.display());
+    println!("{} {}", "Current Location:".bright_yellow(), current_dir.display());
+    
+    if current_dir != project_root {
+        let relative_path = current_dir.strip_prefix(&project_root).unwrap_or(&current_dir);
+        println!("{} {}", "Relative Path:".bright_cyan(), relative_path.display());
+    }
+    
+    println!();
+    
+    // Parse extensions filter
+    let extensions: Option<Vec<String>> = extensions_filter.map(|ext_str| {
+        ext_str.split(',').map(|s| s.trim().to_lowercase()).collect()
+    });
+    
+    // Initialize gitignore if needed
+    let gitignore = if no_ignore {
+        None
+    } else {
+        let mut builder = GitignoreBuilder::new(&project_root);
+        let _ = builder.add(&project_root.join(".gitignore"));
+        builder.build().ok()
+    };
+    
+    // Display tree
+    display_tree(&project_root, "", depth, 0, show_hidden, show_sizes, &extensions, &gitignore)?;
+    
+    Ok(())
+}
+
+fn show_interactive_codebase_tree(depth: usize, show_hidden: bool, show_sizes: bool, extensions_filter: Option<String>, no_ignore: bool) -> Result<()> {
+    use workspace::interactive_tree::InteractiveTree;
+    
+    let current_dir = std::env::current_dir()?;
+    let project_root = find_project_root(&current_dir);
+    
+    // Show brief project info before launching interactive mode
+    println!("{}", "🌳 Interactive Codebase Navigator".bright_blue().bold());
+    println!("{} {}", "Project Root:".bright_green(), project_root.display());
+    println!();
+    println!("{}", "Loading interactive tree... Press 'q' to exit when ready.".dimmed());
+    
+    // Small delay to let user read the info
+    std::thread::sleep(std::time::Duration::from_millis(1500));
+    
+    // Create and run interactive tree
+    let max_depth = if depth > 0 { Some(depth) } else { None };
+    let mut tree = InteractiveTree::new(&project_root, max_depth, show_hidden)?;
+    
+    // Set callback for when Enter is pressed
+    tree.set_callback(|selected_paths| {
+        if !selected_paths.is_empty() {
+            println!("\n🎯 Selected items:");
+            for path in selected_paths {
+                println!("  • {}", path.display().to_string().bright_cyan());
+            }
+            println!("\n{}", "✓ Callback executed! Press any key to continue...".bright_green());
+            
+            // Wait for user input before continuing
+            use std::io::Read;
+            let mut buffer = [0; 1];
+            let _ = std::io::stdin().read(&mut buffer);
+        } else {
+            println!("\n{}", "No items selected.".yellow());
+        }
+        Ok(())
+    });
+    
+    tree.run()?;
+    
+    println!("\n{}", "Interactive navigation completed.".bright_green());
+    Ok(())
+}
+
+fn find_project_root(current: &Path) -> std::path::PathBuf {
+    let mut path = current.to_path_buf();
+    
+    // Look for common project markers
+    let project_markers = [
+        "Cargo.toml", "package.json", "pyproject.toml", "setup.py", 
+        "composer.json", "pom.xml", "build.gradle", "CMakeLists.txt",
+        ".git", ".svn", ".hg", "Makefile", "go.mod"
+    ];
+    
+    loop {
+        for marker in &project_markers {
+            if path.join(marker).exists() {
+                return path;
+            }
+        }
+        
+        if !path.pop() {
+            break;
+        }
+    }
+    
+    // If no markers found, return current directory
+    current.to_path_buf()
+}
+
+fn display_tree(
+    dir: &Path, 
+    prefix: &str, 
+    max_depth: usize, 
+    current_depth: usize,
+    show_hidden: bool,
+    show_sizes: bool,
+    extensions: &Option<Vec<String>>,
+    gitignore: &Option<ignore::gitignore::Gitignore>
+) -> Result<()> {
+    if current_depth >= max_depth {
+        return Ok(());
+    }
+    
+    let entries = fs::read_dir(dir)?;
+    let mut entries: Vec<_> = entries.collect::<Result<Vec<_>, _>>()?;
+    
+    // Filter out gitignored files first
+    if let Some(ref gi) = gitignore {
+        entries.retain(|entry| {
+            let path = entry.path();
+            let is_dir = entry.file_type().map(|ft| ft.is_dir()).unwrap_or(false);
+            let matched = gi.matched(&path, is_dir);
+            !matched.is_ignore()
+        });
+    }
+    
+    entries.sort_by_key(|entry| {
+        let is_dir = entry.file_type().map(|ft| ft.is_dir()).unwrap_or(false);
+        (!is_dir, entry.file_name())
+    });
+    
+    let total_entries = entries.len();
+    
+    for (index, entry) in entries.iter().enumerate() {
+        let file_name = entry.file_name();
+        let file_name_str = file_name.to_string_lossy();
+        let path = entry.path();
+        let is_last = index == total_entries - 1;
+        
+        // Skip hidden files unless requested
+        if !show_hidden && file_name_str.starts_with('.') {
+            continue;
+        }
+        
+        let is_dir = entry.file_type()?.is_dir();
+        let connector = if is_last { "└── " } else { "├── " };
+        let new_prefix = if is_last { "    " } else { "│   " };
+        
+        // Apply extension filter for files
+        if !is_dir {
+            if let Some(ref exts) = extensions {
+                if let Some(ext) = path.extension() {
+                    let ext_str = ext.to_string_lossy().to_lowercase();
+                    if !exts.contains(&ext_str) {
+                        continue;
+                    }
+                } else if !exts.is_empty() {
+                    continue;
+                }
+            }
+        }
+        
+        // Format output
+        print!("{}{}", prefix, connector);
+        
+        if is_dir {
+            print!("{}", file_name_str.bright_blue().bold());
+        } else {
+            let colored_name = match path.extension().and_then(|s| s.to_str()) {
+                Some("rs") => file_name_str.bright_red(),
+                Some("py") => file_name_str.bright_yellow(),
+                Some("js" | "ts" | "jsx" | "tsx") => file_name_str.bright_green(),
+                Some("json" | "yaml" | "yml" | "toml") => file_name_str.bright_cyan(),
+                Some("md" | "txt" | "doc") => file_name_str.white(),
+                Some("sh" | "bash" | "zsh") => file_name_str.bright_magenta(),
+                _ => file_name_str.normal(),
+            };
+            print!("{}", colored_name);
+        }
+        
+        // Show file size if requested
+        if show_sizes && !is_dir {
+            if let Ok(metadata) = entry.metadata() {
+                let size = format_file_size(metadata.len());
+                print!(" {}", size.dimmed());
+            }
+        }
+        
+        println!();
+        
+        // Recurse into directories
+        if is_dir && current_depth + 1 < max_depth {
+            let next_prefix = format!("{}{}", prefix, new_prefix);
+            display_tree(&path, &next_prefix, max_depth, current_depth + 1, show_hidden, show_sizes, extensions, gitignore)?;
+        }
+    }
+    
+    Ok(())
+}
+
+
 // Helper structures and functions
 
 #[derive(Debug)]
@@ -9325,6 +9822,193 @@ async fn get_project_major_version(pool: &SqlitePool) -> Result<u32> {
         // No project found, return default
         Ok(0)
     }
+}
+
+fn handle_test_command(dry_run: bool, install: bool, args: Vec<String>) -> Result<()> {
+    use workspace::st8::detect_project_files;
+    
+    // Get project root (current directory)
+    let project_root = get_project_root()?;
+    
+    // Detect project files to determine project type
+    let project_files = detect_project_files(&project_root)?;
+    
+    if project_files.is_empty() {
+        println!("{} No project files detected in current directory", "⚠️".yellow());
+        println!("{} Supported project types: Rust (Cargo.toml), Node.js (package.json), Python (pyproject.toml), PHP (composer.json), Dart (pubspec.yaml), Java (pom.xml, build.gradle), C++ (CMakeLists.txt)", "💡".blue());
+        return Ok(());
+    }
+    
+    // Determine primary project type and test command
+    let (test_cmd, test_args, description) = determine_test_command(&project_files)?;
+    
+    println!("{} Detected project: {}", "🔍".blue(), description);
+    println!("{} Test command: {} {}", "🚀".green(), test_cmd, test_args.join(" "));
+    
+    if !args.is_empty() {
+        println!("{} Additional args: {}", "📋".blue(), args.join(" "));
+    }
+    
+    if dry_run {
+        println!("{} Dry run - would execute:", "👀".cyan());
+        let mut full_args = test_args.clone();
+        full_args.extend(args);
+        println!("  {} {}", test_cmd, full_args.join(" "));
+        return Ok(());
+    }
+    
+    // Check if test runner is available and install if needed
+    if install {
+        ensure_test_runner_available(&test_cmd, &project_files)?;
+    }
+    
+    // Execute the test command
+    let mut full_args = test_args.clone();
+    full_args.extend(args);
+    
+    println!("{} Running tests...", "🧪".green());
+    let mut command = Command::new(&test_cmd);
+    command.args(&full_args);
+    
+    let status = command.status()?;
+    
+    if status.success() {
+        println!("{} Tests completed successfully!", "✅".green());
+    } else {
+        println!("{} Tests failed with exit code: {}", "❌".red(), status.code().unwrap_or(-1));
+        std::process::exit(status.code().unwrap_or(1));
+    }
+    
+    Ok(())
+}
+
+fn determine_test_command(project_files: &[workspace::st8::ProjectFile]) -> Result<(String, Vec<String>, String)> {
+    use workspace::st8::ProjectFileType;
+    
+    // Priority order for when multiple project files exist
+    for project_file in project_files {
+        match project_file.file_type {
+            ProjectFileType::CargoToml => {
+                return Ok((
+                    "cargo".to_string(),
+                    vec!["nextest".to_string(), "run".to_string(), "--no-fail-fast".to_string()],
+                    "Rust (Cargo.toml)".to_string(),
+                ));
+            }
+            ProjectFileType::PackageJson => {
+                return Ok((
+                    "npm".to_string(),
+                    vec!["test".to_string()],
+                    "Node.js (package.json)".to_string(),
+                ));
+            }
+            ProjectFileType::PyprojectToml => {
+                return Ok((
+                    "pytest".to_string(),
+                    vec![],
+                    "Python (pyproject.toml)".to_string(),
+                ));
+            }
+            ProjectFileType::SetupPy => {
+                return Ok((
+                    "python".to_string(),
+                    vec!["-m".to_string(), "pytest".to_string()],
+                    "Python (setup.py)".to_string(),
+                ));
+            }
+            ProjectFileType::ComposerJson => {
+                return Ok((
+                    "vendor/bin/phpunit".to_string(),
+                    vec![],
+                    "PHP (composer.json)".to_string(),
+                ));
+            }
+            ProjectFileType::PubspecYaml => {
+                return Ok((
+                    "flutter".to_string(),
+                    vec!["test".to_string()],
+                    "Dart/Flutter (pubspec.yaml)".to_string(),
+                ));
+            }
+            ProjectFileType::PomXml => {
+                return Ok((
+                    "mvn".to_string(),
+                    vec!["test".to_string()],
+                    "Java Maven (pom.xml)".to_string(),
+                ));
+            }
+            ProjectFileType::BuildGradle => {
+                return Ok((
+                    "./gradlew".to_string(),
+                    vec!["test".to_string()],
+                    "Java Gradle (build.gradle)".to_string(),
+                ));
+            }
+            ProjectFileType::CMakeLists => {
+                return Ok((
+                    "ctest".to_string(),
+                    vec!["--output-on-failure".to_string()],
+                    "C/C++ (CMakeLists.txt)".to_string(),
+                ));
+            }
+        }
+    }
+    
+    anyhow::bail!("No supported test runner found for detected project files")
+}
+
+fn ensure_test_runner_available(test_cmd: &str, project_files: &[workspace::st8::ProjectFile]) -> Result<()> {
+    use workspace::st8::ProjectFileType;
+    
+    // Check if command exists
+    let check_status = Command::new("which")
+        .arg(test_cmd)
+        .output();
+    
+    if let Ok(output) = check_status {
+        if output.status.success() {
+            println!("{} Test runner {} is already available", "✅".green(), test_cmd);
+            return Ok(());
+        }
+    }
+    
+    // Try to install missing test runners
+    for project_file in project_files {
+        match project_file.file_type {
+            ProjectFileType::CargoToml if test_cmd.contains("nextest") => {
+                println!("{} Installing cargo-nextest...", "📦".blue());
+                let status = Command::new("cargo")
+                    .args(["install", "cargo-nextest", "--locked"])
+                    .status()?;
+                
+                if status.success() {
+                    println!("{} Successfully installed cargo-nextest", "✅".green());
+                } else {
+                    println!("{} Failed to install cargo-nextest, falling back to standard cargo test", "⚠️".yellow());
+                    // Could modify the test command here to fallback to regular cargo test
+                }
+                return Ok(());
+            }
+            ProjectFileType::PyprojectToml | ProjectFileType::SetupPy if test_cmd.contains("pytest") => {
+                println!("{} Installing pytest...", "📦".blue());
+                let status = Command::new("pip")
+                    .args(["install", "pytest"])
+                    .status()?;
+                
+                if status.success() {
+                    println!("{} Successfully installed pytest", "✅".green());
+                } else {
+                    println!("{} Failed to install pytest", "❌".red());
+                    anyhow::bail!("Could not install pytest");
+                }
+                return Ok(());
+            }
+            _ => {}
+        }
+    }
+    
+    println!("{} Test runner {} not found, please install it manually", "⚠️".yellow(), test_cmd);
+    Ok(())
 }
 
 

@@ -10,6 +10,10 @@ pub mod entities;
 // pub mod mcp_server;
 // MCP protocol
 pub mod mcp_protocol;
+// Code analysis with ast-grep
+pub mod code_analysis;
+// Interactive tree navigation
+pub mod interactive_tree;
 
 use anyhow::{Context, Result};
 use std::path::Path;

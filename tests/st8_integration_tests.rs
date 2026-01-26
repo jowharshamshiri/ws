@@ -947,3 +947,263 @@ fn test_st8_install_hook_includes_git_add() {
     assert!(hook_content.contains("update --git-add"), 
            "Hook should include --git-add flag, got: {}", hook_content);
 }
+
+// ==== PROJECT FILE UPDATE TESTS ====
+
+use workspace::st8::{ProjectFile, ProjectFileType, VersionInfo, update_project_file, update_project_files, detect_project_files};
+
+/// Test helper to create version info
+fn create_test_version() -> VersionInfo {
+    VersionInfo {
+        major_version: "v1".to_string(),
+        minor_version: 2,
+        patch_version: 3,
+        full_version: "1.2.3".to_string(),
+    }
+}
+
+#[test]
+fn test_package_json_version_update() {
+    let temp_dir = TempDir::new().unwrap();
+    let package_json_path = temp_dir.path().join("package.json");
+    
+    // Create test package.json
+    let initial_content = r#"{
+  "name": "test-project",
+  "version": "0.1.0",
+  "description": "A test project",
+  "main": "index.js",
+  "dependencies": {
+    "express": "^4.18.0"
+  }
+}"#;
+    fs::write(&package_json_path, initial_content).unwrap();
+    
+    // Update version
+    let version_info = create_test_version();
+    let project_file = ProjectFile {
+        path: package_json_path.clone(),
+        file_type: ProjectFileType::PackageJson,
+    };
+    
+    update_project_file(&version_info, &project_file).unwrap();
+    
+    // Verify update
+    let updated_content = fs::read_to_string(&package_json_path).unwrap();
+    assert!(updated_content.contains("\"version\": \"1.2.3\""));
+    assert!(updated_content.contains("\"name\": \"test-project\""));
+    assert!(updated_content.contains("\"express\": \"^4.18.0\""));
+    
+    // Verify JSON is still valid
+    let parsed: serde_json::Value = serde_json::from_str(&updated_content).unwrap();
+    assert_eq!(parsed["version"], "1.2.3");
+}
+
+#[test]
+fn test_cargo_toml_version_update() {
+    let temp_dir = TempDir::new().unwrap();
+    let cargo_toml_path = temp_dir.path().join("Cargo.toml");
+    
+    // Create test Cargo.toml
+    let initial_content = r#"[package]
+name = "test-project"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde = "1.0"
+tokio = { version = "1.0", features = ["full"] }
+"#;
+    fs::write(&cargo_toml_path, initial_content).unwrap();
+    
+    // Update version
+    let version_info = create_test_version();
+    let project_file = ProjectFile {
+        path: cargo_toml_path.clone(),
+        file_type: ProjectFileType::CargoToml,
+    };
+    
+    update_project_file(&version_info, &project_file).unwrap();
+    
+    // Verify update
+    let updated_content = fs::read_to_string(&cargo_toml_path).unwrap();
+    assert!(updated_content.contains("version = \"1.2.3\""));
+    assert!(updated_content.contains("name = \"test-project\""));
+    assert!(updated_content.contains("serde = \"1.0\""));
+    
+    // Verify TOML is still valid
+    let parsed: toml::Value = updated_content.parse().unwrap();
+    assert_eq!(parsed["package"]["version"].as_str().unwrap(), "1.2.3");
+}
+
+#[test] 
+fn test_ws_update_works_in_any_directory() {
+    let temp_dir = TempDir::new().unwrap();
+    
+    // Create a package.json (Node.js project)
+    let package_json_path = temp_dir.path().join("package.json");
+    fs::write(&package_json_path, r#"{"name": "test", "version": "0.1.0"}"#).unwrap();
+    
+    // Run ws update - should work even without git
+    Command::cargo_bin("ws")
+        .unwrap()
+        .arg("update")
+        .arg("--no-git")
+        .current_dir(temp_dir.path())
+        .assert()
+        .success();
+        
+    // Should still work and create version file
+    let version_file = temp_dir.path().join("version.txt");
+    assert!(version_file.exists());
+}
+
+#[test]
+fn test_ws_update_with_git_repo_and_project_files() {
+    let temp_dir = TempDir::new().unwrap();
+    setup_git_repo(temp_dir.path()).unwrap();
+    
+    // Create multiple project files
+    let package_json = temp_dir.path().join("package.json");
+    fs::write(&package_json, r#"{"name": "test", "version": "0.1.0"}"#).unwrap();
+    
+    let cargo_toml = temp_dir.path().join("Cargo.toml");
+    fs::write(&cargo_toml, "[package]\nname = \"test\"\nversion = \"0.1.0\"\n").unwrap();
+    
+    // Run ws update with git integration
+    Command::cargo_bin("ws")
+        .unwrap()
+        .arg("update")
+        .arg("--git-add")
+        .current_dir(temp_dir.path())
+        .assert()
+        .success();
+        
+    // Verify project files were updated
+    let package_content = fs::read_to_string(&package_json).unwrap();
+    assert!(package_content.contains("\"version\":"));
+    
+    let cargo_content = fs::read_to_string(&cargo_toml).unwrap();
+    assert!(cargo_content.contains("version ="));
+}
+
+#[test]
+fn test_corrupted_project_file_handling() {
+    let temp_dir = TempDir::new().unwrap();
+    let package_json_path = temp_dir.path().join("package.json");
+    
+    // Create invalid JSON
+    fs::write(&package_json_path, "{ invalid json content").unwrap();
+    
+    let version_info = create_test_version();
+    let project_file = ProjectFile {
+        path: package_json_path,
+        file_type: ProjectFileType::PackageJson,
+    };
+    
+    // Should return an error for corrupted files
+    let result = update_project_file(&version_info, &project_file);
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_project_file_detection() {
+    let temp_dir = TempDir::new().unwrap();
+    
+    // Create various project files
+    fs::write(temp_dir.path().join("package.json"), r#"{"name": "test"}"#).unwrap();
+    fs::write(temp_dir.path().join("Cargo.toml"), "[package]\nname = \"test\"").unwrap();
+    fs::write(temp_dir.path().join("pyproject.toml"), "[project]\nname = \"test\"").unwrap();
+    
+    let detected_files = detect_project_files(temp_dir.path()).unwrap();
+    
+    assert_eq!(detected_files.len(), 3);
+    
+    let file_types: Vec<_> = detected_files.iter().map(|f| &f.file_type).collect();
+    assert!(file_types.contains(&&ProjectFileType::PackageJson));
+    assert!(file_types.contains(&&ProjectFileType::CargoToml));
+    assert!(file_types.contains(&&ProjectFileType::PyprojectToml));
+}
+
+#[test]
+fn test_update_preserves_formatting() {
+    let temp_dir = TempDir::new().unwrap();
+    let package_json_path = temp_dir.path().join("package.json");
+    
+    // Create package.json with specific formatting
+    let initial_content = r#"{
+  "name": "test-project",
+  "version": "0.1.0",
+  "scripts": {
+    "start": "node index.js",
+    "test": "jest"
+  },
+  "dependencies": {
+    "express": "^4.18.0"
+  }
+}"#;
+    fs::write(&package_json_path, initial_content).unwrap();
+    
+    let version_info = create_test_version();
+    let project_file = ProjectFile {
+        path: package_json_path.clone(),
+        file_type: ProjectFileType::PackageJson,
+    };
+    
+    update_project_file(&version_info, &project_file).unwrap();
+    
+    let updated_content = fs::read_to_string(&package_json_path).unwrap();
+    
+    // Should preserve formatting structure
+    assert!(updated_content.contains("\"version\": \"1.2.3\""));
+    assert!(updated_content.contains("  \"scripts\": {"));
+    assert!(updated_content.contains("    \"start\": \"node index.js\""));
+}
+
+#[test]
+fn test_multiple_project_file_formats() {
+    let temp_dir = TempDir::new().unwrap();
+    
+    // Create files for different tech stacks
+    let files_to_test = vec![
+        ("package.json", r#"{"name": "test", "version": "0.1.0"}"#, ProjectFileType::PackageJson),
+        ("Cargo.toml", "[package]\nname = \"test\"\nversion = \"0.1.0\"\n", ProjectFileType::CargoToml),
+        ("pyproject.toml", "[project]\nname = \"test\"\nversion = \"0.1.0\"\n", ProjectFileType::PyprojectToml),
+        ("composer.json", r#"{"name": "test/project", "version": "0.1.0"}"#, ProjectFileType::ComposerJson),
+        ("pubspec.yaml", "name: test\nversion: 0.1.0\n", ProjectFileType::PubspecYaml),
+    ];
+    
+    let mut project_files = Vec::new();
+    
+    for (filename, content, file_type) in files_to_test {
+        let file_path = temp_dir.path().join(filename);
+        fs::write(&file_path, content).unwrap();
+        project_files.push(ProjectFile {
+            path: file_path,
+            file_type,
+        });
+    }
+    
+    let version_info = create_test_version();
+    let result = update_project_files(&version_info, &project_files).unwrap();
+    
+    // Should successfully update all files
+    assert_eq!(result.len(), 5);
+    
+    // Verify each file was updated
+    for project_file in &project_files {
+        let content = fs::read_to_string(&project_file.path).unwrap();
+        match project_file.file_type {
+            ProjectFileType::PackageJson | ProjectFileType::ComposerJson => {
+                assert!(content.contains("\"version\": \"1.2.3\""));
+            }
+            ProjectFileType::CargoToml | ProjectFileType::PyprojectToml => {
+                assert!(content.contains("version = \"1.2.3\"") || content.contains("version=\"1.2.3\""));
+            }
+            ProjectFileType::PubspecYaml => {
+                assert!(content.contains("version: 1.2.3"));
+            }
+            _ => {} // Other types handled in separate specific tests
+        }
+    }
+}
