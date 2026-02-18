@@ -5,300 +5,81 @@ title: Testing & Quality Assurance
 
 # Testing & Quality Assurance
 
-Workspace maintains reliability and safety through testing and quality assurance practices.
+Workspace maintains reliability and safety through comprehensive testing.
 
 ## Test Suite Overview
 
-### Test Statistics
-- **Total Tests**: 231 across all tools and scenarios
-- **Test Files**: 8 test suites
-- **Coverage**: Edge case and integration testing
-- **Build Status**: All tests passing with zero warnings
-- **Platforms**: Cross-platform validation (Windows, macOS, Linux)
+### Running Tests
 
-### Test Suite Breakdown
+```bash
+cargo test                    # Run all tests
+cargo test --lib              # Run unit tests only
+cargo test --test <SUITE>     # Run specific integration suite
+cargo test -- --nocapture     # With output
+```
 
-| Test Suite | Tests | Focus Area | Critical Scenarios |
-|------------|-------|------------|-------------------|
-| **integration_tests.rs** | 15 | End-to-end workflows | Tool integration, real-world usage |
-| **refac_concurrency_tests.rs** | 9 | Multi-threading safety | Race conditions, parallel processing |
-| **refac_edge_cases_tests.rs** | 14 | Complex scenarios | Deep nesting, special characters, unicode |
-| **refac_empty_directory_tests.rs** | 8 | Directory handling | Empty dirs, permission issues, cleanup |
-| **refac_encoding_tests.rs** | 7 | Character encoding | UTF-8, BOM, invalid encodings |
-| **scrap_advanced_integration_tests.rs** | 21 | Advanced workflows | Archive, search, metadata management |
-| **scrap_integration_tests.rs** | 18 | Core functionality | Basic operations, git integration |
-| **st8_integration_tests.rs** | 25 | Version management | Git hooks, multi-format support |
+### Test Suites
+
+| Test Suite | Focus Area |
+|------------|------------|
+| **Unit tests** (in `src/`) | Core logic: version calculation, alias derivation, template rendering, state management, entity models |
+| **integration_tests.rs** | End-to-end workflows across tools |
+| **refac_concurrency_tests.rs** | Multi-threading safety, race conditions |
+| **refac_edge_cases_tests.rs** | Deep nesting, special characters, unicode |
+| **refac_empty_directory_tests.rs** | Directory handling, permissions |
+| **refac_encoding_tests.rs** | UTF-8, BOM, invalid encodings |
+| **scrap_advanced_integration_tests.rs** | Archive, search, metadata |
+| **scrap_integration_tests.rs** | Basic scrap/unscrap operations |
+| **st8_integration_tests.rs** | Version management, git hooks |
+| **st8_template_tests.rs** | Template rendering and management |
+| **code_analysis_tests.rs** | AST parsing and code analysis |
+| **entity_manager_tests.rs** | Entity CRUD operations |
+| **database_system_tests.rs** | Database operations |
 
 ## Safety Features
 
 ### Pre-Operation Validation
-Every operation undergoes validation before execution:
 
-```rust
-// Validation prevents mid-operation failures
-validate_all_operations()  // Tests every operation
-    .then(execute_atomically)  // Only proceeds if validation passes
-```
-
-**Validation Scope**:
+Every refactor operation undergoes validation before execution:
 - File accessibility and permissions
 - Encoding compatibility
-- Path length and character validation
+- Path validation
 - Collision detection
-- Available disk space
-- Memory requirements
 
 ### Race Condition Prevention
-Proper operation ordering eliminates race conditions:
 
-```rust
-// Files processed before directories to prevent path invalidation
-operations.sort_by(|a, b| {
-    match (a.is_file(), b.is_file()) {
-        (true, false) => Ordering::Less,    // Files first
-        (false, true) => Ordering::Greater, // Then directories
-        _ => a.depth().cmp(&b.depth()).reverse() // Deepest first
-    }
-});
-```
-
-**Race Condition Tests**:
-- Concurrent directory modifications
-- Parallel file processing
-- Thread pool exhaustion scenarios
-- File system stress testing
+Files are processed before directories to prevent path invalidation. Deepest paths are processed first when renaming.
 
 ### Encoding Safety
-Character encoding validation:
 
-```rust
-// Encoding validation prevents crashes during operations
-fn validate_file_encoding(path: &Path) -> Result<(), EncodingError> {
-    let content = fs::read(path)?;
-    match std::str::from_utf8(&content) {
-        Ok(_) => Ok(()),
-        Err(e) => Err(EncodingError::InvalidUtf8 { path, error: e })
-    }
-}
-```
-
-**Encoding Test Coverage**:
-- UTF-8 with BOM (Byte Order Mark)
-- Invalid UTF-8 sequences
-- Mixed encoding files
-- Large files with encoding issues
-- Binary file detection
-
-## Edge Case Testing
-
-### 🌊 Deep Nesting Scenarios
-Testing extreme directory structures:
-
-```bash
-# Test creates 1000+ level deep directories
-test_maximum_directory_depth_limits()
-test_very_long_file_and_directory_names()
-test_complex_circular_directory_reference_patterns()
-```
-
-### 🔒 Permission and Security Testing
-Comprehensive permission scenario coverage:
-
-```bash
-# Permission edge cases
-test_readonly_files_and_directories()
-test_directory_rename_with_permission_issues()
-test_filesystem_stress_concurrent_operations()
-```
-
-### 🌐 Cross-Platform Compatibility
-Platform-specific behavior validation:
-
-```bash
-# Windows-specific tests
-test_case_insensitive_filesystem_handling()
-test_windows_path_length_limits()
-test_reserved_filename_handling()
-
-# Unix-specific tests
-test_symlink_handling()
-test_permission_bit_preservation()
-test_hidden_file_processing()
-```
-
-### 🧵 Concurrency and Performance
-Multi-threading safety validation:
-
-```bash
-# Concurrency stress tests
-test_high_thread_count_processing()
-test_concurrent_file_access_safety()
-test_thread_pool_exhaustion_handling()
-test_interrupt_safety_simulation()
-```
+Binary files are automatically detected and skipped. UTF-8 validation prevents crashes on invalid encodings.
 
 ## Quality Standards
 
-### ✅ Zero-Warning Policy
-All code compiles without warnings:
+### Memory Safety
 
-```bash
-cargo build --release  # Must produce zero warnings
-cargo clippy           # Lint checks must pass
-cargo fmt --check      # Code formatting enforced
-```
+Rust's ownership model provides compile-time guarantees:
+- No buffer overflows
+- No use-after-free
+- No data races
+- Automatic memory management
 
-### 🔒 Memory Safety
-Rust's ownership model provides memory safety guarantees:
+## Test Writing Guidelines
 
-- **No Buffer Overflows**: Compile-time bounds checking
-- **No Use-After-Free**: Ownership system prevents invalid memory access
-- **No Data Races**: Thread safety enforced at compile time
-- **No Memory Leaks**: Automatic memory management with RAII
+When adding new features:
 
-### ⚡ Performance Validation
-Performance testing ensures scalability:
+1. **Write tests that expose real issues** — not tautological tests that pass by definition
+2. **Cover edge cases** — boundary conditions, error scenarios, missing files
+3. **Use descriptive names** — test names should explain the scenario
+4. **Use tempfile** — all tests should use temporary directories for isolation
 
 ```rust
 #[test]
-fn test_large_dataset_performance() {
-    // Test with 1M+ files
-    let large_dataset = create_test_files(1_000_000);
-    let start = Instant::now();
-    refac_operation(&large_dataset);
-    assert!(start.elapsed() < Duration::from_secs(60));
-}
-```
-
-## Error Handling and Recovery
-
-### 🚨 Comprehensive Error Scenarios
-Every possible error condition is tested:
-
-```rust
-// Error scenario testing
-test_insufficient_disk_space()
-test_network_filesystem_failures()
-test_permission_changes_during_operation()
-test_file_locks_and_concurrent_access()
-test_system_resource_exhaustion()
-```
-
-### 🔄 Recovery and Rollback
-Atomic operation guarantees:
-
-```rust
-// Operations are atomic - either all succeed or all fail
-match execute_operations(&validated_ops) {
-    Ok(_) => println!("All operations completed successfully"),
-    Err(e) => {
-        rollback_partial_changes();
-        return Err(e);
-    }
-}
-```
-
-## Test Execution and CI/CD
-
-### 🏃 Running Tests Locally
-
-```bash
-# Run all tests
-cargo test
-
-# Run specific test suite
-cargo test --test integration_tests
-cargo test --test refac_concurrency_tests
-
-# Run tests with verbose output
-cargo test -- --nocapture
-
-# Run performance tests
-cargo test --release test_large_dataset
-```
-
-### 🔄 Continuous Integration
-Automated testing pipeline:
-
-1. **Code Quality Checks**
-   - Compilation without warnings
-   - Clippy lint validation
-   - Code formatting verification
-
-2. **Test Execution**
-   - All 231 tests must pass
-   - Performance regression testing
-   - Memory usage validation
-
-3. **Platform Testing**
-   - Windows, macOS, Linux validation
-   - Different Rust versions
-   - Various filesystem types
-
-4. **Security Validation**
-   - Dependency security scanning
-   - Static analysis checks
-   - Fuzz testing for edge cases
-
-## Test Development Guidelines
-
-### 📝 Test Writing Standards
-
-```rust
-#[test]
-fn test_specific_scenario_with_clear_name() {
-    // Arrange: Set up test environment
+fn test_specific_scenario() {
     let temp_dir = TempDir::new().unwrap();
-    create_test_files(&temp_dir);
-    
+    // Arrange: Set up test environment
     // Act: Execute the operation
-    let result = refac_operation(&temp_dir, "old", "new");
-    
     // Assert: Verify expected outcomes
-    assert!(result.is_ok());
-    verify_expected_changes(&temp_dir);
-    
     // Cleanup handled automatically by TempDir
 }
 ```
-
-### 🎯 Test Coverage Goals
-- **Functionality**: Every feature has positive and negative tests
-- **Edge Cases**: Boundary conditions and error scenarios
-- **Performance**: Scalability and resource usage validation
-- **Security**: Permission and access control testing
-- **Integration**: Tool interaction and workflow testing
-
-## Testing Best Practices
-
-### Quality Assurance
-- **Property-Based Testing**: Generate random test cases for comprehensive coverage
-- **Test Isolation**: Each test runs independently without side effects
-- **Performance Testing**: Monitor resource usage and execution time
-- **Error Recovery**: Validate proper handling of failure scenarios
-
-### Test Execution
-- **Test Execution Time**: Optimized for fast feedback loops
-- **Code Coverage**: Maintained through comprehensive test scenarios
-- **Bug Prevention**: Proactive testing prevents issues before deployment
-- **Performance Monitoring**: Regular validation of tool performance
-
-## Contributing to Tests
-
-### 🤝 Test Contribution Guidelines
-When adding new features or fixing bugs:
-
-1. **Write Tests First**: Test-driven development approach
-2. **Cover Edge Cases**: Think about what could go wrong
-3. **Use Descriptive Names**: Test names should explain the scenario
-4. **Include Performance Tests**: For operations on large datasets
-5. **Document Complex Tests**: Explain non-obvious test scenarios
-
-### 🔍 Test Review Process
-All test additions undergo review for:
-- **Correctness**: Tests verify the intended behavior
-- **Completeness**: All scenarios are covered
-- **Performance**: Tests don't slow down the suite unnecessarily
-- **Maintainability**: Tests are clear and well-documented
-
-The comprehensive test suite ensures Workspace remains reliable, safe, and performant for mission-critical operations across all supported platforms and use cases.

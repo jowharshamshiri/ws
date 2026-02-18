@@ -27,7 +27,7 @@ The `unscrap` tool restores files and directories from the `.scrap` folder back 
 
 ```bash
 # Restore the most recently scrapped item
-unscrap
+ws unscrap
 
 # This finds the item with the latest timestamp and restores it
 # to its original location
@@ -37,10 +37,10 @@ Example workflow:
 
 ```bash
 # Accidentally scrap an important file
-scrap important.txt
+ws scrap important.txt
 
 # Realize the mistake and quickly undo
-unscrap
+ws unscrap
 # → Restored 'important.txt' to '/path/to/original/important.txt'
 ```
 
@@ -48,13 +48,13 @@ unscrap
 
 ```bash
 # Restore a specific file
-unscrap filename.txt
+ws unscrap filename.txt
 
 # Restore a directory
-unscrap old_project/
+ws unscrap old_project/
 
 # Restore with the exact name as it appears in .scrap
-unscrap file_1.txt  # If there were naming conflicts
+ws unscrap file_1.txt  # If there were naming conflicts
 ```
 
 ## Features
@@ -63,23 +63,23 @@ unscrap file_1.txt  # If there were naming conflicts
 
 ```bash
 # Restore to a different directory
-unscrap file.txt --to /new/location/
+ws unscrap file.txt --to /new/location/
 
 # Restore to a specific file path
-unscrap data.json --to ~/backup/recovered-data.json
+ws unscrap data.json --to ~/backup/recovered-data.json
 
 # Restore to current directory
-unscrap file.txt --to .
+ws unscrap file.txt --to .
 ```
 
 ### Force Overwrite
 
 ```bash
 # Overwrite existing files at destination
-unscrap file.txt --force
+ws unscrap file.txt --force
 
 # Restore to custom location with force
-unscrap file.txt --to /existing/location/ --force
+ws unscrap file.txt --to /existing/location/ --force
 ```
 
 ## Detailed Examples
@@ -88,7 +88,7 @@ unscrap file.txt --to /existing/location/ --force
 
 ```bash
 # 1. Check what's in .scrap
-scrap list
+ws scrap list
 
 # Output:
 # 📄 temp.log               1.2 KB  2 hours ago     from: /home/user/project/temp.log
@@ -96,11 +96,11 @@ scrap list
 # 📄 debug.txt              524 B   3 hours ago     from: /home/user/debug.txt
 
 # 2. Restore specific item
-unscrap temp.log
+ws unscrap temp.log
 # → Restored 'temp.log' to '/home/user/project/temp.log'
 
 # 3. Check it's gone from .scrap
-scrap list
+ws scrap list
 # temp.log no longer appears in the list
 ```
 
@@ -108,17 +108,17 @@ scrap list
 
 ```bash
 # Work session with multiple scrap operations
-scrap old_file1.txt        # 10:00 AM
-scrap temp_directory/      # 10:30 AM  
-scrap debug.log           # 11:00 AM
+ws scrap old_file1.txt        # 10:00 AM
+ws scrap temp_directory/      # 10:30 AM
+ws scrap debug.log           # 11:00 AM
 
 # Undo the last action (debug.log)
-unscrap
+ws unscrap
 # → Restoring last scrapped item: debug.log (from /path/to/debug.log)
 # → Restored 'debug.log' to '/path/to/debug.log'
 
 # Undo the previous action (temp_directory/)
-unscrap
+ws unscrap
 # → Restoring last scrapped item: temp_directory (from /path/to/temp_directory)
 ```
 
@@ -126,28 +126,28 @@ unscrap
 
 ```bash
 # Restore to a backup location
-unscrap important_config.json --to ~/backups/
+ws unscrap important_config.json --to ~/backups/
 
 # Restore with a new name
-unscrap old_script.sh --to ~/scripts/new_script.sh
+ws unscrap old_script.sh --to ~/scripts/new_script.sh
 
 # Restore to current project directory
-unscrap library_code/ --to ./vendor/
+ws unscrap library_code/ --to ./vendor/
 ```
 
 ### Handling Conflicts
 
 ```bash
 # Try to restore when destination exists
-unscrap file.txt
+ws unscrap file.txt
 # Error: Destination '/path/to/file.txt' already exists. Use --force to overwrite.
 
 # Force the restoration
-unscrap file.txt --force
+ws unscrap file.txt --force
 # → Restored 'file.txt' to '/path/to/file.txt' (overwrote existing file)
 
 # Or restore to a different location
-unscrap file.txt --to ./recovered_file.txt
+ws unscrap file.txt --to ./recovered_file.txt
 # → Restored 'file.txt' to './recovered_file.txt'
 ```
 
@@ -174,7 +174,7 @@ When metadata is missing (older .scrap folder or manual additions):
 ```bash
 # Original file: /deep/nested/path/file.txt
 # After scrapping and restoring:
-unscrap file.txt
+ws unscrap file.txt
 # → Creates /deep/nested/path/ if it doesn't exist
 # → Restores file.txt to /deep/nested/path/file.txt
 ```
@@ -186,40 +186,40 @@ unscrap file.txt
 #### File Not Found
 
 ```bash
-unscrap nonexistent.txt
+ws unscrap nonexistent.txt
 # Error: 'nonexistent.txt' not found in .scrap folder
 
 # Solution: Check what's available
-scrap list
+ws scrap list
 ```
 
 #### Destination Exists
 
 ```bash
-unscrap file.txt
+ws unscrap file.txt
 # Error: Destination '/path/to/file.txt' already exists. Use --force to overwrite.
 
 # Solutions:
-unscrap file.txt --force                    # Overwrite
-unscrap file.txt --to ./recovered_file.txt  # Different location
+ws unscrap file.txt --force                    # Overwrite
+ws unscrap file.txt --to ./recovered_file.txt  # Different location
 ```
 
 #### Permission Denied
 
 ```bash
-unscrap system_file.conf
+ws unscrap system_file.conf
 # Error: Failed to restore 'system_file.conf' to '/etc/system_file.conf'
 # Context: Permission denied
 
 # Solution: Use sudo or restore to accessible location
-unscrap system_file.conf --to ~/recovered_system_file.conf
+ws unscrap system_file.conf --to ~/recovered_system_file.conf
 ```
 
 #### Missing Parent Directory
 
 ```bash
-# If original path no longer exists, unscrap creates it
-unscrap file.txt
+# If original path no longer exists, ws unscrap creates it
+ws unscrap file.txt
 # → Creating parent directory: /path/that/was/deleted
 # → Restored 'file.txt' to '/path/that/was/deleted/file.txt'
 ```
@@ -230,16 +230,16 @@ unscrap file.txt
 
 ```bash
 # 1. Scrap files during cleanup
-scrap temp_* debug_* old_*/
+ws scrap temp_* debug_* old_*/
 
 # 2. Continue working...
 
 # 3. Realize you need something back
-scrap find "important"  # Find the file
-unscrap important_backup.txt  # Restore it
+ws scrap find "important"  # Find the file
+ws unscrap important_backup.txt  # Restore it
 
 # 4. Or quickly undo last scrap
-unscrap  # Restores most recent item
+ws unscrap  # Restores most recent item
 ```
 
 ### Metadata Consistency
@@ -257,9 +257,9 @@ unscrap  # Restores most recent item
 # Restore script for project files
 
 # Check if file exists in .scrap
-if scrap find "project.config" > /dev/null 2>&1; then
+if ws scrap find "project.config" > /dev/null 2>&1; then
     echo "Restoring project configuration..."
-    unscrap project.config --force
+    ws unscrap project.config --force
 else
     echo "No project configuration found in .scrap"
 fi
@@ -271,7 +271,7 @@ fi
 # Restore multiple files (run multiple commands)
 for file in config.json settings.ini database.db; do
     if [ -f ".scrap/$file" ]; then
-        unscrap "$file" --force
+        ws unscrap "$file" --force
     fi
 done
 ```
@@ -280,11 +280,11 @@ done
 
 ```bash
 # Restore only specific types of files
-scrap find "\.txt$" | while read -r file; do
+ws scrap find "\.txt$" | while read -r file; do
     echo "Restore $file? (y/n)"
     read -r response
     if [ "$response" = "y" ]; then
-        unscrap "$file"
+        ws unscrap "$file"
     fi
 done
 ```
@@ -315,20 +315,20 @@ done
 
 ```bash
 # Always try undo first for recent mistakes
-unscrap
+ws unscrap
 
-# Use scrap list to see what's available
-scrap list | grep important
+# Use ws scrap list to see what's available
+ws scrap list | grep important
 ```
 
 ### Backup Strategy
 
 ```bash
 # Before major restore operations, archive current .scrap
-scrap archive --output "before-restore-$(date +%s).tar.gz"
+ws scrap archive --output "before-restore-$(date +%s).tar.gz"
 
 # Then restore safely
-unscrap critical_file.txt
+ws unscrap critical_file.txt
 ```
 
 ### Project Management
@@ -336,7 +336,7 @@ unscrap critical_file.txt
 ```bash
 # Restore project files to a staging area first
 mkdir staging/
-unscrap project_files/ --to staging/
+ws unscrap project_files/ --to staging/
 
 # Review and then move to final location
 mv staging/project_files/* ./

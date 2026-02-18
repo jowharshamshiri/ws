@@ -5,37 +5,54 @@ title: Command Reference
 
 # Command Reference
 
-reference for all Workspace command-line options and usage patterns.
+Complete reference for all `ws` command-line options and usage patterns.
 
-## Tools Overview
+## Commands Overview
 
-The Workspace tool suite includes four command-line utilities:
+All tools are subcommands of the `ws` binary:
 
-### Refac - String Replacement
 ```bash
-refac <ROOT_DIR> <OLD_STRING> <NEW_STRING> [OPTIONS]
+ws <COMMAND> [OPTIONS]
 ```
 
-### Scrap - Local Trash
-```bash
-scrap [PATH...] [SUBCOMMAND] [OPTIONS]
-```
-
-### Unscrap - File Restoration  
-```bash
-unscrap [NAME] [OPTIONS]
-```
-
-### St8 - Version Management
-```bash
-st8 [SUBCOMMAND] [OPTIONS]
-```
+| Command | Description |
+|---------|-------------|
+| `refactor` | Recursive string replacement in files and directories |
+| `git` | Git integration and version management |
+| `template` | Tera template management |
+| `update` | Update version and render templates |
+| `wstemplate` | Cross-project `.wstemplate` version stamping |
+| `version` | Database-driven version management |
+| `scrap` | Local trash can using `.scrap` folder |
+| `unscrap` | Restore files from `.scrap` folder |
+| `ldiff` | Line difference visualization |
+| `code` | AST-based code analysis and transformation |
+| `test` | Intelligent test runner based on project type |
+| `status` | Project status with feature metrics |
+| `feature` | Feature management with state machine workflow |
+| `task` | Feature-centric task management |
+| `directive` | Project directive and rule management |
+| `note` | Note management for any entity |
+| `relationship` | Entity relationship management |
+| `start` | Start development session |
+| `end` | End development session |
+| `artifacts` | Session artifact management |
+| `continuity` | Session continuity and context management |
+| `consolidate` | Documentation consolidation |
+| `database` | Database backup, recovery, maintenance |
+| `mcp-server` | MCP server for Claude AI integration |
+| `sample` | Create sample project with test data |
 
 ---
 
-## Refac Command Reference
+## ws refactor
 
-## Arguments
+Recursive string replacement in file names and contents with collision detection.
+
+### Synopsis
+```bash
+ws refactor <ROOT_DIR> <OLD_STRING> <NEW_STRING> [OPTIONS]
+```
 
 ### Required Arguments
 
@@ -45,225 +62,42 @@ st8 [SUBCOMMAND] [OPTIONS]
 | `OLD_STRING` | String to find and replace |
 | `NEW_STRING` | Replacement string |
 
-### Argument Validation
-
-- `ROOT_DIR` must exist and be a directory
-- `OLD_STRING` cannot be empty
-- `NEW_STRING` cannot be empty
-- `NEW_STRING` cannot contain path separators (`/` or `\`)
-
-## Options
-
-### Basic Options
+### Options
 
 | Option | Short | Description | Default |
 |--------|-------|-------------|---------|
-| `--assume-yes` | `-y` | Skip confirmation prompts (non-interactive mode) | `false` |
+| `--assume-yes` | `-y` | Skip confirmation prompts | `false` |
 | `--force` | `-f` | Skip confirmation prompt | `false` |
 | `--verbose` | `-v` | Show detailed output | `false` |
-| `--help` | `-h` | Show help information | |
-| `--version` | `-V` | Show version information | |
+| `--backup` | `-b` | Create backup files before modifying | `false` |
+| `--follow-symlinks` | | Follow symbolic links | `false` |
+| `--files-only` | | Only process files (skip directories) | `false` |
+| `--dirs-only` | | Only process directories (skip files) | `false` |
+| `--names-only` | | Skip content replacement, only rename | `false` |
+| `--content-only` | | Skip renaming, only replace content | `false` |
+| `--include <PATTERN>` | | Include only files matching glob (repeatable) | all |
+| `--exclude <PATTERN>` | | Exclude files matching glob (repeatable) | none |
+| `--max-depth <N>` | | Maximum depth to search (0 = unlimited) | `0` |
+| `--threads <N>` | `-j` | Number of threads (0 = auto) | `0` |
+| `--ignore-case` | `-i` | Case-insensitive matching | `false` |
+| `--regex` | `-r` | Use regex patterns | `false` |
+| `--format <FORMAT>` | | Output format: `human`, `json`, `plain` | `human` |
+| `--progress <MODE>` | | Progress display: `auto`, `always`, `never` | `auto` |
 
-### Safety Options
+Only one mode flag (`--files-only`, `--dirs-only`, `--names-only`, `--content-only`) can be specified at a time.
 
-| Option | Description | Default |
-|--------|-------------|---------|
-| `--backup` | `-b` | Create backup files before modifying content | `false` |
-| `--follow-symlinks` | Follow symbolic links | `false` |
-
-### Operation Mode Options
-
-| Option | Description | Default |
-|--------|-------------|---------|
-| `--files-only` | Only process files (skip directories) | `false` |
-| `--dirs-only` | Only process directories (skip files) | `false` |
-| `--names-only` | Skip content replacement, only rename files/directories | `false` |
-| `--content-only` | Skip file/directory renaming, only replace content | `false` |
-
-**Note**: Only one mode flag can be specified at a time.
-
-### Filtering Options
-
-| Option | Description | Default |
-|--------|-------------|---------|
-| `--include <PATTERN>` | Include only files matching pattern (glob) | Include all |
-| `--exclude <PATTERN>` | Exclude files matching pattern (glob) | Exclude none |
-| `--max-depth <N>` | Maximum depth to search (0 = unlimited) | `0` |
-
-**Note**: Multiple `--include` and `--exclude` patterns can be specified.
-
-### Performance Options
-
-| Option | Short | Description | Default |
-|--------|-------|-------------|---------|
-| `--threads <N>` | `-j` | Number of threads to use (0 = auto) | `0` |
-
-### Pattern Matching Options
-
-| Option | Short | Description | Default |
-|--------|-------|-------------|---------|
-| `--ignore-case` | `-i` | Ignore case when matching patterns | `false` |
-| `--regex` | `-r` | Use regex patterns instead of literal strings | `false` |
-
-### Output Options
-
-| Option | Description | Values | Default |
-|--------|-------------|--------|---------|
-| `--format <FORMAT>` | Output format | `human`, `json`, `plain` | `human` |
-| `--progress <MODE>` | Progress display mode | `auto`, `always`, `never` | `auto` |
-
-## Operation Modes
-
-### Full Mode (Default)
-
-Processes both file/directory names and file contents.
-
+### Examples
 ```bash
-refac . "oldname" "newname"
+ws refactor . "oldname" "newname"                          # Full replacement
+ws refactor . "oldname" "newname" --verbose                # Preview first
+ws refactor . "oldname" "newname" --include "*.rs" --backup
+ws refactor . "old.api.com" "new.api.com" --content-only
+ws refactor . "OldClass" "NewClass" --names-only
+ws refactor . "old_\\w+" "new_name" --regex
+ws refactor . "oldname" "newname" --format json            # Machine-readable output
 ```
 
-### Files Only Mode
-
-Process only files, skip directories.
-
-```bash
-refac . "oldname" "newname" --files-only
-```
-
-### Directories Only Mode
-
-Process only directories, skip files.
-
-```bash
-refac . "oldname" "newname" --dirs-only
-```
-
-### Names Only Mode
-
-Only rename files and directories, skip content replacement.
-
-```bash
-refac . "oldname" "newname" --names-only
-```
-
-### Content Only Mode
-
-Only replace content in files, skip renaming.
-
-```bash
-refac . "oldname" "newname" --content-only
-```
-
-## Pattern Matching
-
-### Glob Patterns
-
-Use glob patterns for include/exclude filters:
-
-```bash
-# Include specific file types
-refac . "old" "new" --include "*.rs" --include "*.toml"
-
-# Exclude directories
-refac . "old" "new" --exclude "target/*" --exclude "node_modules/*"
-
-# Include hidden files
-refac . "old" "new" --include ".*"
-```
-
-#### Glob Pattern Syntax
-
-| Pattern | Matches |
-|---------|---------|
-| `*` | Any sequence of characters |
-| `?` | Any single character |
-| `[abc]` | Any character in brackets |
-| `[a-z]` | Any character in range |
-| `**` | Recursive directory match |
-
-### Regular Expressions
-
-Use regex patterns with the `--regex` flag:
-
-```bash
-# Match word boundaries
-refac . "\\bold\\b" "new" --regex
-
-# Case-insensitive regex
-refac . "old.*name" "newname" --regex --ignore-case
-
-# Match numbers
-refac . "version_\\d+" "version_2" --regex
-```
-
-## Output Formats
-
-### Human Format (Default)
-
-Colored, interactive output with progress bars:
-
-```bash
-refac . "old" "new"
-```
-
-Example output:
-```
-=== REFAC TOOL ===
-Root directory: /project
-Old string: 'old'
-New string: 'new'
-Mode: Full
-
-Phase 1: Discovering files and directories...
-Phase 2: Checking for naming collisions...
-
-=== CHANGE SUMMARY ===
-Content modifications: 15 file(s)
-File renames:         8 file(s)
-Directory renames:    3 directory(ies)
-Total changes:        26
-
-Do you want to proceed? (y/N) y
-
-Replacing content in files...
-Renaming files and directories...
-
-=== OPERATION COMPLETE ===
-Operation completed successfully!
-Total changes applied: 26
-```
-
-### JSON Format
-
-Machine-readable output for scripting:
-
-```bash
-refac . "old" "new" --format json
-```
-
-Example output:
-```json
-{
-  "summary": {
-    "content_changes": 15,
-    "file_renames": 8,
-    "directory_renames": 3,
-    "total_changes": 26
-  },
-  "result": "success",
-  "dry_run": false
-}
-```
-
-### Plain Format
-
-Simple text output without colors:
-
-```bash
-refac . "old" "new" --format plain
-```
-
-## Exit Codes
+### Exit Codes
 
 | Code | Meaning |
 |------|---------|
@@ -274,159 +108,208 @@ refac . "old" "new" --format plain
 | `4` | File not found |
 | `5` | Naming collision detected |
 
-## Examples
+---
 
-### Basic Usage
+## ws git
 
+Git integration and version management via pre-commit hooks.
+
+### Subcommands
+
+| Subcommand | Description | Options |
+|------------|-------------|---------|
+| `install` | Install pre-commit hook | `--force` |
+| `uninstall` | Remove hook | |
+| `show` | Display version information | |
+| `status` | Show configuration status | |
+
+### Examples
 ```bash
-# Simple replacement
-refac . "oldname" "newname"
-
-# Refac always shows changes before applying
-refac . "oldname" "newname"
-
-# Force without confirmation
-refac . "oldname" "newname" --force
+ws git install              # Install git hook
+ws git install --force      # Force reinstall
+ws git show                 # Show version info
+ws git status               # Check configuration
+ws git uninstall            # Remove hook
 ```
 
-### File Type Filtering
+---
 
+## ws template
+
+Tera template management for automatic file generation during `ws update`.
+
+### Subcommands
+
+| Subcommand | Description |
+|------------|-------------|
+| `add` | Add a new template |
+| `list` | List all templates |
+| `show` | Show template details |
+| `update` | Update an existing template |
+| `delete` | Remove a template |
+| `render` | Render all enabled templates |
+
+### Examples
 ```bash
-# Only Rust files
-refac . "old_function" "new_function" --include "*.rs"
-
-# Multiple file types
-refac . "oldname" "newname" --include "*.js" --include "*.ts" --include "*.json"
-
-# Exclude build artifacts
-refac . "oldname" "newname" --exclude "target/*" --exclude "*.log"
+ws template add version-header --template "v{{ project.version }}" --output version.h
+ws template list
+ws template show version-header
+ws template render
+ws template delete version-header
 ```
 
-### Mode Examples
+---
 
+## ws update
+
+Update version file and render all templates (both `.tera` and `.wstemplate`).
+
+### Synopsis
 ```bash
-# Only rename files, don't change content
-refac ./docs "draft" "final" --names-only
-
-# Only change content, don't rename files
-refac ./config "old.server.com" "new.server.com" --content-only
-
-# Only process files, skip directories
-refac . "oldname" "newname" --files-only
+ws update [OPTIONS]
 ```
 
 ### Options
 
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--no-git` | Skip git integration | `false` |
+| `--git-add` | Auto-add updated files to git staging | `false` |
+
+### What It Does
+
+1. Calculates the current version from git history
+2. Writes `version.txt`
+3. Updates project files (Cargo.toml, package.json, etc.) with the new version
+4. Renders `.tera` templates via the template manager
+5. Renders `.wstemplate` files via the wstemplate engine
+6. Optionally stages all changed files in git
+
+### Examples
 ```bash
-# Limit search depth
-refac . "oldname" "newname" --max-depth 3
-
-# Use more threads
-refac . "oldname" "newname" --threads 8
-
-# Case-insensitive matching
-refac . "oldname" "newname" --ignore-case
-
-# Regex patterns
-refac . "old_\\w+" "new_name" --regex
+ws update                   # Basic update
+ws update --git-add         # Update and stage files
+ws update --no-git          # Update without git integration
 ```
-
-### Safety Features
-
-```bash
-# Create backups
-refac . "oldname" "newname" --backup
-
-# Verbose output for debugging
-refac . "oldname" "newname" --verbose
-```
-
-### Output Formats
-
-```bash
-# JSON output for scripts
-refac . "oldname" "newname" --format json
-
-# Plain text output
-refac . "oldname" "newname" --format plain
-
-# Disable progress bars
-refac . "oldname" "newname" --progress never
-```
-
-## Limitations
-
-### String Restrictions
-
-- Old string cannot be empty
-- New string cannot be empty
-- New string cannot contain path separators (`/` or `\`)
-
-### Performance Limits
-
-- Maximum thread count: 1000
-- Maximum search depth: 1000
-
-### File Handling
-
-- Binary files are automatically skipped for content replacement
-- Symlinks are not followed unless `--follow-symlinks` is specified
-- Very large files may require additional memory
-
-## Error Handling
-
-### Common Error Messages
-
-**"Root directory does not exist"**
-- Check that the specified directory path is correct
-
-**"Cannot specify more than one mode flag"**
-- Use only one of: `--files-only`, `--dirs-only`, `--names-only`, `--content-only`
-
-**"New string cannot contain path separators"**
-- Remove `/` or `\` characters from the new string
-
-**"Naming collision detected"**
-- Review the collision report and resolve conflicts manually
-
-### Debugging
-
-Use verbose mode to see detailed operation information:
-
-```bash
-refac . "oldname" "newname" --verbose
-```
-
-This will show:
-- Which files are being processed
-- Which files are being skipped
-- Why files are being skipped
-- Detailed pattern matching information
 
 ---
 
-## Scrap Command Reference
+## ws wstemplate
+
+Manage `.wstemplate` file rendering for cross-project version stamping.
+
+Each project has a single wstemplate entry consisting of an **alias** (Tera identifier)
+and a **scan root** (directory tree to search). Cross-project references like
+`{{ projects.OTHER.version }}` are resolved dynamically by scanning the root for
+sibling `.ws/state.json` files.
+
+### Subcommands
+
+| Subcommand | Description |
+|------------|-------------|
+| `add <PATH>` | Set the scan root (replaces any existing entry) |
+| `remove <ALIAS>` | Remove this project's wstemplate entry |
+| `list-entries` | Show this project's wstemplate entry |
+| `list` | List all `.wstemplate` files relevant to this project |
+| `render` | Render all relevant `.wstemplate` files |
+
+### Options for `add`
+
+| Option | Description |
+|--------|-------------|
+| `--alias <ALIAS>` | Override auto-derived alias (must be valid Tera identifier) |
+
+### Template Variables
+
+| Variable | Description |
+|----------|-------------|
+| `{{ project.version }}` | Owning project's full version (e.g., `0.5.12`) |
+| `{{ project.major_version }}` | e.g., `v0` |
+| `{{ project.minor_version }}` | Commit count |
+| `{{ project.patch_version }}` | Line changes |
+| `{{ project.name }}` | From manifest or directory name |
+| `{{ projects.ALIAS.version }}` | Any discoverable project's version |
+| `{{ projects.ALIAS.major_version }}` | Any project's major version |
+| `{{ projects.ALIAS.minor_version }}` | Any project's minor version |
+| `{{ projects.ALIAS.patch_version }}` | Any project's patch version |
+| `{{ projects.ALIAS.name }}` | Any project's name |
+| `{{ datetime.iso }}` | RFC 3339 timestamp |
+| `{{ datetime.date }}` | YYYY-MM-DD |
+| `{{ datetime.time }}` | HH:MM:SS |
+| `{{ datetime.year }}` | Year |
+| `{{ datetime.month }}` | Month |
+| `{{ datetime.day }}` | Day |
+
+### Template Selection
+
+When rendering, only templates satisfying at least one condition are rendered:
+1. The template lives under the current project's root (own templates)
+2. The template's text contains a reference to `{{ projects.SELF_ALIAS.* }}`
+
+### Error Handling
+
+- **Unresolvable alias**: Hard error listing all known aliases
+- **Missing `version.txt`**: Hard error with instructions to run `ws update` in the dependency
+- **Multiple wstemplate entries in state.json**: Hard error (single-entry model enforced)
+
+### Examples
+```bash
+ws wstemplate add /path/to/workspace              # Set scan root
+ws wstemplate add /path/to/workspace --alias mylib # Custom alias
+ws wstemplate list-entries                         # Show current entry
+ws wstemplate list                                 # Show relevant templates
+ws wstemplate render                               # Render templates
+ws wstemplate remove mylib                         # Remove entry
+```
+
+---
+
+## ws version
+
+Version management with database-driven major version and git-calculated components.
+
+### Version Format
+
+`{major}.{minor}.{patch}` where:
+- **Major**: Set via `ws version major` (stored in database)
+- **Minor**: Total commits in the repository
+- **Patch**: Total line changes (additions + deletions)
+
+### Subcommands
+
+| Subcommand | Description | Options |
+|------------|-------------|---------|
+| `show` | Display version breakdown | `--verbose`, `--format` |
+| `major <N>` | Set major version number | |
+| `tag` | Create git tag with current version | `--prefix`, `--message` |
+| `info` | Show calculation details | `--include-history` |
+
+### Examples
+```bash
+ws version show                          # Display version
+ws version show --verbose --format json  # Detailed JSON output
+ws version major 2                       # Set major to 2
+ws version tag                           # Create git tag
+ws version tag --prefix "release-"       # Custom tag prefix
+ws version info --include-history        # Show git history analysis
+```
+
+---
+
+## ws scrap
+
+Local trash can using a `.scrap` folder for files you want to remove safely.
 
 ### Synopsis
 ```bash
-scrap [PATH...] [SUBCOMMAND] [OPTIONS]
-```
-
-### Basic Operations
-```bash
-# Move unwanted files to local trash can
-scrap file.txt directory/
-
-# List .scrap contents (default when no args)
-scrap
-scrap list [--sort name|date|size]
+ws scrap [PATH...] [SUBCOMMAND] [OPTIONS]
 ```
 
 ### Subcommands
 
 | Subcommand | Description | Options |
 |------------|-------------|---------|
-| `list` | List .scrap contents | `--sort name\|date\|size` |
+| `list` | List `.scrap` contents | `--sort name\|date\|size` |
 | `clean` | Remove old items | `--days N` |
 | `purge` | Remove all items | `--force` |
 | `find` | Search for patterns | `--content` |
@@ -434,31 +317,24 @@ scrap list [--sort name|date|size]
 
 ### Examples
 ```bash
-scrap temp.txt logs/                    # Move to local trash can
-scrap list --sort size                  # List trash contents
-scrap find "*.log"                      # Find log files in trash
-scrap clean --days 30                   # Permanently remove old items
-scrap archive backup.tar.gz --remove   # Archive and remove
-scrap purge --force                     # Empty trash completely
+ws scrap temp.txt logs/                    # Move to .scrap
+ws scrap list --sort size                  # List contents
+ws scrap find "*.log"                      # Find files
+ws scrap clean --days 30                   # Remove old items
+ws scrap archive backup.tar.gz --remove    # Archive and remove
+ws scrap purge --force                     # Empty completely
 ```
 
 ---
 
-## Unscrap Command Reference
+## ws unscrap
+
+Restore files from `.scrap` folder to their original locations.
 
 ### Synopsis
 ```bash
-unscrap [NAME] [OPTIONS]
+ws unscrap [NAME] [OPTIONS]
 ```
-
-### Operations
-
-| Command | Description |
-|---------|-------------|
-| `unscrap` | Restore last scrapped item |
-| `unscrap NAME` | Restore specific item |
-| `unscrap NAME --to PATH` | Restore to custom location |
-| `unscrap NAME --force` | Overwrite existing files |
 
 ### Options
 
@@ -466,88 +342,236 @@ unscrap [NAME] [OPTIONS]
 |--------|-------------|
 | `--to PATH` | Custom restoration path |
 | `--force` | Overwrite existing files |
-| `--help` | Show help |
-| `--version` | Show version |
 
 ### Examples
 ```bash
-unscrap                           # Restore last item
-unscrap important_file.txt        # Restore specific file
-unscrap config.json --to backup/  # Restore to directory
-unscrap data.txt --force          # Overwrite existing
+ws unscrap                           # Restore last item
+ws unscrap important_file.txt        # Restore specific file
+ws unscrap config.json --to backup/  # Restore to directory
+ws unscrap data.txt --force          # Overwrite existing
 ```
 
 ---
 
-## St8 Command Reference
+## ws ldiff
+
+Process input lines, replacing repeated tokens with a substitute character to highlight differences.
 
 ### Synopsis
 ```bash
-st8 [SUBCOMMAND] [OPTIONS]
+ws ldiff [SUBSTITUTE_CHAR]
 ```
 
-### Subcommands
-
-| Subcommand | Description | Options |
-|------------|-------------|---------|
-| `install` | Install git pre-commit hook | `--force` |
-| `uninstall` | Remove git hook | |
-| `show` | Display version information | |
-| `update` | Manually update version | `--no-git`, `--git-add` |
-| `status` | Show configuration status | |
-
-### Configuration
-
-Create `.st8.json` in repository root:
-```json
-{
-  "version": 1,
-  "enabled": true,
-  "version_file": "version.txt"
-}
-```
-
-### Version Format
-
-`{major}.{minor}.{patch}`
-
-- **Major**: From git tags (e.g., `v1.2` → `1.2`)
-- **Minor**: Commits since tag
-- **Patch**: Total line changes
+Default substitute character: `░`
 
 ### Examples
 ```bash
-st8 install                 # Install git hook
-st8 install --force         # Force reinstall
-st8 show                    # Show version info
-st8 update                  # Manual update
-st8 status                  # Check status
-st8 uninstall              # Remove hook
+echo -e "hello world\nhello universe" | ws ldiff
+tail -f /var/log/syslog | ws ldiff
+cat access.log | ws ldiff "*"
 ```
+
+---
+
+## ws status
+
+Display project status with feature metrics and progress tracking.
+
+### Options
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--debug-mode` | Enable diagnostic output | `false` |
+| `--include-features` | Include feature breakdown | `false` |
+| `--include-metrics` | Include detailed metrics | `false` |
+| `--format` | Output format: `human`, `json`, `summary` | `human` |
+
+### Examples
+```bash
+ws status
+ws status --include-features
+ws status --include-metrics --format json
+```
+
+---
+
+## ws feature
+
+Feature management with state machine workflow and validation.
+
+### Subcommands
+
+| Subcommand | Description |
+|------------|-------------|
+| `add` | Add a new feature |
+| `list` | List features with filters |
+| `show` | Show feature details |
+| `update` | Update feature status/properties |
+
+### Examples
+```bash
+ws feature add "User authentication"
+ws feature list --state implemented
+ws feature show F00001
+```
+
+---
+
+## ws task
+
+Feature-centric task management with automatic feature detection.
+
+### Subcommands
+
+| Subcommand | Description |
+|------------|-------------|
+| `add` | Add a new task |
+| `list` | List tasks with filters |
+| `show` | Show task details |
+| `update` | Update task status/properties |
+| `complete` | Mark task as completed |
+| `start` | Start working on a task |
+| `block` | Mark task as blocked |
+| `unblock` | Remove blocked status |
+
+### Examples
+```bash
+ws task add "Implement login" "Build the login page" --feature F00001
+ws task list --status pending
+ws task show T000001
+ws task start T000001
+ws task complete T000001 --evidence "Tests passing"
+```
+
+---
+
+## ws directive
+
+Project directive and rule management.
+
+### Subcommands
+
+| Subcommand | Description |
+|------------|-------------|
+| `add` | Add a new directive |
+| `list` | List directives |
+| `show` | Show directive details |
+| `update` | Update directive |
+| `activate` | Activate a directive |
+| `deactivate` | Deactivate a directive |
+| `check` | Check directive compliance |
+
+---
+
+## ws code
+
+AST-based code analysis and transformation.
+
+### Examples
+```bash
+ws code                     # Run code analysis
+```
+
+---
+
+## ws test
+
+Intelligent test runner that detects project type and runs appropriate tests.
+
+### Options
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--dry-run` | Show test command without executing | `false` |
+| `--install` | Install missing test runners | `false` |
+
+### Examples
+```bash
+ws test                     # Run tests for detected project type
+ws test --dry-run           # Show what would run
+ws test -- --nocapture      # Pass args to test runner
+```
+
+---
+
+## ws start / ws end
+
+Session management for development workflow.
+
+### ws start
+```bash
+ws start                                # Start new session
+ws start --continue-from T000001        # Continue from task
+ws start --project-setup                # Initialize new project
+ws start "Implement auth"               # Start with first task description
+```
+
+### ws end
+```bash
+ws end                                  # End session
+ws end --summary "Completed auth"       # End with summary
+ws end --skip-docs                      # Skip documentation updates
+```
+
+---
+
+## ws mcp-server
+
+MCP server for Claude AI integration with automatic session management.
+
+### Options
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--port` | HTTP server port | `3000` |
+| `--debug` | Enable debug logging | `false` |
+| `--migrate` | Migrate features from features.md to database | `false` |
+
+### Examples
+```bash
+ws mcp-server                    # Start on localhost:3000
+ws mcp-server --port 8080        # Custom port
+ws mcp-server --debug            # With debug logging
+```
+
+---
+
+## ws database
+
+Database backup, recovery, and maintenance operations.
+
+---
+
+## ws continuity
+
+Session continuity and context management.
+
+### Subcommands
+
+| Subcommand | Description |
+|------------|-------------|
+| `list` | List continuity records |
+| `snapshot` | Create context snapshot |
+
+---
+
+## ws consolidate
+
+Documentation consolidation with diagram management.
+
+### Options
+
+| Option | Description |
+|--------|-------------|
+| `--generate-diagrams` | Generate architectural diagrams in DOT format |
+| `--preserve-complexity` | Preserve complexity information |
+| `--force` | Force consolidation |
 
 ---
 
 ## Getting Help
 
-### Tool-Specific Help
 ```bash
-# Show help for each tool
-refac --help
-scrap --help
-unscrap --help
-st8 --help
-
-# Show versions
-refac --version
-scrap --version
-unscrap --version
-st8 --version
+ws --help              # Show all commands
+ws <COMMAND> --help    # Help for specific command
 ```
-
-### Resources
-
-For more information:
-- [Getting Started]({{ '/getting-started/' | relative_url }}) - Quick start guide
-- [Usage Guide]({{ '/usage/' | relative_url }}) - usage examples
-- [Tool-Specific Guides]({{ '/scrap-guide/' | relative_url }}) - Individual tool documentation
-- [GitHub Issues](https://github.com/jowharshamshiri/workspace/issues) - Report bugs or request features

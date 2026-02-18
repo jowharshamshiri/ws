@@ -3,8 +3,8 @@ use clap::{CommandFactory, Parser, Subcommand};
 use clap_complete::{generate, Shell};
 use colored::Colorize;
 use log;
-use workspace::st8::{St8Config, VersionInfo, detect_project_files, update_version_file, TemplateManager};
-use workspace::workspace_state::WorkspaceState;
+use workspace::st8::{St8Config, VersionInfo, detect_project_files, update_version_file, TemplateManager, WstemplateEngine};
+use workspace::workspace_state::{WorkspaceState, WstemplateEntry};
 use workspace::entities::EntityManager;
 use workspace::logging::{self, log_operation_start, log_operation_complete, log_operation_error, log_warning, log_version_info};
 use sqlx::SqlitePool;
@@ -248,6 +248,12 @@ enum Commands {
     Version {
         #[command(subcommand)]
         action: VersionAction,
+    },
+
+    /// Manage .wstemplate file rendering for version-stamping project files
+    Wstemplate {
+        #[command(subcommand)]
+        action: WstemplateAction,
     },
 }
 
@@ -1084,6 +1090,29 @@ enum VersionAction {
 }
 
 #[derive(Subcommand, Debug)]
+enum WstemplateAction {
+    /// Set the scan root for this project (replaces any existing entry)
+    Add {
+        /// Directory tree to scan for .wstemplate files and peer .ws/state.json files
+        path: PathBuf,
+        /// Override the auto-derived alias (must be a valid Tera identifier: [a-z_][a-z0-9_]*)
+        #[arg(long)]
+        alias: Option<String>,
+    },
+    /// Remove this project's wstemplate entry
+    Remove {
+        /// Alias of the entry to remove (must match current entry)
+        alias: String,
+    },
+    /// Show this project's wstemplate entry (alias and scan root)
+    ListEntries,
+    /// List all .wstemplate files relevant to this project (no rendering)
+    List,
+    /// Render all .wstemplate files relevant to this project
+    Render,
+}
+
+#[derive(Subcommand, Debug)]
 enum ScrapCommands {
     /// List contents of .scrap folder
     #[command(alias = "ls")]
@@ -1280,8 +1309,12 @@ fn run() -> Result<()> {
         Commands::Version { action } => {
             run_version_command(action)?;
         }
+
+        Commands::Wstemplate { action } => {
+            handle_wstemplate_command(action)?;
+        }
     }
-    
+
     Ok(())
 }
 
@@ -1309,9 +1342,23 @@ fn run_git_command(command: Option<GitCommands>) -> Result<()> {
                 // Hook is installed, just update state
                 let project_root = get_project_root()?;
                 let config = St8Config::load(&project_root)?;
-                let mut workspace_state = WorkspaceState::load(&project_root)?;
-                
-                update_version_in_memory(&mut workspace_state, &config, &project_root)?;
+                let workspace_state = WorkspaceState::load(&project_root)?;
+
+                let version_info = calculate_version(&project_root)?;
+                update_version_file(&version_info, &config)?;
+
+                // Render wstemplate files if configured
+                if let Some(entry) = workspace_state.wstemplate_entry() {
+                    let engine = WstemplateEngine::new(
+                        version_info,
+                        workspace_state.project_name.clone(),
+                        entry.alias.clone(),
+                        project_root.clone(),
+                        entry.root.clone(),
+                    );
+                    engine.render_relevant()?;
+                }
+
                 workspace_state.save(&project_root)?;
             }
         }
@@ -1323,88 +1370,219 @@ fn run_git_command(command: Option<GitCommands>) -> Result<()> {
 fn update_state(no_git: bool, git_add: bool) -> Result<()> {
     let project_root = get_project_root()?;
     let config = St8Config::load(&project_root)?;
-    let mut workspace_state = WorkspaceState::load(&project_root)?;
-    
-    // Update version in memory  
-    update_version_in_memory(&mut workspace_state, &config, &project_root)?;
-    
-    // Render templates
-    let template_manager = TemplateManager::new(&workspace_state)?;
-    let version_info = VersionInfo::calculate()?;
-    let project_name = workspace_state.project_name.as_deref();
-    let rendered_files = template_manager.render_all_templates(&version_info, project_name)?;
-    
-    if !rendered_files.is_empty() {
-        log::info!("Rendered {} templates: {}", rendered_files.len(), rendered_files.join(", "));
-        // Log instead of print to avoid VSCode detecting as error during git operations
-        for file in &rendered_files {
-            log::info!("Template rendered: {}", file);
-        }
-    }
-    
-    // Save state to disk
-    workspace_state.save(&project_root)?;
-    
-    // Update version file on disk using enhanced versioning
-    let db_path = project_root.join(".ws/project.db");
-    let rt = tokio::runtime::Runtime::new()?;
-    let version_info = rt.block_on(async {
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
-        let major_version = get_project_major_version(&pool).await?;
-        workspace::st8::VersionInfo::calculate_with_major(major_version)
-    })?;
-    
+    let workspace_state = WorkspaceState::load(&project_root)?;
+
+    // Calculate version once
+    let version_info = calculate_version(&project_root)?;
+
+    // Write version.txt first — other projects read our version.txt
+    // when resolving {{ projects.OUR_ALIAS.version }}
     update_version_file(&version_info, &config)?;
     if !config.version_file.is_empty() {
         log::info!("Updated version file: {}", config.version_file);
         println!("{}: Updated {}", "Info".blue(), config.version_file);
     }
-    
+
+    // Render .tera templates via TemplateManager
+    let template_manager = TemplateManager::new(&workspace_state)?;
+    let project_name = workspace_state.project_name.as_deref();
+    let rendered_tera_files = template_manager.render_all_templates(&version_info, project_name)?;
+    if !rendered_tera_files.is_empty() {
+        log::info!("Rendered {} .tera templates: {}", rendered_tera_files.len(), rendered_tera_files.join(", "));
+    }
+
+    // Render .wstemplate files via WstemplateEngine
+    let mut rendered_wstemplate_files: Vec<String> = Vec::new();
+    if let Some(entry) = workspace_state.wstemplate_entry() {
+        let engine = WstemplateEngine::new(
+            version_info,
+            workspace_state.project_name.clone(),
+            entry.alias.clone(),
+            project_root.clone(),
+            entry.root.clone(),
+        );
+
+        let rendered = engine.render_relevant()?;
+        for r in &rendered {
+            log::info!("wstemplate: {} -> {}", r.source_path.display(), r.output_path.display());
+            rendered_wstemplate_files.push(r.output_path.display().to_string());
+        }
+        if !rendered.is_empty() {
+            println!("{}: Rendered {} .wstemplate files", "Info".blue(), rendered.len());
+        }
+    }
+
+    // Save state
+    workspace_state.save(&project_root)?;
+
     // Add files to git if requested and we're in a git repository
     if !no_git && git_add && is_git_repository() {
         let mut files_to_add = Vec::new();
-        
-        // Add version file if it exists
+
         if !config.version_file.is_empty() {
-            let version_file = &config.version_file;
-            files_to_add.push(version_file.clone());
+            files_to_add.push(config.version_file.clone());
         }
-        
-        // Add rendered template files
-        for file in rendered_files {
-            let path_str = file.clone();
-            files_to_add.push(path_str.to_string());
+
+        for file in &rendered_tera_files {
+            files_to_add.push(file.clone());
         }
-        
-        // Add .ws directory files (logs, database, state files)
-        let ws_files = vec![
-            ".ws/logs/ws.log".to_string(),
-            ".ws/project.db".to_string(),
-            ".ws/project.db-shm".to_string(),
-            ".ws/project.db-wal".to_string(),
-            ".ws/workspace.db".to_string(),
-            ".ws/state.json".to_string(),
+
+        for file in &rendered_wstemplate_files {
+            files_to_add.push(file.clone());
+        }
+
+        // Add .ws directory files
+        let ws_files = [
+            ".ws/logs/ws.log",
+            ".ws/project.db",
+            ".ws/project.db-shm",
+            ".ws/project.db-wal",
+            ".ws/workspace.db",
+            ".ws/state.json",
         ];
-        
         for ws_file in ws_files {
-            let ws_path = project_root.join(&ws_file);
-            if ws_path.exists() {
-                files_to_add.push(ws_file);
+            if project_root.join(ws_file).exists() {
+                files_to_add.push(ws_file.to_string());
             }
         }
-        
+
         if !files_to_add.is_empty() {
             let added_files = add_files_to_git(&files_to_add)?;
             if !added_files.is_empty() {
                 log::info!("Added {} files to git staging area: {}", added_files.len(), added_files.join(", "));
                 println!("{}: Added {} files to git staging area", "Info".blue(), added_files.len());
-                for file in added_files {
+                for file in &added_files {
                     println!("  - {}", file);
                 }
             }
         }
     }
-    
+
+    Ok(())
+}
+
+fn handle_wstemplate_command(action: WstemplateAction) -> Result<()> {
+    let project_root = get_project_root()?;
+    let mut workspace_state = WorkspaceState::load(&project_root)?;
+
+    match action {
+        WstemplateAction::Add { path, alias } => {
+            let scan_root = path.canonicalize()
+                .with_context(|| format!("Cannot resolve path: {}", path.display()))?;
+
+            let alias = alias.unwrap_or_else(|| {
+                WstemplateEngine::derive_alias(&project_root)
+            });
+
+            // Validate alias is a valid Tera identifier
+            anyhow::ensure!(
+                !alias.is_empty()
+                    && alias.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
+                    && !alias.starts_with(|c: char| c.is_ascii_digit()),
+                "Invalid alias '{}': must match [a-z_][a-z0-9_]* (Tera identifier)",
+                alias
+            );
+
+            let entry = WstemplateEntry {
+                alias: alias.clone(),
+                root: scan_root.clone(),
+            };
+
+            workspace_state.set_wstemplate_entry(entry);
+            workspace_state.save(&project_root)?;
+
+            println!("{} wstemplate entries:", "1".bold());
+            println!("  {} \u{2192} {}", alias, scan_root.display());
+        }
+
+        WstemplateAction::Remove { alias } => {
+            match workspace_state.wstemplate_entry() {
+                Some(entry) if entry.alias == alias => {
+                    workspace_state.clear_wstemplate_entry();
+                    workspace_state.save(&project_root)?;
+                    println!("Removed wstemplate entry '{}'", alias);
+                }
+                Some(entry) => {
+                    anyhow::bail!(
+                        "No entry with alias '{}'. This project's alias is '{}'.",
+                        alias,
+                        entry.alias
+                    );
+                }
+                None => {
+                    anyhow::bail!("No wstemplate entry configured for this project.");
+                }
+            }
+        }
+
+        WstemplateAction::ListEntries => {
+            match workspace_state.wstemplate_entry() {
+                Some(entry) => {
+                    println!("{} wstemplate entries:", "1".bold());
+                    println!("  {} \u{2192} {}", entry.alias, entry.root.display());
+                }
+                None => {
+                    println!("{} wstemplate entries:", "0".bold());
+                }
+            }
+        }
+
+        WstemplateAction::List => {
+            let entry = workspace_state.wstemplate_entry()
+                .ok_or_else(|| anyhow::anyhow!(
+                    "No wstemplate entry configured. Run 'ws wstemplate add <scan-root>' first."
+                ))?;
+
+            let version_info = calculate_version(&project_root)?;
+
+            let engine = WstemplateEngine::new(
+                version_info,
+                workspace_state.project_name.clone(),
+                entry.alias.clone(),
+                project_root.clone(),
+                entry.root.clone(),
+            );
+
+            let project_roots = engine.discover_project_roots()?;
+            let templates = engine.discover_relevant(&project_roots)?;
+            if templates.is_empty() {
+                println!("No relevant .wstemplate files found.");
+            } else {
+                println!("{} relevant .wstemplate files:", templates.len());
+                for path in &templates {
+                    println!("  {}", path.display());
+                }
+            }
+        }
+
+        WstemplateAction::Render => {
+            let entry = workspace_state.wstemplate_entry()
+                .ok_or_else(|| anyhow::anyhow!(
+                    "No wstemplate entry configured. Run 'ws wstemplate add <scan-root>' first."
+                ))?;
+
+            let version_info = calculate_version(&project_root)?;
+
+            let engine = WstemplateEngine::new(
+                version_info,
+                workspace_state.project_name.clone(),
+                entry.alias.clone(),
+                project_root.clone(),
+                entry.root.clone(),
+            );
+
+            let rendered = engine.render_relevant()?;
+            if rendered.is_empty() {
+                println!("No templates to render.");
+            } else {
+                println!("Rendered {} templates:", rendered.len());
+                for r in &rendered {
+                    println!("  {} \u{2192} {}", r.source_path.display(), r.output_path.display());
+                }
+            }
+        }
+    }
+
     Ok(())
 }
 
@@ -1691,23 +1869,16 @@ fn show_status() -> Result<()> {
     Ok(())
 }
 
-fn update_version_in_memory(
-    _workspace_state: &mut WorkspaceState,
-    _config: &St8Config,
-    project_root: &std::path::Path,
-) -> Result<()> {
-    if is_git_repository() {
-        let db_path = project_root.join(".ws/project.db");
-        let rt = tokio::runtime::Runtime::new()?;
-        let version_info = rt.block_on(async {
-            let pool = workspace::entities::database::initialize_database(&db_path).await?;
-            let major_version = get_project_major_version(&pool).await?;
-            workspace::st8::VersionInfo::calculate_with_major(major_version)
-        })?;
-        
-        log::info!("Version updated to: {}", version_info.full_version);
-    }
-    Ok(())
+fn calculate_version(project_root: &std::path::Path) -> Result<VersionInfo> {
+    let db_path = project_root.join(".ws/project.db");
+    let rt = tokio::runtime::Runtime::new()?;
+    let version_info = rt.block_on(async {
+        let pool = workspace::entities::database::initialize_database(&db_path).await?;
+        let major_version = get_project_major_version(&pool).await?;
+        workspace::st8::VersionInfo::calculate_with_major(major_version)
+    })?;
+    log::info!("Version calculated: {}", version_info.full_version);
+    Ok(version_info)
 }
 
 fn log_action(message: &str) {

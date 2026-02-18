@@ -5,41 +5,51 @@ title: Usage Guide
 
 # Usage Guide
 
-This guide covers all aspects of using the Workspace tool suite for string replacement, line analysis, project cleanup, and version management.
+This guide covers all aspects of using the Workspace tool suite for string replacement, line analysis, project cleanup, version management, and cross-project version stamping.
 
 ## Tools Overview
 
-### Refac - String Replacement Tool
+### Refactor - String Replacement
 ```bash
-refac <ROOT_DIR> <OLD_STRING> <NEW_STRING> [OPTIONS]
+ws refactor <ROOT_DIR> <OLD_STRING> <NEW_STRING> [OPTIONS]
 ```
 
 ### Ldiff - Line Difference Visualizer
 ```bash
-ldiff [SUBSTITUTE_CHAR]
+ws ldiff [SUBSTITUTE_CHAR]
 ```
 
-### Scrap - Local Trash Tool
+### Scrap - Local Trash
 ```bash
-scrap [FILE/DIR] [SUBCOMMAND] [OPTIONS]
+ws scrap [PATH...] [SUBCOMMAND] [OPTIONS]
 ```
 
-### Unscrap - File Restoration Tool
+### Unscrap - File Restoration
 ```bash
-unscrap [FILE/DIR] [OPTIONS]
+ws unscrap [NAME] [OPTIONS]
 ```
 
-### St8 - Version Management Tool
+### Git Integration - Version Management
 ```bash
-st8 [SUBCOMMAND] [OPTIONS]
+ws git <SUBCOMMAND> [OPTIONS]
 ```
 
-## Refac - String Replacement
+### Version - Database-Driven Versioning
+```bash
+ws version <SUBCOMMAND> [OPTIONS]
+```
+
+### Wstemplate - Cross-Project Version Stamping
+```bash
+ws wstemplate <SUBCOMMAND> [OPTIONS]
+```
+
+## Refactor - String Replacement
 
 ### Command Syntax
 
 ```bash
-refac <ROOT_DIR> <OLD_STRING> <NEW_STRING> [OPTIONS]
+ws refactor <ROOT_DIR> <OLD_STRING> <NEW_STRING> [OPTIONS]
 ```
 
 - `ROOT_DIR`: Directory to search in (use `.` for current directory)
@@ -49,377 +59,103 @@ refac <ROOT_DIR> <OLD_STRING> <NEW_STRING> [OPTIONS]
 ### Simple Examples
 
 ```bash
-# Replace in current directory
-refac . "oldname" "newname"
-
-# Process specific directory
-refac ./src "OldClass" "NewClass"
-
-# Preview changes first (recommended)
-refac . "oldname" "newname" --verbose
+ws refactor . "oldname" "newname"
+ws refactor ./src "OldClass" "NewClass"
+ws refactor . "oldname" "newname" --verbose
 ```
 
 ## Operation Modes
 
-Refac operates on two levels by default:
+Refactor operates on two levels by default:
 
 1. **Name Replacement**: Renames files and directories
 2. **Content Replacement**: Replaces strings inside text files
 
 ### Mode Flags
 
-Use these flags to limit the operation scope:
-
 ```bash
-# Only rename files/directories (skip content)
-refac . "oldname" "newname" --names-only
-
-# Only replace content (skip renaming)
-refac . "oldname" "newname" --content-only
-
-# Only process files (skip directories)
-refac . "oldname" "newname" --files-only
-
-# Only process directories (skip files)
-refac . "oldname" "newname" --dirs-only
+ws refactor . "oldname" "newname" --names-only     # Only rename files/directories
+ws refactor . "oldname" "newname" --content-only   # Only replace content
+ws refactor . "oldname" "newname" --files-only     # Only process files
+ws refactor . "oldname" "newname" --dirs-only      # Only process directories
 ```
 
 ## Safety Features
 
 ### Dry Run Mode
 
-Always preview changes before applying them:
-
 ```bash
-# See what would be changed
-refac . "oldname" "newname" --verbose
-
-# Dry run with verbose output
-refac . "oldname" "newname" --verbose --verbose
+ws refactor . "oldname" "newname" --verbose
+ws refactor . "oldname" "newname" --verbose --verbose
 ```
 
 ### Backup Files
 
-Create backups before modifying files:
-
 ```bash
-# Create .bak files before modification
-refac . "oldname" "newname" --backup
+ws refactor . "oldname" "newname" --backup
 ```
 
 ### Force Mode
 
-Skip confirmation prompts:
-
 ```bash
-# Apply changes without confirmation
-refac . "oldname" "newname" --force
+ws refactor . "oldname" "newname" --force
 ```
 
 ## Filtering Options
 
 ### Include Patterns
 
-Process only files matching specific patterns:
-
 ```bash
-# Only Rust files
-refac . "oldname" "newname" --include "*.rs"
-
-# Multiple patterns
-refac . "oldname" "newname" --include "*.rs" --include "*.toml"
-
-# Include hidden files
-refac . "oldname" "newname" --include ".*"
+ws refactor . "oldname" "newname" --include "*.rs"
+ws refactor . "oldname" "newname" --include "*.rs" --include "*.toml"
 ```
 
 ### Exclude Patterns
 
-Skip files matching specific patterns:
-
 ```bash
-# Exclude log files
-refac . "oldname" "newname" --exclude "*.log"
-
-# Exclude multiple patterns
-refac . "oldname" "newname" --exclude "target/*" --exclude "*.log"
-
-# Exclude build directories
-refac . "oldname" "newname" --exclude "node_modules/*" --exclude "dist/*"
+ws refactor . "oldname" "newname" --exclude "*.log"
+ws refactor . "oldname" "newname" --exclude "target/*" --exclude "*.log"
 ```
 
 ### Combining Filters
 
 ```bash
-# Include source files but exclude tests
-refac ./src "oldname" "newname" \
+ws refactor ./src "oldname" "newname" \
   --include "*.rs" \
   --include "*.toml" \
   --exclude "*test*"
 ```
 
-## Options
+## Advanced Options
 
 ### Depth Control
 
-Limit how deep the tool searches:
-
 ```bash
-# Search only current directory (depth 1)
-refac . "oldname" "newname" --max-depth 1
-
-# Search up to 3 levels deep
-refac . "oldname" "newname" --max-depth 3
+ws refactor . "oldname" "newname" --max-depth 1
+ws refactor . "oldname" "newname" --max-depth 3
 ```
 
 ### Threading
 
-Control parallel processing:
-
 ```bash
-# Use 8 threads for faster processing
-refac . "oldname" "newname" --threads 8
-
-# Auto-detect optimal thread count (default)
-refac . "oldname" "newname" --threads 0
+ws refactor . "oldname" "newname" --threads 8
+ws refactor . "oldname" "newname" --threads 0    # Auto-detect
 ```
 
-### Case Sensitivity
+### Pattern Matching
 
 ```bash
-# Case-insensitive matching
-refac . "oldname" "newname" --ignore-case
+ws refactor . "oldname" "newname" --ignore-case
+ws refactor . "old_\\w+" "new_name" --regex
+ws refactor . "old.*name" "newname" --regex --ignore-case
 ```
 
-### Regex Patterns
-
-Use regular expressions for complex patterns:
+### Output Formats
 
 ```bash
-# Use regex patterns
-refac . "old_\w+" "new_name" --regex
-
-# Case-insensitive regex
-refac . "old.*name" "newname" --regex --ignore-case
-```
-
-## Output Formats
-
-### Human-Readable (Default)
-
-```bash
-refac . "oldname" "newname"
-```
-
-Shows colored output with progress bars and detailed information.
-
-### JSON Output
-
-```bash
-refac . "oldname" "newname" --format json
-```
-
-Useful for scripting and automation:
-
-```json
-{
-  "summary": {
-    "content_changes": 15,
-    "file_renames": 8,
-    "directory_renames": 3,
-    "total_changes": 26
-  },
-  "result": "success",
-  "dry_run": false
-}
-```
-
-### Plain Text
-
-```bash
-refac . "oldname" "newname" --format plain
-```
-
-Simple text output without colors or special formatting.
-
-## Real-World Examples
-
-### Code Refactoring
-
-```bash
-# Rename a class throughout a project
-refac ./src "UserManager" "AccountManager" --verbose
-
-# Update variable names in specific files
-refac ./src "oldVar" "newVar" --include "*.js" --include "*.ts"
-
-# Rename function across codebase
-refac . "calculateTotal" "computeSum" --content-only
-```
-
-### File Organization
-
-```bash
-# Rename draft files to final
-refac ./docs "draft" "final" --names-only
-
-# Update configuration URLs
-refac ./config "old.example.com" "new.example.com" --content-only
-
-# Rename project files
-refac . "myproject" "newproject" --exclude "node_modules/*"
-```
-
-### Database Migration
-
-```bash
-# Update table names in SQL files
-refac ./sql "old_table" "new_table" --include "*.sql"
-
-# Update column references
-refac ./src "old_column" "new_column" --include "*.py" --include "*.sql"
-```
-
-## Best Practices
-
-### 1. Always Test First
-
-```bash
-# Review changes carefully (refac shows preview automatically)
-refac . "oldname" "newname" --verbose --verbose
-
-# Check the output carefully before proceeding
-refac . "oldname" "newname"
-```
-
-### 2. Use Version Control
-
-```bash
-# Commit before refactoring
-git add .
-git commit -m "Before refactoring: rename oldname to newname"
-
-# Run refac
-refac . "oldname" "newname"
-
-# Review changes
-git diff
-```
-
-### 3. Be Specific with Patterns
-
-```bash
-# Good: Specific file types
-refac ./src "oldname" "newname" --include "*.rs" --include "*.toml"
-
-# Better: Also exclude unwanted directories
-refac ./src "oldname" "newname" \
-  --include "*.rs" \
-  --exclude "target/*" \
-  --exclude "*.log"
-```
-
-### 4. Use Appropriate Modes
-
-```bash
-# When renaming files only
-refac . "old_prefix" "new_prefix" --names-only
-
-# When updating configuration values
-refac ./config "old.server.com" "new.server.com" --content-only
-```
-
-### 5. Handle Large Projects
-
-```bash
-# Use more threads for large codebases
-refac . "oldname" "newname" --threads 8
-
-# Limit scope with patterns
-refac . "oldname" "newname" --include "src/**" --exclude "tests/**"
-```
-
-## Troubleshooting
-
-### No Changes Found
-
-```bash
-# Use verbose mode to see what's being processed
-refac . "oldname" "newname" --verbose --verbose
-
-# Check if the string exists
-grep -r "oldname" . --include="*.rs"
-
-# Verify include/exclude patterns
-refac . "oldname" "newname" --include "*" --verbose
-```
-
-### Permission Errors
-
-```bash
-# Check file permissions
-ls -la problematic_file
-
-# Use sudo if necessary (be careful!)
-sudo refac . "oldname" "newname"
-```
-
-### Binary Files
-
-Refac automatically skips binary files for content replacement:
-
-```bash
-# Use verbose to see skipped files
-refac . "oldname" "newname" --verbose
-```
-
-### Large Files
-
-For very large files, increase available memory:
-
-```bash
-# Process in smaller batches
-refac . "oldname" "newname" --max-depth 2
-```
-
-## Integration with Other Tools
-
-### Git Hooks
-
-Create a pre-commit hook to validate changes:
-
-```bash
-#!/bin/bash
-# .git/hooks/pre-commit
-refac . "debug_print" "logger.debug" --verbose --format json | \
-  jq '.summary.total_changes > 0' && \
-  echo "Warning: debug prints found"
-```
-
-### CI/CD Pipelines
-
-```bash
-# Check for outdated patterns
-refac . "old_api_url" "new_api_url" --verbose --format json | \
-  jq '.summary.total_changes > 0' && exit 1
-```
-
-### Scripts
-
-```bash
-#!/bin/bash
-# bulk-rename.sh
-PATTERNS=(
-  "old_function_1:new_function_1"
-  "old_function_2:new_function_2"
-  "old_variable:new_variable"
-)
-
-for pattern in "${PATTERNS[@]}"; do
-  IFS=':' read -r old new <<< "$pattern"
-  echo "Replacing $old with $new..."
-  refac . "$old" "$new" --force
-done
+ws refactor . "oldname" "newname"                   # Human-readable (default)
+ws refactor . "oldname" "newname" --format json     # Machine-readable
+ws refactor . "oldname" "newname" --format plain    # No colors
 ```
 
 ## Ldiff - Line Difference Visualizer
@@ -429,14 +165,12 @@ The `ldiff` tool processes input lines, replacing repeated tokens with a substit
 ### Basic Usage
 
 ```bash
-# Read from stdin with default substitute character
-echo -e "hello world\nhello universe" | ldiff
+echo -e "hello world\nhello universe" | ws ldiff
 # Output:
 # hello world
 # ░░░░░ universe
 
-# Use custom substitute character
-echo -e "test line\ntest another" | ldiff "*"
+echo -e "test line\ntest another" | ws ldiff "*"
 # Output:
 # test line
 # **** another
@@ -445,186 +179,79 @@ echo -e "test line\ntest another" | ldiff "*"
 ### Log Analysis
 
 ```bash
-# Monitor system logs for patterns
-tail -f /var/log/syslog | ldiff
-
-# Analyze web server logs
-cat /var/log/nginx/access.log | ldiff "■"
-
-# Find patterns in application logs
-journalctl -u myapp | ldiff
-```
-
-### Command Output Analysis
-
-```bash
-# Analyze directory listings
-find /usr/local -type f | ldiff
-
-# Monitor process lists
-ps aux | ldiff
-
-# Analyze network connections
-netstat -tulpn | ldiff "●"
+tail -f /var/log/syslog | ws ldiff
+cat /var/log/nginx/access.log | ws ldiff
+journalctl -u myapp | ws ldiff
 ```
 
 ### Real-time Monitoring
 
 ```bash
-# Monitor multiple log files
-tail -f /var/log/app1.log /var/log/app2.log | ldiff
-
-# Watch system messages
-dmesg -w | ldiff
-
-# Monitor command output
-watch -n 2 "df -h" | ldiff
-```
-
-### Advanced Usage
-
-```bash
-# Save patterns to file
-cat large.log | ldiff > patterns.txt
-
-# Combine with other tools
-grep "ERROR" /var/log/app.log | ldiff | head -20
-
-# Chain multiple filters
-cat access.log | grep "GET" | ldiff "*" | tee filtered.log
-```
-
-### Use Cases
-
-**Security Analysis:**
-```bash
-# Monitor failed login attempts
-tail -f /var/log/auth.log | grep "Failed" | ldiff
-```
-
-**Performance Monitoring:**
-```bash
-# Track response time patterns
-tail -f /var/log/api.log | grep "response_time" | ldiff
-```
-
-**System Administration:**
-```bash
-# Analyze startup patterns
-dmesg | grep "systemd" | ldiff
-```
-
-**Development Debugging:**
-```bash
-# Monitor application output
-./my_app 2>&1 | ldiff
+tail -f /var/log/app1.log /var/log/app2.log | ws ldiff
+dmesg -w | ws ldiff
 ```
 
 ## Scrap - Local Trash Can
 
-The scrap tool provides a local trash can for deleted files using a `.scrap` folder.
+The scrap tool provides a local trash can using a `.scrap` folder.
 
 ### Basic Operations
 
 ```bash
-# Move files to local trash can
-scrap temp_file.txt old_directory/
-
-# List contents (default behavior)
-scrap
-
-# Search for files
-scrap find "*.log"
-
-# Clean old items
-scrap clean --days 30
-
-# Archive everything
-scrap archive --remove
-```
-
-### Workflow Examples
-
-```bash
-# Development workflow - move unwanted files to trash
-scrap debug.log temp_output/ experimental_code/
-# Continue working...
-scrap clean --days 7  # Weekly cleanup
-
-# Remove old files to trash instead of deleting
-scrap old_version/ deprecated_files/
-scrap archive --output "project-backup-v1.0.tar.gz"
+ws scrap temp_file.txt old_directory/
+ws scrap list
+ws scrap find "*.log"
+ws scrap clean --days 30
+ws scrap archive --remove
 ```
 
 For detailed information, see the [Scrap Tool Guide]({{ '/scrap-guide/' | relative_url }}).
 
 ## Unscrap - File Restoration
 
-The unscrap tool restores files from `.scrap` back to their original locations.
-
-### Basic Operations
-
 ```bash
-# Restore last scrapped item
-unscrap
-
-# Restore specific file
-unscrap filename.txt
-
-# Restore to custom location
-unscrap file.txt --to /new/location/
-
-# Force overwrite existing files
-unscrap file.txt --force
-```
-
-### Workflow Examples
-
-```bash
-# Quick recovery
-scrap important.txt  # Accidental scrap
-unscrap              # Quick undo
-
-# Selective restoration
-scrap list           # See what's available
-unscrap old_config.json --to ./backup/
+ws unscrap                              # Restore last item
+ws unscrap filename.txt                 # Restore specific file
+ws unscrap file.txt --to /new/location/ # Custom destination
+ws unscrap file.txt --force             # Overwrite existing
 ```
 
 For detailed information, see the [Unscrap Tool Guide]({{ '/unscrap-guide/' | relative_url }}).
 
-## St8 - Version Management
+## Version Management
 
-### Installation and Setup
-
-```bash
-# Navigate to your git repository
-cd your-project/
-
-# Install git hook
-st8 install
-
-# Check status
-st8 status
-```
-
-### Basic Operations
+### Git Hook Integration
 
 ```bash
-# Show current version information
-st8 show
-
-# Manual version update
-st8 update
-
-# Force update (outside git repo)
-st8 update --no-git
-
-# Check configuration and status
-st8 status
-
-# Uninstall hook
-st8 uninstall
+ws git install           # Install pre-commit hook
+ws git show              # Show current version
+ws git status            # Check configuration
+ws git uninstall         # Remove hook
 ```
+
+### Manual Version Update
+
+```bash
+ws update                # Update version and render templates
+ws update --git-add      # Also stage changed files
+ws update --no-git       # Skip git integration
+```
+
+### Database-Driven Versioning
+
+```bash
+ws version show          # Display current version breakdown
+ws version major 2       # Set major version to 2
+ws version tag           # Create git tag
+ws version info          # Show calculation details
+```
+
+### Version Format
+
+`{major}.{minor}.{patch}` where:
+- **Major**: Set via `ws version major` (stored in database)
+- **Minor**: Total commits in the repository
+- **Patch**: Total line changes (additions + deletions)
 
 ### Configuration
 
@@ -638,119 +265,80 @@ Create `.st8.json` in your repository root:
 }
 ```
 
-### Version Calculation
+## Wstemplate - Cross-Project Version Stamping
 
-St8 calculates versions using:
-- **Major**: Latest git tag (e.g., `v1.2` → `1.2`)
-- **Minor**: Commits since tag
-- **Patch**: Total line changes
+### Overview
 
-```bash
-# Example with git tag v1.0 and 3 commits since tag:
-# Result: 1.0.3.247 (where 247 is total changes)
-```
+`.wstemplate` files are Tera templates that render to the file with the `.wstemplate` suffix stripped (e.g., `Cargo.toml.wstemplate` renders to `Cargo.toml`). They're rendered automatically during `ws update`.
 
-### Workflow Examples
+### Setup
+
+Each project needs a single wstemplate entry: its alias and a scan root.
 
 ```bash
-# Setup new project
-git init
-git add .
-git commit -m "Initial commit"
-git tag v1.0
-st8 install
-
-# Normal development (automatic)
-echo "new feature" >> main.rs
-git add .
-git commit -m "Add feature"  # Version auto-updated
-
-# Check current version
-st8 show
-cat version.txt
-
-# Manual version check
-st8 update --no-git
+ws wstemplate add /path/to/workspace     # Set scan root for this project
+ws wstemplate list-entries               # Verify entry
 ```
 
-For detailed information, see the [St8 Tool Guide]({{ '/st8-guide/' | relative_url }}).
+The alias is auto-derived from the project directory name (e.g., `my-project` becomes `my_project`). Override with `--alias`:
+
+```bash
+ws wstemplate add /path/to/workspace --alias mylib
+```
+
+### Template Syntax
+
+Templates use Tera syntax. Available variables:
+
+```
+{{ project.version }}                  # This project's version
+{{ project.name }}                     # This project's name
+{{ projects.other_lib.version }}       # Another project's version
+{{ datetime.date }}                    # Current date (YYYY-MM-DD)
+```
+
+### Dynamic Cross-Project Resolution
+
+When rendering, the engine scans the root for all `.ws/state.json` files to discover peer projects. No explicit cross-project entries are needed. If a template references `{{ projects.tagged_urn_js.version }}`, the engine finds `tagged_urn_js`'s project root and reads its `version.txt`.
+
+### Error Handling
+
+- **Unresolvable alias**: Hard error listing all known aliases
+- **Missing `version.txt`**: Hard error — run `ws update` in the dependency first
+- **Multiple entries in state.json**: Hard error — single-entry model enforced
+
+### Commands
+
+```bash
+ws wstemplate add /path/to/root              # Set scan root
+ws wstemplate add /path/to/root --alias lib  # With custom alias
+ws wstemplate list-entries                    # Show entry
+ws wstemplate list                            # List relevant templates
+ws wstemplate render                          # Render all relevant
+ws wstemplate remove my_alias                 # Remove entry
+```
 
 ## Tool Integration
 
 ### Combined Workflows
 
 ```bash
-# development workflow
-st8 install                               # Set up versioning
-scrap temp_* *.log build/                    # Clear workspace
-refac . "OldClass" "NewClass" --verbose      # Preview changes
-refac . "OldClass" "NewClass"                # Apply changes
-git add . && git commit -m "Refactor class" # Auto-version bump
+# Development workflow
+ws git install                              # Set up versioning
+ws scrap temp_* *.log build/                # Clear workspace
+ws refactor . "OldClass" "NewClass" --verbose # Preview changes
+ws refactor . "OldClass" "NewClass"          # Apply changes
+git add . && git commit -m "Refactor class"  # Auto-version bump
 
-# Safe refactoring with backup
-scrap old_implementation.rs                  # Backup current code
-st8 show                                 # Note current version
-refac . "OldClass" "NewClass" --verbose      # Preview changes
-refac . "OldClass" "NewClass"                # Apply changes
-# If issues arise: unscrap old_implementation.rs
-
-# Project cleanup and maintenance
-scrap temp_* debug_* old_*/                  # Move temporary files
-refac . "old_project_name" "new_project_name" # Rename project
-scrap clean --days 14                       # Clean old scrapped files
-st8 status                               # Check version tracking
-```
-
-### Automation Scripts
-
-```bash
-#!/bin/bash
-# safe-refactor.sh - refactoring workflow
-OLD="$1"
-NEW="$2"
-
-# Check st8 is set up
-if ! st8 status >/dev/null 2>&1; then
-    echo "Setting up version tracking..."
-    st8 install
-fi
-
-# Record current version
-CURRENT_VERSION=$(st8 show 2>/dev/null | grep "Full Version" | cut -d: -f2 | xargs)
-echo "Current version: $CURRENT_VERSION"
-
-# Backup current state
-echo "Creating backup..."
-scrap archive --output "backup-$(date +%s).tar.gz"
-
-# Preview changes
-echo "Previewing changes..."
-refac . "$OLD" "$NEW" --verbose
-
-# Ask for confirmation
-read -p "Apply changes? (y/N) " -n 1 -r
-echo
-if [[ $REPLY =~ ^[Yy]$ ]]; then
-    refac . "$OLD" "$NEW"
-    echo "Refactoring complete!"
-    
-    # Commit changes (triggers version bump)
-    git add .
-    git commit -m "Refactor: $OLD -> $NEW"
-    
-    # Show new version
-    NEW_VERSION=$(cat version.txt 2>/dev/null || echo "unknown")
-    echo "Version updated: $CURRENT_VERSION -> $NEW_VERSION"
-else
-    echo "Operation cancelled."
-fi
+# Cross-project version update
+ws wstemplate add /path/to/workspace         # Set scan root
+ws update --git-add                          # Update + render + stage
 ```
 
 ## Next Steps
 
-- Check the [Command Reference]({{ '/api-reference/' | relative_url }}) for option details
-- See [Scrap Tool Guide]({{ '/scrap-guide/' | relative_url }}) for file management
-- See [Unscrap Tool Guide]({{ '/unscrap-guide/' | relative_url }}) for restoration workflows
-- See [St8 Tool Guide]({{ '/st8-guide/' | relative_url }}) for version management setup
-- See [Examples]({{ '/examples/' | relative_url }}) for more real-world scenarios
-- Report issues at [GitHub Issues](https://github.com/jowharshamshiri/workspace/issues)
+- [Command Reference]({{ '/api-reference/' | relative_url }}) for full option details
+- [Scrap Guide]({{ '/scrap-guide/' | relative_url }}) for file management
+- [Unscrap Guide]({{ '/unscrap-guide/' | relative_url }}) for restoration workflows
+- [St8 Guide]({{ '/st8-guide/' | relative_url }}) for version management and wstemplate setup
+- [Examples]({{ '/examples/' | relative_url }}) for more real-world scenarios

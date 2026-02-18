@@ -1,11 +1,11 @@
 ---
 layout: default
-title: Refac - Code Refactoring Guide
+title: Refactor - Code Refactoring Guide
 ---
 
-# Refac - Code Refactoring Guide
+# Refactor - Code Refactoring Guide
 
-The `refac` tool is a string replacement engine designed for safe code refactoring and content modification across codebases.
+The `ws refactor` tool is a string replacement engine designed for safe code refactoring and content modification across codebases.
 
 ## Overview
 
@@ -20,19 +20,19 @@ The `refac` tool is a string replacement engine designed for safe code refactori
 
 ### Command Syntax
 ```bash
-refac <directory> <old_string> <new_string> [OPTIONS]
+ws refactor <directory> <old_string> <new_string> [OPTIONS]
 ```
 
 ### First Steps
 ```bash
 # Refac always previews changes and asks for confirmation
-refac ./src "OldClassName" "NewClassName" --verbose
+ws refactor ./src "OldClassName" "NewClassName" --verbose
 
 # Apply with backup for safety
-refac ./src "OldClassName" "NewClassName" --backup
+ws refactor ./src "OldClassName" "NewClassName" --backup
 
 # Target specific file types
-refac ./src "old_api" "new_api" --include "*.rs" --include "*.toml"
+ws refactor ./src "old_api" "new_api" --include "*.rs" --include "*.toml"
 ```
 
 ## Core Features
@@ -63,13 +63,13 @@ Refac always shows changes before applying them and asks for confirmation:
 
 ```bash
 # Basic operation (shows preview automatically)
-refac . "oldname" "newname"
+ws refactor . "oldname" "newname"
 
 # Verbose output with detailed information
-refac . "oldname" "newname" --verbose
+ws refactor . "oldname" "newname" --verbose
 
 # JSON output for scripting (still shows preview)
-refac . "oldname" "newname" --format json
+ws refactor . "oldname" "newname" --format json
 ```
 
 **Preview Output Example**:
@@ -95,13 +95,13 @@ Optimized parallel processing for large datasets:
 
 ```bash
 # Use multiple threads for faster processing
-refac . "oldname" "newname" --threads 8
+ws refactor . "oldname" "newname" --threads 8
 
 # Auto-detect optimal thread count
-refac . "oldname" "newname" --threads 0
+ws refactor . "oldname" "newname" --threads 0
 
 # Progress tracking for long operations
-refac . "oldname" "newname" --progress always
+ws refactor . "oldname" "newname" --progress always
 ```
 
 **Performance Features**:
@@ -117,16 +117,16 @@ Control exactly what gets modified:
 
 ```bash
 # Only rename files and directories (skip content)
-refac . "oldproject" "newproject" --names-only
+ws refactor . "oldproject" "newproject" --names-only
 
 # Only replace content (skip renaming)
-refac . "old.api.com" "new.api.com" --content-only
+ws refactor . "old.api.com" "new.api.com" --content-only
 
 # Only process files (skip directories)
-refac . "oldname" "newname" --files-only
+ws refactor . "oldname" "newname" --files-only
 
 # Only process directories (skip files)
-refac . "oldname" "newname" --dirs-only
+ws refactor . "oldname" "newname" --dirs-only
 ```
 
 ### 📁 Pattern Filtering
@@ -134,19 +134,19 @@ Precise control over which files are processed:
 
 ```bash
 # Include specific file types
-refac . "oldname" "newname" \
+ws refactor . "oldname" "newname" \
   --include "*.rs" \
   --include "*.toml" \
   --include "*.md"
 
 # Exclude unwanted areas
-refac . "oldname" "newname" \
+ws refactor . "oldname" "newname" \
   --exclude "target/*" \
   --exclude "*.log" \
   --exclude ".git/*"
 
 # Complex filtering
-refac ./src "OldStruct" "NewStruct" \
+ws refactor ./src "OldStruct" "NewStruct" \
   --include "*.rs" \
   --exclude "*/tests/*" \
   --exclude "*/examples/*"
@@ -157,13 +157,13 @@ Manage traversal depth for large projects:
 
 ```bash
 # Limit to current directory only
-refac . "oldname" "newname" --max-depth 1
+ws refactor . "oldname" "newname" --max-depth 1
 
 # Search 3 levels deep
-refac . "oldname" "newname" --max-depth 3
+ws refactor . "oldname" "newname" --max-depth 3
 
 # Unlimited depth (default)
-refac . "oldname" "newname" --max-depth 0
+ws refactor . "oldname" "newname" --max-depth 0
 ```
 
 ## Advanced Features
@@ -173,7 +173,7 @@ Safe modification with automatic backups:
 
 ```bash
 # Create backups before modifying files
-refac . "oldname" "newname" --backup
+ws refactor . "oldname" "newname" --backup
 
 # Backups are created with .refac_backup extension
 # Example: config.toml → config.toml.refac_backup
@@ -190,13 +190,13 @@ Mission-critical safety features:
 
 ```bash
 # Force operation without confirmation
-refac . "oldname" "newname" --force
+ws refactor . "oldname" "newname" --force
 
 # Case-sensitive matching (default)
-refac . "OldName" "NewName"
+ws refactor . "OldName" "NewName"
 
 # Show detailed error information
-refac . "oldname" "newname" --verbose
+ws refactor . "oldname" "newname" --verbose
 ```
 
 **Safety Guarantees**:
@@ -210,11 +210,11 @@ Consistent behavior across all platforms:
 
 ```bash
 # Works identically on Windows, macOS, and Linux
-refac . "oldname" "newname"
+ws refactor . "oldname" "newname"
 
 # Handles platform-specific path separators
-refac . "old\\path" "new/path"  # Windows
-refac . "old/path" "new/path"   # Unix-like
+ws refactor . "old\\path" "new/path"  # Windows
+ws refactor . "old/path" "new/path"   # Unix-like
 ```
 
 **Platform Features**:
@@ -229,17 +229,17 @@ refac . "old/path" "new/path"   # Unix-like
 Migrate from old API to new API across entire codebase:
 
 ```bash
-# 1. Review the migration (refac shows changes before applying)
-refac ./src "old_api::Client" "new_api::Client" --verbose
+# 1. Review the migration (ws refactor shows changes before applying)
+ws refactor ./src "old_api::Client" "new_api::Client" --verbose
 
 # 2. Update import statements
-refac ./src "use old_api" "use new_api" --content-only --include "*.rs"
+ws refactor ./src "use old_api" "use new_api" --content-only --include "*.rs"
 
 # 3. Update function calls
-refac ./src "old_api::connect" "new_api::connect" --content-only
+ws refactor ./src "old_api::connect" "new_api::connect" --content-only
 
 # 4. Update configuration files
-refac ./config "old_api_endpoint" "new_api_endpoint" --content-only --include "*.toml"
+ws refactor ./config "old_api_endpoint" "new_api_endpoint" --content-only --include "*.toml"
 ```
 
 ### 🏢 Project Rebranding
@@ -247,16 +247,16 @@ Rename a project throughout the codebase:
 
 ```bash
 # 1. Update package names
-refac . "oldproject" "newproject" --include "Cargo.toml" --include "package.json"
+ws refactor . "oldproject" "newproject" --include "Cargo.toml" --include "package.json"
 
 # 2. Update file names and directory structure
-refac . "oldproject" "newproject" --names-only
+ws refactor . "oldproject" "newproject" --names-only
 
 # 3. Update content references
-refac . "oldproject" "newproject" --content-only --exclude "target/*"
+ws refactor . "oldproject" "newproject" --content-only --exclude "target/*"
 
 # 4. Update documentation
-refac ./docs "OldProject" "NewProject" --include "*.md"
+ws refactor ./docs "OldProject" "NewProject" --include "*.md"
 ```
 
 ### 🏗️ Refactoring Code Structure
@@ -264,13 +264,13 @@ Reorganize and rename code components:
 
 ```bash
 # 1. Rename a module throughout the codebase
-refac ./src "user_service" "account_service" --include "*.rs"
+ws refactor ./src "user_service" "account_service" --include "*.rs"
 
 # 2. Update struct names
-refac ./src "UserData" "AccountData" --content-only --include "*.rs"
+ws refactor ./src "UserData" "AccountData" --content-only --include "*.rs"
 
 # 3. Update configuration keys
-refac ./config "user_" "account_" --content-only --include "*.toml" --include "*.yaml"
+ws refactor ./config "user_" "account_" --content-only --include "*.toml" --include "*.yaml"
 ```
 
 ### 🌍 Configuration Updates
@@ -278,7 +278,7 @@ Update configuration across multiple environments:
 
 ```bash
 # Update API endpoints across all configs
-refac ./config "api.old.com" "api.new.com" \
+ws refactor ./config "api.old.com" "api.new.com" \
   --content-only \
   --include "*.toml" \
   --include "*.yaml" \
@@ -286,7 +286,7 @@ refac ./config "api.old.com" "api.new.com" \
   --include "*.env"
 
 # Update database connection strings
-refac ./config "old_database" "new_database" \
+ws refactor ./config "old_database" "new_database" \
   --content-only \
   --backup
 ```
@@ -335,7 +335,7 @@ Total changes applied: 26
 Machine-readable format for automation:
 
 ```bash
-refac . "oldname" "newname" --format json
+ws refactor . "oldname" "newname" --format json
 ```
 
 ```json
@@ -368,7 +368,7 @@ refac . "oldname" "newname" --format json
 Minimal output for scripting:
 
 ```bash
-refac . "oldname" "newname" --format plain
+ws refactor . "oldname" "newname" --format plain
 ```
 
 ```
@@ -452,36 +452,36 @@ Total changes: 26
 ls -la affected_file.txt
 
 # Run with appropriate permissions
-sudo refac . "oldname" "newname"  # Use carefully
+sudo ws refactor . "oldname" "newname"  # Use carefully
 ```
 
 **"No changes found" when changes expected**
 ```bash
 # Use verbose mode to see what's being processed
-refac . "oldname" "newname" --verbose
+ws refactor . "oldname" "newname" --verbose
 
 # Check case sensitivity
-refac . "OldName" "NewName"  # vs "oldname" "newname"
+ws refactor . "OldName" "NewName"  # vs "oldname" "newname"
 
 # Verify include/exclude patterns
-refac . "oldname" "newname" --include "*.txt" --verbose
+ws refactor . "oldname" "newname" --include "*.txt" --verbose
 ```
 
 **"Naming collision detected"**
 ```bash
 # Review the collision report (shown automatically)
-refac . "oldname" "newname" --verbose
+ws refactor . "oldname" "newname" --verbose
 
 # Resolve conflicts manually before proceeding
 mv conflicting_file.txt conflicting_file_backup.txt
-refac . "oldname" "newname"
+ws refactor . "oldname" "newname"
 ```
 
 **Binary files not being processed**
 ```bash
 # This is by design for safety
 # Use verbose mode to see which files are skipped
-refac . "oldname" "newname" --verbose --content-only
+ws refactor . "oldname" "newname" --verbose --content-only
 ```
 
 ### Debug Mode
@@ -489,10 +489,10 @@ For detailed debugging information:
 
 ```bash
 # Maximum verbosity (shows preview automatically)
-refac . "oldname" "newname" --verbose --progress always
+ws refactor . "oldname" "newname" --verbose --progress always
 
 # Check specific file processing
-refac specific_file.txt "oldname" "newname" --verbose
+ws refactor specific_file.txt "oldname" "newname" --verbose
 ```
 
 ## Integration Examples
@@ -504,8 +504,8 @@ git checkout -b refactor-api-names
 git add .
 git commit -m "Checkpoint before refactoring"
 
-refac ./src "old_api" "new_api" --verbose
-refac ./src "old_api" "new_api" --backup
+ws refactor ./src "old_api" "new_api" --verbose
+ws refactor ./src "old_api" "new_api" --backup
 
 git add .
 git commit -m "Refactor API names from old_api to new_api"
@@ -514,7 +514,7 @@ git commit -m "Refactor API names from old_api to new_api"
 ### With Build Systems
 ```bash
 # Update build configurations
-refac . "old_target_name" "new_target_name" \
+ws refactor . "old_target_name" "new_target_name" \
   --include "Makefile" \
   --include "*.cmake" \
   --include "*.toml" \
@@ -528,11 +528,11 @@ refac . "old_target_name" "new_target_name" \
 set -e
 
 # Validate refactoring first (using assume-yes for non-interactive)
-if refac ./src "$OLD_NAME" "$NEW_NAME" --assume-yes --format json > refac_plan.json; then
+if ws refactor ./src "$OLD_NAME" "$NEW_NAME" --assume-yes --format json > refac_plan.json; then
     echo "Refactoring plan validated"
     
     # Apply changes
-    refac ./src "$OLD_NAME" "$NEW_NAME" --format json > refac_result.json
+    ws refactor ./src "$OLD_NAME" "$NEW_NAME" --format json > refac_result.json
     
     # Verify success
     if [ $? -eq 0 ]; then
@@ -548,4 +548,4 @@ else
 fi
 ```
 
-The refac tool provides comprehensive, safe, and efficient string replacement capabilities for any scale of refactoring operation, from small tweaks to large-scale codebase transformations.
+The `ws refactor` tool provides comprehensive, safe, and efficient string replacement capabilities for any scale of refactoring operation, from small tweaks to large-scale codebase transformations.

@@ -23,7 +23,7 @@ cargo build
 Run the full test suite:
 
 ```bash
-cargo test --all-features
+cargo test
 ```
 
 ## Contribution Guidelines
@@ -38,8 +38,22 @@ cargo test --all-features
 
 ```
 src/
-├── cli.rs        # Command-line interface
-├── engine.rs     # Core processing logic
-├── fs_ops.rs     # File system operations
-└── detector.rs   # Collision detection
+├── bin/
+│   └── ws.rs               # CLI entry point (clap parser, command dispatch)
+├── lib.rs                   # Library root
+├── refac/                   # Refactor tool (string replacement)
+│   ├── mod.rs
+│   └── binary_detector.rs
+├── st8/                     # Version management
+│   ├── mod.rs
+│   ├── st8_common.rs        # Version calculation, project file updates
+│   ├── templates.rs         # Tera template manager
+│   └── wstemplate.rs        # Cross-project .wstemplate engine
+├── workspace_state.rs       # Per-project state (WstemplateEntry, .ws/state.json)
+├── entities/                # Entity system (features, tasks, directives, etc.)
+├── ldiff/                   # Line difference visualizer
+├── logging.rs               # Structured logging
+├── code_analysis/           # AST-based code analysis
+├── mcp_protocol.rs          # MCP server protocol handler
+└── interactive_tree.rs      # Interactive tree display
 ```
