@@ -1,7 +1,7 @@
 {
   "id": "P001",
   "name": "Claude Commands Project",
-  "description": "CLI command management system for AI-assisted development with persistent knowledge management methodology",
+  "description": "CLI command management system with persistent knowledge management methodology",
   "status": "active",
   "created": "2025-07-31",
   "lastActivity": "2025-08-21",
