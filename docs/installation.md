@@ -16,7 +16,7 @@ This guide covers installation methods for the Workspace tool suite.
 ## Quick Install (Recommended)
 
 ```bash
-git clone https://github.com/jowharshamshiri/workspace.git
+git clone https://github.com/jowharshamshiri/ws.git
 cd workspace
 ./install.sh
 ```
@@ -65,7 +65,7 @@ ws git status                               # Test git integration status
 ### Build and Install
 
 ```bash
-git clone https://github.com/jowharshamshiri/workspace.git
+git clone https://github.com/jowharshamshiri/ws.git
 cd workspace
 cargo build --release
 cargo install --path .
@@ -83,7 +83,7 @@ cargo install --path . --root /usr/local    # Requires sudo
 For development or testing the latest changes:
 
 ```bash
-git clone https://github.com/jowharshamshiri/workspace.git
+git clone https://github.com/jowharshamshiri/ws.git
 cd workspace
 
 # Run tools directly without installing
@@ -123,7 +123,7 @@ sudo apt update
 sudo apt install build-essential git curl
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 source ~/.cargo/env
-git clone https://github.com/jowharshamshiri/workspace.git
+git clone https://github.com/jowharshamshiri/ws.git
 cd workspace && ./install.sh
 ```
 
@@ -131,7 +131,7 @@ cd workspace && ./install.sh
 ```bash
 sudo pacman -S base-devel git rustup
 rustup default stable
-git clone https://github.com/jowharshamshiri/workspace.git
+git clone https://github.com/jowharshamshiri/ws.git
 cd workspace && ./install.sh
 ```
 
@@ -149,7 +149,7 @@ xcode-select --install
 brew install ripgrep
 
 # Install Workspace
-git clone https://github.com/jowharshamshiri/workspace.git
+git clone https://github.com/jowharshamshiri/ws.git
 cd workspace && ./install.sh
 ```
 
@@ -267,7 +267,7 @@ cargo install --path . --force
 If you encounter issues:
 
 1. Check [Usage Guide]({{ '/usage/' | relative_url }}) and [API Reference]({{ '/api-reference/' | relative_url }})
-2. Search [GitHub Issues](https://github.com/jowharshamshiri/workspace/issues)
+2. Search [GitHub Issues](https://github.com/jowharshamshiri/ws/issues)
 3. Create a new issue with: OS/version, Rust version, error message, steps to reproduce
 
 ## Next Steps

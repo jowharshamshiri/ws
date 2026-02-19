@@ -121,7 +121,7 @@ ws version tag               # Create git tag with current version
 ## Installation
 
 ```bash
-git clone https://github.com/jowharshamshiri/workspace.git
+git clone https://github.com/jowharshamshiri/ws.git
 cd workspace
 ./install.sh
 ```

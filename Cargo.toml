@@ -84,10 +84,10 @@ description = "Workspace - A tool suite for file operations, version management,
 edition = "2021"
 keywords = ["development-tools", "filesystem", "automation", "workflow"]
 license = "MIT"
-name = "workspace"
+name = "ws"
 readme = "README.md"
-repository = "https://github.com/jowharshamshiri/workspace"
-version = "0.69.198628"
+repository = "https://github.com/jowharshamshiri/ws"
+version = "0.70.193581"
 
 [profile.dev]
 debug = true

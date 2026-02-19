@@ -3,10 +3,10 @@ use clap::{CommandFactory, Parser, Subcommand};
 use clap_complete::{generate, Shell};
 use colored::Colorize;
 use log;
-use workspace::st8::{St8Config, VersionInfo, detect_project_files, update_version_file, TemplateManager, WstemplateEngine};
-use workspace::workspace_state::{WorkspaceState, WstemplateEntry};
-use workspace::entities::EntityManager;
-use workspace::logging::{self, log_operation_start, log_operation_complete, log_operation_error, log_warning, log_version_info};
+use ws::st8::{St8Config, VersionInfo, detect_project_files, update_version_file, TemplateManager, WstemplateEngine};
+use ws::workspace_state::{WorkspaceState, WstemplateEntry};
+use ws::entities::EntityManager;
+use ws::logging::{self, log_operation_start, log_operation_complete, log_operation_error, log_warning, log_version_info};
 use sqlx::SqlitePool;
 use sqlx::Row;
 use std::collections::HashMap;
@@ -33,7 +33,7 @@ enum Commands {
     Refactor {
         /// Arguments for refactor tool
         #[command(flatten)]
-        args: workspace::refac::Args,
+        args: ws::refac::Args,
     },
     
     /// Git integration and version management
@@ -1198,7 +1198,7 @@ fn run() -> Result<()> {
     match args.command {
         Commands::Refactor { args } => {
             log_operation_start("refactor", &format!("root: {:?}", args.root_dir));
-            match workspace::run_refac(args) {
+            match ws::run_refac(args) {
                 Ok(()) => log_operation_complete("refactor", start_time.elapsed()),
                 Err(error) => {
                     log_operation_error("refactor", &error);
@@ -1620,7 +1620,7 @@ fn run_scrap_command(paths: Vec<std::path::PathBuf>, command: Option<ScrapComman
         }
     }
     
-    workspace::run_scrap(args)
+    ws::run_scrap(args)
 }
 
 fn run_unscrap_command(name: Option<String>, force: bool, to: Option<std::path::PathBuf>) -> Result<()> {
@@ -1639,11 +1639,11 @@ fn run_unscrap_command(name: Option<String>, force: bool, to: Option<std::path::
         args.push(target_path.to_string_lossy().to_string());
     }
     
-    workspace::run_unscrap(args)
+    ws::run_unscrap(args)
 }
 
 fn run_ldiff_command(substitute_char: String) -> Result<()> {
-    workspace::run_ldiff(vec![substitute_char.clone()])
+    ws::run_ldiff(vec![substitute_char.clone()])
 }
 
 fn install_hook(force: bool) -> Result<()> {
@@ -1858,9 +1858,9 @@ fn calculate_version(project_root: &std::path::Path) -> Result<VersionInfo> {
     let db_path = project_root.join(".ws/project.db");
     let rt = tokio::runtime::Runtime::new()?;
     let version_info = rt.block_on(async {
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
+        let pool = ws::entities::database::initialize_database(&db_path).await?;
         let major_version = get_project_major_version(&pool).await?;
-        workspace::st8::VersionInfo::calculate_with_major(major_version)
+        ws::st8::VersionInfo::calculate_with_major(major_version)
     })?;
     log::info!("Version calculated: {}", version_info.full_version);
     Ok(version_info)
@@ -1906,7 +1906,7 @@ async fn handle_generate_docs(doc_type: &str, output_dir: Option<&str>, force: b
     use std::collections::HashMap;
     
     let db_path = get_project_root()?.join(".ws/project.db");
-    let pool = workspace::entities::database::initialize_database(&db_path).await?;
+    let pool = ws::entities::database::initialize_database(&db_path).await?;
     let entity_manager = EntityManager::new(pool.clone());
     
     // Get current project
@@ -1979,10 +1979,10 @@ async fn handle_generate_docs(doc_type: &str, output_dir: Option<&str>, force: b
 
 async fn generate_claude_md(
     tera: &tera::Tera,
-    project: &workspace::entities::schema_models::Project,
-    features: &[workspace::entities::schema_models::Feature],
-    sessions: &[workspace::entities::schema_models::Session],
-    _tasks: &[workspace::entities::schema_models::Task],
+    project: &ws::entities::schema_models::Project,
+    features: &[ws::entities::schema_models::Feature],
+    sessions: &[ws::entities::schema_models::Session],
+    _tasks: &[ws::entities::schema_models::Task],
     implementation_percentage: usize,
     test_percentage: usize,
     output_path: &str,
@@ -2008,8 +2008,8 @@ async fn generate_claude_md(
 
 async fn generate_features_md(
     tera: &tera::Tera,
-    project: &workspace::entities::schema_models::Project,
-    features: &[workspace::entities::schema_models::Feature],
+    project: &ws::entities::schema_models::Project,
+    features: &[ws::entities::schema_models::Feature],
     total_features: usize,
     implementation_percentage: usize,
     test_percentage: usize,
@@ -2027,7 +2027,7 @@ async fn generate_features_md(
     context.insert("generated_at", &chrono::Utc::now());
     
     // Group features by category
-    let mut features_by_category: BTreeMap<String, Vec<&workspace::entities::schema_models::Feature>> = BTreeMap::new();
+    let mut features_by_category: BTreeMap<String, Vec<&ws::entities::schema_models::Feature>> = BTreeMap::new();
     for feature in features {
         let category = feature.category.as_deref().unwrap_or("General").to_string();
         features_by_category.entry(category).or_insert_with(Vec::new).push(feature);
@@ -2056,7 +2056,7 @@ async fn generate_features_md(
 
 async fn generate_progress_md(
     _tera: &tera::Tera,
-    sessions: &[workspace::entities::schema_models::Session],
+    sessions: &[ws::entities::schema_models::Session],
     output_path: &str,
     force: bool
 ) -> Result<()> {
@@ -2093,10 +2093,10 @@ async fn generate_progress_md(
 }
 
 async fn generate_status_report(
-    project: &workspace::entities::schema_models::Project,
-    features: &[workspace::entities::schema_models::Feature],
-    tasks: &[workspace::entities::schema_models::Task],
-    sessions: &[workspace::entities::schema_models::Session],
+    project: &ws::entities::schema_models::Project,
+    features: &[ws::entities::schema_models::Feature],
+    tasks: &[ws::entities::schema_models::Task],
+    sessions: &[ws::entities::schema_models::Session],
     implementation_percentage: usize,
     test_percentage: usize,
     output_path: &str,
@@ -2458,10 +2458,10 @@ fn run_mcp_server(_port: u16, _debug: bool, migrate: bool) -> Result<()> {
                 let pool = if db_path.exists() {
                     sqlx::SqlitePool::connect(&format!("sqlite:{}", db_path.display())).await?
                 } else {
-                    workspace::entities::database::initialize_database(&db_path).await?
+                    ws::entities::database::initialize_database(&db_path).await?
                 };
                 
-                let _entity_manager = workspace::entities::EntityManager::new(pool);
+                let _entity_manager = ws::entities::EntityManager::new(pool);
                 // Migration method not implemented yet
                 // entity_manager.migrate_features_from_file(features_path).await?;
                 
@@ -2680,10 +2680,10 @@ async fn populate_sample_data_async(force: bool) -> Result<()> {
         sqlx::SqlitePool::connect(&format!("sqlite:{}", db_path.display())).await
             .map_err(|e| anyhow::anyhow!("Failed to connect to database: {}", e))?
     } else {
-        workspace::entities::database::initialize_database(&db_path).await?
+        ws::entities::database::initialize_database(&db_path).await?
     };
     
-    let entity_manager = workspace::entities::EntityManager::new(pool);
+    let entity_manager = ws::entities::EntityManager::new(pool);
     
     // Load test data from test_data.sql if it exists
     let test_data_path = std::path::Path::new("test_data.sql");
@@ -5740,7 +5740,7 @@ fn add_feature_to_database(title: String, description: String, category: String,
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(async {
         let db_path = get_project_root()?.join(".ws/project.db");
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
+        let pool = ws::entities::database::initialize_database(&db_path).await?;
         let _entity_manager = EntityManager::new(pool.clone());
         
         println!("{} Adding feature to database via EntityManager", "💾".blue());
@@ -5750,7 +5750,7 @@ fn add_feature_to_database(title: String, description: String, category: String,
         println!("  {} Initial State: {}", "🎯".cyan(), state);
         
         // Map state to FeatureState enum
-        use workspace::entities::schema_models::FeatureState;
+        use ws::entities::schema_models::FeatureState;
         let feature_state = match state.as_str() {
             "not_started" => FeatureState::NotImplemented,
             "implemented" => FeatureState::ImplementedNoTests,
@@ -5762,7 +5762,7 @@ fn add_feature_to_database(title: String, description: String, category: String,
         };
         
         // Create feature using CRUD operations (the create function doesn't take state parameter)
-        let feature = workspace::entities::crud::features::create(
+        let feature = ws::entities::crud::features::create(
             &pool,
             "P001".to_string(), // Default project ID for now
             title.clone(),
@@ -5771,7 +5771,7 @@ fn add_feature_to_database(title: String, description: String, category: String,
         ).await?;
         
         // Update state separately
-        workspace::entities::crud::features::update_state(&pool, &feature.id, feature_state).await?;
+        ws::entities::crud::features::update_state(&pool, &feature.id, feature_state).await?;
         
         println!("{} Feature {} added to database", "✅".green(), feature.id);
         Ok(feature.id)
@@ -6068,13 +6068,13 @@ fn update_feature_state(feature_id: &str, new_state: &str, evidence: Option<Stri
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(async {
         let db_path = get_project_root()?.join(".ws/project.db");
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
+        let pool = ws::entities::database::initialize_database(&db_path).await?;
         let _entity_manager = EntityManager::new(pool.clone());
         
         println!("{} Updating feature {} state to {}", "🔄".blue(), feature_id, new_state);
         
         // Map state string to FeatureState enum
-        use workspace::entities::schema_models::FeatureState;
+        use ws::entities::schema_models::FeatureState;
         let feature_state = match new_state {
             "❌" => FeatureState::NotImplemented,
             "🟠" => FeatureState::ImplementedNoTests,
@@ -6088,7 +6088,7 @@ fn update_feature_state(feature_id: &str, new_state: &str, evidence: Option<Stri
         };
         
         // Update feature in database
-        workspace::entities::crud::features::update_state(&pool, feature_id, feature_state).await?;
+        ws::entities::crud::features::update_state(&pool, feature_id, feature_state).await?;
         
         // Update notes if evidence provided
         if let Some(_evidence_text) = evidence {
@@ -6409,7 +6409,7 @@ fn handle_list_features_api(payload: Option<String>) -> Result<()> {
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(async {
         let db_path = get_project_root()?.join(".ws/project.db");
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
+        let pool = ws::entities::database::initialize_database(&db_path).await?;
         let _entity_manager = EntityManager::new(pool.clone());
         
         let filters = if let Some(json_payload) = payload {
@@ -6424,7 +6424,7 @@ fn handle_list_features_api(payload: Option<String>) -> Result<()> {
         let notes_search = filters["notes_search"].as_str();
         
         // Get all features from database (using list_by_project with default project)
-        let all_features = workspace::entities::crud::features::list_by_project(&pool, "P001").await?;
+        let all_features = ws::entities::crud::features::list_by_project(&pool, "P001").await?;
         
         // Apply filters and convert to JSON
         let mut filtered_features = Vec::new();
@@ -6553,7 +6553,7 @@ fn handle_project_status_api(payload: Option<String>) -> Result<()> {
     let rt = tokio::runtime::Runtime::new()?;
     let response = rt.block_on(async {
         let db_path = get_project_root()?.join(".ws/project.db");
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
+        let pool = ws::entities::database::initialize_database(&db_path).await?;
         let entity_manager = EntityManager::new(pool.clone());
         
         // Get current project
@@ -6561,9 +6561,9 @@ fn handle_project_status_api(payload: Option<String>) -> Result<()> {
         let project_name = current_project.map_or("Unknown Project".to_string(), |p| p.name);
         
         // Get database-driven metrics
-        let features = workspace::entities::crud::features::list_by_project(&pool, "P001").await?;
+        let features = ws::entities::crud::features::list_by_project(&pool, "P001").await?;
         let tasks = if include_tasks {
-            Some(workspace::entities::crud::tasks::list_by_project(&pool, "P001", None).await?)
+            Some(ws::entities::crud::tasks::list_by_project(&pool, "P001", None).await?)
         } else {
             None
         };
@@ -6671,7 +6671,7 @@ fn handle_project_setup_api(payload: Option<String>) -> Result<()> {
         let setup_result = rt.block_on(async {
             // Initialize database and project
             let db_path = get_project_root()?.join(".ws/project.db");
-            let pool = workspace::entities::database::initialize_database(&db_path).await?;
+            let pool = ws::entities::database::initialize_database(&db_path).await?;
             let entity_manager = EntityManager::new(pool.clone());
             
             // Create project if it doesn't exist
@@ -6681,7 +6681,7 @@ fn handle_project_setup_api(payload: Option<String>) -> Result<()> {
             let project = if existing_project.is_none() {
                 println!("    {} Creating new project: {}", "➕".green(), project_name);
                 
-                workspace::entities::crud::projects::create(
+                ws::entities::crud::projects::create(
                     &pool,
                     project_name.clone(),
                     format!("{} project created via API", project_type)
@@ -6728,7 +6728,7 @@ fn handle_project_setup_api(payload: Option<String>) -> Result<()> {
                 
                 for (i, (title, description)) in template_features.iter().enumerate() {
                     let feature_id = format!("F{:05}", i + 1);
-                    workspace::entities::crud::features::create(
+                    ws::entities::crud::features::create(
                         &pool,
                         "P001".to_string(),
                         title.to_string(),
@@ -6746,7 +6746,7 @@ fn handle_project_setup_api(payload: Option<String>) -> Result<()> {
                 
                 // Create a sample task
                 let task_id = format!("T{:06}", 1);
-                workspace::entities::crud::tasks::create(
+                ws::entities::crud::tasks::create(
                     &pool,
                     "P001".to_string(),
                     format!("F{:05}", 1),
@@ -6757,13 +6757,13 @@ fn handle_project_setup_api(payload: Option<String>) -> Result<()> {
                 
                 // Create a sample directive
                 let directive_id = format!("D{:03}", 1);
-                workspace::entities::crud::directives::create(
+                ws::entities::crud::directives::create(
                     &pool,
                     "P001".to_string(),
                     format!("{} Development Standards", project_type),
                     format!("Development standards and practices for {} projects", project_type),
-                    workspace::entities::DirectiveCategory::Architecture,
-                    workspace::entities::Priority::High
+                    ws::entities::DirectiveCategory::Architecture,
+                    ws::entities::Priority::High
                 ).await?;
                 sample_items_created += 1;
             }
@@ -7808,7 +7808,7 @@ fn populate_sample_data_in_dir(output_dir: &str, force: bool) -> Result<()> {
 }
 
 async fn populate_sample_data_in_dir_async(output_dir: &str, _force: bool) -> Result<()> {
-    use workspace::entities::{database::initialize_database, EntityManager};
+    use ws::entities::{database::initialize_database, EntityManager};
     
     let output_path = std::path::Path::new(output_dir);
     let db_path = output_path.join(".ws/project.db");
@@ -7972,8 +7972,8 @@ fn link_entities(from_entity: String, from_type: String, to_entity: String, to_t
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(async {
         let db_path = get_project_root()?.join(".ws/project.db");
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
-        let entity_manager = workspace::entities::EntityManager::new(pool.clone());
+        let pool = ws::entities::database::initialize_database(&db_path).await?;
+        let entity_manager = ws::entities::EntityManager::new(pool.clone());
         
         // Get current project
         let project = entity_manager.get_current_project().await?;
@@ -7993,7 +7993,7 @@ fn list_entity_relationships(entity_id: String, entity_type: String, _relationsh
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(async {
         let db_path = get_project_root()?.join(".ws/project.db");
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
+        let pool = ws::entities::database::initialize_database(&db_path).await?;
         
         // Get relationships for this entity
         // TODO: Implement relationship listing when needed
@@ -8008,7 +8008,7 @@ fn unlink_entities(dependency_id: String, force: bool) -> Result<()> {
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(async {
         let db_path = get_project_root()?.join(".ws/project.db");
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
+        let pool = ws::entities::database::initialize_database(&db_path).await?;
         
         if !force {
             print!("Remove relationship {}? [y/N]: ", dependency_id);
@@ -8040,7 +8040,7 @@ fn resolve_entity_relationship(dependency_id: String, description: Option<String
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(async {
         let db_path = get_project_root()?.join(".ws/project.db");
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
+        let pool = ws::entities::database::initialize_database(&db_path).await?;
         
         // TODO: Implement dependency resolution when needed
         println!("Dependency resolution not implemented in new schema");
@@ -8058,8 +8058,8 @@ fn show_relationship_stats(detailed: bool, format: String) -> Result<()> {
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(async {
         let db_path = get_project_root()?.join(".ws/project.db");
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
-        let entity_manager = workspace::entities::EntityManager::new(pool.clone());
+        let pool = ws::entities::database::initialize_database(&db_path).await?;
+        let entity_manager = ws::entities::EntityManager::new(pool.clone());
         
         let project = entity_manager.get_current_project().await?.ok_or_else(|| anyhow::anyhow!("No active project"))?;
         // TODO: Implement project dependencies listing when needed
@@ -8089,13 +8089,13 @@ fn show_relationship_stats(detailed: bool, format: String) -> Result<()> {
     })
 }
 
-fn parse_entity_type(type_str: &str) -> Result<workspace::entities::EntityType> {
+fn parse_entity_type(type_str: &str) -> Result<ws::entities::EntityType> {
     match type_str.to_lowercase().as_str() {
-        "project" => Ok(workspace::entities::EntityType::Project),
-        "feature" => Ok(workspace::entities::EntityType::Feature),
-        "task" => Ok(workspace::entities::EntityType::Task),
-        "session" => Ok(workspace::entities::EntityType::Session),
-        "directive" => Ok(workspace::entities::EntityType::Directive),
+        "project" => Ok(ws::entities::EntityType::Project),
+        "feature" => Ok(ws::entities::EntityType::Feature),
+        "task" => Ok(ws::entities::EntityType::Task),
+        "session" => Ok(ws::entities::EntityType::Session),
+        "directive" => Ok(ws::entities::EntityType::Directive),
         // Note: Note, Template, Dependency, Milestone, Test types not in new schema
         _ => Err(anyhow::anyhow!("Unknown entity type: {}", type_str)),
     }
@@ -8141,8 +8141,8 @@ fn add_entity_note(entity_type: String, entity_id: String, title: String, conten
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(async {
         let db_path = get_project_root()?.join(".ws/project.db");
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
-        let _entity_manager = workspace::entities::EntityManager::new(pool.clone());
+        let pool = ws::entities::database::initialize_database(&db_path).await?;
+        let _entity_manager = ws::entities::EntityManager::new(pool.clone());
 
         let entity_type_enum = parse_entity_type(&entity_type)?;
         let note_type_enum = parse_note_type(&note_type)?;
@@ -8157,8 +8157,8 @@ fn add_project_note(title: String, content: String, note_type: String, _tags: Op
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(async {
         let db_path = get_project_root()?.join(".ws/project.db");
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
-        let entity_manager = workspace::entities::EntityManager::new(pool.clone());
+        let pool = ws::entities::database::initialize_database(&db_path).await?;
+        let entity_manager = ws::entities::EntityManager::new(pool.clone());
 
         let project = entity_manager.get_current_project().await?;
 
@@ -8172,8 +8172,8 @@ fn list_notes(_entity_type: Option<String>, entity_id: Option<String>, _note_typ
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(async {
         let db_path = get_project_root()?.join(".ws/project.db");
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
-        let entity_manager = workspace::entities::EntityManager::new(pool.clone());
+        let pool = ws::entities::database::initialize_database(&db_path).await?;
+        let entity_manager = ws::entities::EntityManager::new(pool.clone());
 
         let project = entity_manager.get_current_project().await?;
         // TODO: Implement note listing when needed
@@ -8199,8 +8199,8 @@ fn search_notes(query: String, note_type: Option<String>, format: String) -> Res
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(async {
         let db_path = get_project_root()?.join(".ws/project.db");
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
-        let entity_manager = workspace::entities::EntityManager::new(pool.clone());
+        let pool = ws::entities::database::initialize_database(&db_path).await?;
+        let entity_manager = ws::entities::EntityManager::new(pool.clone());
 
         let project = entity_manager.get_current_project().await?;
         // TODO: Implement note search in new CRUD system
@@ -8232,7 +8232,7 @@ fn update_note(note_id: String, title: Option<String>, content: Option<String>, 
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(async {
         let db_path = get_project_root()?.join(".ws/project.db");
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
+        let pool = ws::entities::database::initialize_database(&db_path).await?;
 
         let tags_vec: Option<Vec<String>> = tags.map(|t| t.split(',').map(|s| s.trim().to_string()).collect());
 
@@ -8248,7 +8248,7 @@ fn delete_note(note_id: String, force: bool) -> Result<()> {
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(async {
         let db_path = get_project_root()?.join(".ws/project.db");
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
+        let pool = ws::entities::database::initialize_database(&db_path).await?;
 
         if !force {
             print!("Delete note {}? (y/N): ", note_id);
@@ -8273,7 +8273,7 @@ fn toggle_note_pin(note_id: String) -> Result<()> {
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(async {
         let db_path = get_project_root()?.join(".ws/project.db");
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
+        let pool = ws::entities::database::initialize_database(&db_path).await?;
 
         // TODO: Implement note pin toggle in new CRUD system
         let is_pinned = false;
@@ -8289,8 +8289,8 @@ fn link_note_to_target(source_note_id: String, target_id: String, target_type: S
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(async {
         let db_path = get_project_root()?.join(".ws/project.db");
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
-        let entity_manager = workspace::entities::EntityManager::new(pool);
+        let pool = ws::entities::database::initialize_database(&db_path).await?;
+        let entity_manager = ws::entities::EntityManager::new(pool);
 
         let project = entity_manager.get_current_project().await?;
 
@@ -8330,7 +8330,7 @@ fn run_database_command(action: DatabaseAction) -> Result<()> {
 }
 
 fn create_database_backup(backup_dir: Option<String>, compress: bool, max_backups: usize) -> Result<()> {
-    use workspace::entities::database::{BackupConfig, create_backup};
+    use ws::entities::database::{BackupConfig, create_backup};
     use colored::*;
     
     let rt = tokio::runtime::Runtime::new()?;
@@ -8342,7 +8342,7 @@ fn create_database_backup(backup_dir: Option<String>, compress: bool, max_backup
             return Ok(());
         }
         
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
+        let pool = ws::entities::database::initialize_database(&db_path).await?;
         
         let mut config = BackupConfig::default();
         if let Some(dir) = backup_dir {
@@ -8367,7 +8367,7 @@ fn create_database_backup(backup_dir: Option<String>, compress: bool, max_backup
 }
 
 fn list_database_backups(backup_dir: Option<String>, format: String) -> Result<()> {
-    use workspace::entities::database::{BackupConfig, list_backups};
+    use ws::entities::database::{BackupConfig, list_backups};
     use colored::*;
     
     let rt = tokio::runtime::Runtime::new()?;
@@ -8410,7 +8410,7 @@ fn list_database_backups(backup_dir: Option<String>, format: String) -> Result<(
 }
 
 fn restore_database_backup(backup_id: String, target: Option<String>, force: bool) -> Result<()> {
-    use workspace::entities::database::{BackupConfig, list_backups, restore_backup};
+    use ws::entities::database::{BackupConfig, list_backups, restore_backup};
     use colored::*;
     use std::io::{self, Write};
     
@@ -8466,7 +8466,7 @@ fn restore_database_backup(backup_id: String, target: Option<String>, force: boo
 }
 
 fn cleanup_database_backups(backup_dir: Option<String>, max_backups: usize, dry_run: bool) -> Result<()> {
-    use workspace::entities::database::{BackupConfig, cleanup_old_backups, list_backups};
+    use ws::entities::database::{BackupConfig, cleanup_old_backups, list_backups};
     use colored::*;
     
     let rt = tokio::runtime::Runtime::new()?;
@@ -8504,7 +8504,7 @@ fn cleanup_database_backups(backup_dir: Option<String>, max_backups: usize, dry_
 }
 
 fn check_database_health(performance: bool) -> Result<()> {
-    use workspace::entities::database::{health_check, optimize_database};
+    use ws::entities::database::{health_check, optimize_database};
     use colored::*;
     
     let rt = tokio::runtime::Runtime::new()?;
@@ -8516,7 +8516,7 @@ fn check_database_health(performance: bool) -> Result<()> {
             return Ok(());
         }
         
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
+        let pool = ws::entities::database::initialize_database(&db_path).await?;
         
         println!("{} Checking database health...", "⏳".yellow());
         
@@ -8572,7 +8572,7 @@ fn run_continuity_command(action: ContinuityAction) -> Result<()> {
 }
 
 fn save_session_continuity_state(session_id: String, focus: String, notes: Option<String>) -> Result<()> {
-    use workspace::entities::database::{SessionContinuityState, create_context_snapshot, save_session_continuity};
+    use ws::entities::database::{SessionContinuityState, create_context_snapshot, save_session_continuity};
     use colored::*;
     use std::collections::HashMap;
     
@@ -8585,8 +8585,8 @@ fn save_session_continuity_state(session_id: String, focus: String, notes: Optio
             return Ok(());
         }
         
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
-        let entity_manager = workspace::entities::EntityManager::new(pool.clone());
+        let pool = ws::entities::database::initialize_database(&db_path).await?;
+        let entity_manager = ws::entities::EntityManager::new(pool.clone());
         
         let project = entity_manager.get_current_project().await?
             .ok_or_else(|| anyhow::anyhow!("No active project found"))?;
@@ -8597,13 +8597,13 @@ fn save_session_continuity_state(session_id: String, focus: String, notes: Optio
         let context_snapshot = create_context_snapshot(&pool, &project.id).await?;
         
         // Get active features and tasks
-        let active_features = workspace::entities::crud::features::list_by_project(&pool, &project.id).await?
+        let active_features = ws::entities::crud::features::list_by_project(&pool, &project.id).await?
             .into_iter()
             .filter(|f| matches!(f.state.as_str(), "implemented_no_tests" | "implemented_failing_tests"))
             .map(|f| f.id)
             .collect();
         
-        let in_progress_tasks = workspace::entities::crud::tasks::list_by_project(&pool, &project.id, None).await?
+        let in_progress_tasks = ws::entities::crud::tasks::list_by_project(&pool, &project.id, None).await?
             .into_iter()
             .filter(|t| t.status == "in_progress")
             .map(|t| t.id)
@@ -8638,7 +8638,7 @@ fn save_session_continuity_state(session_id: String, focus: String, notes: Optio
 }
 
 fn load_session_continuity_state(session_id: String, format: String) -> Result<()> {
-    use workspace::entities::database::load_session_continuity;
+    use ws::entities::database::load_session_continuity;
     use colored::*;
     
     let rt = tokio::runtime::Runtime::new()?;
@@ -8650,7 +8650,7 @@ fn load_session_continuity_state(session_id: String, format: String) -> Result<(
             return Ok(());
         }
         
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
+        let pool = ws::entities::database::initialize_database(&db_path).await?;
         
         let state = load_session_continuity(&pool, &session_id).await?;
         
@@ -8722,7 +8722,7 @@ fn load_session_continuity_state(session_id: String, format: String) -> Result<(
 }
 
 fn transfer_session_continuity(from_session: String, to_session: String, force: bool) -> Result<()> {
-    use workspace::entities::database::transfer_session_knowledge;
+    use ws::entities::database::transfer_session_knowledge;
     use colored::*;
     use std::io::{self, Write};
     
@@ -8735,7 +8735,7 @@ fn transfer_session_continuity(from_session: String, to_session: String, force: 
             return Ok(());
         }
         
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
+        let pool = ws::entities::database::initialize_database(&db_path).await?;
         
         if !force {
             print!("{} Transfer knowledge from session {} to {}? (y/N): ", 
@@ -8775,7 +8775,7 @@ fn list_session_continuity_states(project: Option<String>, format: String) -> Re
             return Ok(());
         }
         
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
+        let pool = ws::entities::database::initialize_database(&db_path).await?;
         
         let rows = if let Some(project_id) = project {
             sqlx::query(r#"
@@ -8852,7 +8852,7 @@ fn list_session_continuity_states(project: Option<String>, format: String) -> Re
 }
 
 fn create_project_context_snapshot(project: Option<String>, format: String) -> Result<()> {
-    use workspace::entities::database::create_context_snapshot;
+    use ws::entities::database::create_context_snapshot;
     use colored::*;
     
     let rt = tokio::runtime::Runtime::new()?;
@@ -8864,8 +8864,8 @@ fn create_project_context_snapshot(project: Option<String>, format: String) -> R
             return Ok(());
         }
         
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
-        let entity_manager = workspace::entities::EntityManager::new(pool.clone());
+        let pool = ws::entities::database::initialize_database(&db_path).await?;
+        let entity_manager = ws::entities::EntityManager::new(pool.clone());
         
         let project_id = if let Some(pid) = project {
             pid
@@ -8927,8 +8927,8 @@ fn unlink_note(link_id: String, force: bool) -> Result<()> {
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(async {
         let db_path = get_project_root()?.join(".ws/project.db");
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
-        let entity_manager = workspace::entities::EntityManager::new(pool);
+        let pool = ws::entities::database::initialize_database(&db_path).await?;
+        let entity_manager = ws::entities::EntityManager::new(pool);
 
         if !force {
             print!("Remove link {}? (y/N): ", link_id);
@@ -8957,8 +8957,8 @@ fn list_note_links(id: String, incoming: bool, outgoing: bool, format: String) -
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(async {
         let db_path = get_project_root()?.join(".ws/project.db");
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
-        let entity_manager = workspace::entities::EntityManager::new(pool);
+        let pool = ws::entities::database::initialize_database(&db_path).await?;
+        let entity_manager = ws::entities::EntityManager::new(pool);
 
         // If neither incoming nor outgoing specified, show both
         let show_incoming = incoming || (!incoming && !outgoing);
@@ -9240,7 +9240,7 @@ async fn handle_archive_artifacts(session_id: &str, format: &str, output: Option
 }
 
 fn handle_code_command(action: CodeAction) -> Result<()> {
-    use workspace::code_analysis::{
+    use ws::code_analysis::{
         SupportedLanguage,
         search::{AstSearchEngine, SearchOptions},
         transform::{AstTransformEngine, TransformOptions, TransformRule, CommonTransforms},
@@ -9457,7 +9457,7 @@ fn show_codebase_tree(depth: usize, show_hidden: bool, show_sizes: bool, extensi
 }
 
 fn show_interactive_codebase_tree(depth: usize, show_hidden: bool, show_sizes: bool, extensions_filter: Option<String>, no_ignore: bool) -> Result<()> {
-    use workspace::interactive_tree::InteractiveTree;
+    use ws::interactive_tree::InteractiveTree;
     
     let current_dir = std::env::current_dir()?;
     let project_root = find_project_root(&current_dir);
@@ -9797,7 +9797,7 @@ fn handle_version_show(verbose: bool, format: String) -> Result<()> {
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(async {
         let db_path = get_project_root()?.join(".ws/project.db");
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
+        let pool = ws::entities::database::initialize_database(&db_path).await?;
         let entity_manager = EntityManager::new(pool.clone());
         
         // Get current project and major version
@@ -9805,12 +9805,12 @@ fn handle_version_show(verbose: bool, format: String) -> Result<()> {
         let major_version = get_project_major_version(&pool).await?;
         
         // Calculate version using new system
-        let version_info = workspace::st8::VersionInfo::calculate_with_major(major_version)?;
+        let version_info = ws::st8::VersionInfo::calculate_with_major(major_version)?;
         
         match format.as_str() {
             "json" => {
                 let json_output = if verbose {
-                    let calc_info = workspace::st8::VersionInfo::get_calculation_info(major_version)?;
+                    let calc_info = ws::st8::VersionInfo::get_calculation_info(major_version)?;
                     serde_json::json!({
                         "version": version_info.full_version,
                         "major": major_version,
@@ -9841,7 +9841,7 @@ fn handle_version_show(verbose: bool, format: String) -> Result<()> {
                 println!("{} {}", "Project:".blue(), project_name);
                 
                 if verbose {
-                    let calc_info = workspace::st8::VersionInfo::get_calculation_info(major_version)?;
+                    let calc_info = ws::st8::VersionInfo::get_calculation_info(major_version)?;
                     println!("\n{}", "Calculation Breakdown:".blue().bold());
                     println!("  {} {}", "Major (DB):".blue(), major_version.to_string().yellow());
                     println!("  {} {}", "Minor (commits):".blue(), version_info.minor_version.to_string().yellow());
@@ -9866,7 +9866,7 @@ fn handle_version_major(version: u32) -> Result<()> {
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(async {
         let db_path = get_project_root()?.join(".ws/project.db");
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
+        let pool = ws::entities::database::initialize_database(&db_path).await?;
         
         // Update major version in database
         sqlx::query("UPDATE projects SET major_version = ?, updated_at = datetime('now') WHERE id = (SELECT id FROM projects LIMIT 1)")
@@ -9875,7 +9875,7 @@ fn handle_version_major(version: u32) -> Result<()> {
             .await?;
         
         // Calculate new version
-        let version_info = workspace::st8::VersionInfo::calculate_with_major(version)?;
+        let version_info = ws::st8::VersionInfo::calculate_with_major(version)?;
         
         log::info!("Major version set to {}, new version: {}", version, version_info.full_version);
         println!("{} Major version set to {}", "✅".green(), version.to_string().green().bold());
@@ -9892,10 +9892,10 @@ fn handle_version_tag(prefix: String, message: Option<String>) -> Result<()> {
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(async {
         let db_path = get_project_root()?.join(".ws/project.db");
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
+        let pool = ws::entities::database::initialize_database(&db_path).await?;
         
         let major_version = get_project_major_version(&pool).await?;
-        let version_info = workspace::st8::VersionInfo::calculate_with_major(major_version)?;
+        let version_info = ws::st8::VersionInfo::calculate_with_major(major_version)?;
         
         let tag_name = format!("{}{}", prefix, version_info.full_version);
         let tag_message = message.unwrap_or_else(|| format!("Release version {}", version_info.full_version));
@@ -9924,11 +9924,11 @@ fn handle_version_info(include_history: bool) -> Result<()> {
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(async {
         let db_path = get_project_root()?.join(".ws/project.db");
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
+        let pool = ws::entities::database::initialize_database(&db_path).await?;
         
         let major_version = get_project_major_version(&pool).await?;
-        let calc_info = workspace::st8::VersionInfo::get_calculation_info(major_version)?;
-        let version_info = workspace::st8::VersionInfo::calculate_with_major(major_version)?;
+        let calc_info = ws::st8::VersionInfo::get_calculation_info(major_version)?;
+        let version_info = ws::st8::VersionInfo::calculate_with_major(major_version)?;
         
         println!("{}", "Version Calculation Information".blue().bold());
         println!("=====================================");
@@ -10005,7 +10005,7 @@ async fn get_project_major_version(pool: &SqlitePool) -> Result<u32> {
 }
 
 fn handle_test_command(dry_run: bool, install: bool, args: Vec<String>) -> Result<()> {
-    use workspace::st8::detect_project_files;
+    use ws::st8::detect_project_files;
     
     // Get project root (current directory)
     let project_root = get_project_root()?;
@@ -10062,8 +10062,8 @@ fn handle_test_command(dry_run: bool, install: bool, args: Vec<String>) -> Resul
     Ok(())
 }
 
-fn determine_test_command(project_files: &[workspace::st8::ProjectFile]) -> Result<(String, Vec<String>, String)> {
-    use workspace::st8::ProjectFileType;
+fn determine_test_command(project_files: &[ws::st8::ProjectFile]) -> Result<(String, Vec<String>, String)> {
+    use ws::st8::ProjectFileType;
     
     // Priority order for when multiple project files exist
     for project_file in project_files {
@@ -10200,8 +10200,8 @@ fn determine_test_command(project_files: &[workspace::st8::ProjectFile]) -> Resu
     anyhow::bail!("No supported test runner found for detected project files")
 }
 
-fn ensure_test_runner_available(test_cmd: &str, project_files: &[workspace::st8::ProjectFile]) -> Result<()> {
-    use workspace::st8::ProjectFileType;
+fn ensure_test_runner_available(test_cmd: &str, project_files: &[ws::st8::ProjectFile]) -> Result<()> {
+    use ws::st8::ProjectFileType;
     
     // Check if command exists
     let check_status = Command::new("which")
