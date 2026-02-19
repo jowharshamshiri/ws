@@ -1431,21 +1431,6 @@ fn update_state(no_git: bool, git_add: bool) -> Result<()> {
             files_to_add.push(file.clone());
         }
 
-        // Add .ws directory files
-        let ws_files = [
-            ".ws/logs/ws.log",
-            ".ws/project.db",
-            ".ws/project.db-shm",
-            ".ws/project.db-wal",
-            ".ws/workspace.db",
-            ".ws/state.json",
-        ];
-        for ws_file in ws_files {
-            if project_root.join(ws_file).exists() {
-                files_to_add.push(ws_file.to_string());
-            }
-        }
-
         if !files_to_add.is_empty() {
             let added_files = add_files_to_git(&files_to_add)?;
             if !added_files.is_empty() {
@@ -2301,18 +2286,51 @@ fn is_running_as_git_hook() -> bool {
 }
 
 fn setup_shell_completions() -> Result<()> {
-    // Check if completions are already set up in this session
-    if env::var("WS_COMPLETIONS_LOADED").is_ok() {
-        return Ok(());
-    }
-    
     let shell = detect_shell()?;
-    generate_and_activate_completions(shell)?;
-    
-    // Mark completions as loaded for this session
-    env::set_var("WS_COMPLETIONS_LOADED", "1");
-    
+
+    // Always (re)generate the completion script file.
+    generate_completion_file(shell)?;
+
+    // Show the activation hint exactly once per project, tracked in state.json.
+    show_completion_hint_if_needed(shell);
+
     Ok(())
+}
+
+/// Show the shell-completion activation hint once per project.
+///
+/// Reads `.ws/state.json` from the current directory; if it exists and
+/// `completion_hint_shown` is false, prints the hint and persists the flag.
+/// Errors are silently swallowed — a broken hint must never block ws.
+fn show_completion_hint_if_needed(shell: Shell) {
+    let project_root = match std::env::current_dir() {
+        Ok(p) => p,
+        Err(_) => return,
+    };
+    if !project_root.join(".ws").join("state.json").exists() {
+        return;
+    }
+    let mut state = match WorkspaceState::load(&project_root) {
+        Ok(s) => s,
+        Err(_) => return,
+    };
+    if state.completion_hint_shown {
+        return;
+    }
+
+    let completion_dir = match get_completion_dir(shell) {
+        Ok(d) => d,
+        Err(_) => return,
+    };
+    let completion_file = match get_completion_file_path(shell, &completion_dir) {
+        Ok(f) => f,
+        Err(_) => return,
+    };
+
+    print_activation_hint(shell, &completion_file);
+
+    state.completion_hint_shown = true;
+    let _ = state.save(&project_root);
 }
 
 fn detect_shell() -> Result<Shell> {
@@ -2340,32 +2358,26 @@ fn detect_shell() -> Result<Shell> {
     Ok(Shell::Bash)
 }
 
-fn generate_and_activate_completions(shell: Shell) -> Result<()> {
-    
-    // Generate completion script to a temporary string
+/// Generate the shell completion script file (silently, no hints).
+fn generate_completion_file(shell: Shell) -> Result<()> {
     let mut completion_script = Vec::new();
     {
         let mut app = Args::command();
         let name = app.get_name().to_string();
         generate(shell, &mut app, name, &mut completion_script);
     }
-    
+
     let completion_content = String::from_utf8(completion_script)
         .context("Failed to convert completion script to string")?;
-    
-    // Create completion directory if it doesn't exist
+
     let completion_dir = get_completion_dir(shell)?;
     fs::create_dir_all(&completion_dir)
         .context("Failed to create completion directory")?;
-    
-    // Write completion script to appropriate location
+
     let completion_file = get_completion_file_path(shell, &completion_dir)?;
     fs::write(&completion_file, &completion_content)
         .context("Failed to write completion script")?;
-    
-    // Output shell-specific activation commands to stderr so they can be sourced
-    output_activation_commands(shell, &completion_file)?;
-    
+
     Ok(())
 }
 
@@ -2403,46 +2415,32 @@ fn get_completion_file_path(shell: Shell, completion_dir: &std::path::Path) -> R
     Ok(completion_dir.join(file_name))
 }
 
-fn output_activation_commands(shell: Shell, file_path: &std::path::Path) -> Result<()> {
-    // Output to stderr so it doesn't interfere with normal command output
+/// Print the shell-completion activation hint to stderr.
+///
+/// Called at most once per project (gated by `completion_hint_shown` in state.json).
+fn print_activation_hint(shell: Shell, file_path: &std::path::Path) {
     match shell {
         Shell::Bash => {
-            // Check if completion is already sourced via BASH_COMPLETION_COMPAT_DIR or similar
-            let completion_dir = file_path.parent().unwrap_or(std::path::Path::new(""));
-            let bash_comp_dir = env::var("BASH_COMPLETION_COMPAT_DIR").unwrap_or_default();
-            if bash_comp_dir.contains(&completion_dir.to_string_lossy().to_string()) {
-                return Ok(()); // Already set up
-            }
-            eprintln!("# To enable ws completions for this session, run:");
+            eprintln!("# To enable ws completions, add this to your ~/.bashrc:");
             eprintln!("source '{}'", file_path.to_string_lossy());
-            eprintln!("# To enable permanently, add the above line to your ~/.bashrc");
-        },
+        }
         Shell::Zsh => {
             let completion_parent = file_path.parent().unwrap_or(std::path::Path::new(""));
-            // Check if completion directory is already in FPATH
-            let fpath = env::var("FPATH").unwrap_or_default();
-            if fpath.contains(&completion_parent.to_string_lossy().to_string()) {
-                return Ok(()); // Already set up in fpath
-            }
-            eprintln!("# To enable ws completions for this session, run:");
+            eprintln!("# To enable ws completions, add these lines to your ~/.zshrc:");
             eprintln!("fpath=(\"{}\" $fpath)", completion_parent.to_string_lossy());
             eprintln!("autoload -U compinit && compinit");
-            eprintln!("# To enable permanently, add the above lines to your ~/.zshrc");
-        },
+        }
         Shell::Fish => {
-            eprintln!("# ws completions have been installed to: {}", file_path.to_string_lossy());
-            eprintln!("# Fish will automatically load completions from this location");
-        },
+            eprintln!("# ws completions installed to: {}", file_path.to_string_lossy());
+        }
         Shell::PowerShell => {
             eprintln!("# To enable ws completions, add this to your PowerShell profile:");
             eprintln!(". '{}'", file_path.to_string_lossy());
-        },
+        }
         _ => {
-            eprintln!("# Completion script generated at: {}", file_path.to_string_lossy());
+            eprintln!("# Completion script at: {}", file_path.to_string_lossy());
         }
     }
-    
-    Ok(())
 }
 
 fn run_mcp_server(_port: u16, _debug: bool, migrate: bool) -> Result<()> {

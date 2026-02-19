@@ -33,6 +33,9 @@ pub struct WorkspaceState {
     pub tools: HashMap<String, serde_json::Value>,
     #[serde(default)]
     pub wstemplate_entries: Vec<WstemplateEntry>,
+    /// Set to true after the shell completion hint has been shown once.
+    #[serde(default)]
+    pub completion_hint_shown: bool,
 }
 
 impl Default for WorkspaceState {
@@ -43,6 +46,7 @@ impl Default for WorkspaceState {
             project_name: None,
             tools: HashMap::new(),
             wstemplate_entries: Vec::new(),
+            completion_hint_shown: false,
         }
     }
 }
@@ -234,6 +238,7 @@ mod tests {
         assert!(temp_dir.path().join(".ws").join("templates").exists());
         assert!(temp_dir.path().join(".ws").join("state.json").exists());
         assert!(state.wstemplate_entries.is_empty());
+        assert!(!state.completion_hint_shown);
     }
 
     #[test]
@@ -298,6 +303,8 @@ mod tests {
         let state = WorkspaceState::load(temp_dir.path()).unwrap();
         assert!(state.wstemplate_entries.is_empty(),
             "missing wstemplate_entries field must default to empty Vec");
+        assert!(!state.completion_hint_shown,
+            "missing completion_hint_shown field must default to false");
     }
 
     #[test]
@@ -381,6 +388,20 @@ mod tests {
             "error must explain the constraint, got: {}",
             msg
         );
+    }
+
+    #[test]
+    fn test_completion_hint_shown_persists() {
+        let temp_dir = TempDir::new().unwrap();
+        let mut state = WorkspaceState::initialize(temp_dir.path()).unwrap();
+        assert!(!state.completion_hint_shown);
+
+        state.completion_hint_shown = true;
+        state.save(temp_dir.path()).unwrap();
+
+        let loaded = WorkspaceState::load(temp_dir.path()).unwrap();
+        assert!(loaded.completion_hint_shown,
+            "completion_hint_shown must persist through save/load");
     }
 
     #[test]
