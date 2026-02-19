@@ -109,3 +109,4 @@ temp/
 #svelte
 .svelte-kit
 .svelte.bak.ws/
+.ws/
