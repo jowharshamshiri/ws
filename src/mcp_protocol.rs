@@ -1716,7 +1716,7 @@ Use database-based feature tracking and session management for project monitorin
 
 ---
 
-*This file tracks detailed session-by-session progress for AI-assisted development continuity.*
+*This file tracks detailed session-by-session progress for development continuity.*
 "#, name, chrono::Utc::now().format("%Y-%m-%d")))
     }
 

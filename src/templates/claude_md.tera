@@ -99,4 +99,4 @@ CLI Layer (ws binary) → Tool Implementations → Project Management (MCP Serve
 ---
 
 *Documentation generated {{ generated_at | date(format="%Y-%m-%d %H:%M:%S UTC") }} from database entities*  
-*Project ready for efficient AI-assisted development continuation*
+*Project ready for development continuation*

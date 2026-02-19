@@ -1,12 +1,12 @@
 ---
 layout: default
-title: Workspace - AI-Assisted Development Suite
+title: Workspace - Development Tool Suite
 toc: false
 ---
 
 # Workspace
 
-Multi-tool CLI suite with AI-assisted development capabilities, real-time project dashboard, and entity-driven management system. All tools accessible through a single `ws` binary.
+Multi-tool CLI suite with real-time project dashboard and entity-driven management system. All tools accessible through a single `ws` binary.
 
 **Build Status**: Clean compilation with structured logging
 
@@ -57,9 +57,9 @@ Each project has a single wstemplate entry (alias + scan root). Cross-project
 references like `{{ projects.OTHER.version }}` are resolved dynamically by
 scanning for sibling `.ws/state.json` files.
 
-### AI-Assisted Development Environment
+### MCP Server Integration
 
-**MCP Server Integration**: API endpoints for Claude AI assistance
+**MCP Server**: API endpoints for Claude integration
 ```bash
 ws mcp-server                # Start on localhost:3000
 ws mcp-server --port 8080    # Custom port
@@ -112,7 +112,6 @@ ws version tag               # Create git tag with current version
 | `ws relationship` | Entity relationship management |
 | `ws start` | Start development session with context loading |
 | `ws end` | End development session with documentation |
-| `ws artifacts` | Session artifact management |
 | `ws continuity` | Session continuity and context management |
 | `ws consolidate` | Documentation consolidation with diagrams |
 | `ws database` | Database backup, recovery, and maintenance |

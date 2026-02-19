@@ -1,6 +1,6 @@
-# Workspace - AI-Assisted Development Suite
+# Workspace - Development Tool Suite
 
-Multi-tool CLI suite with AI-assisted development capabilities and real-time project dashboard.
+Multi-tool CLI suite with real-time project dashboard and entity-driven management.
 
 ## Core Tools
 

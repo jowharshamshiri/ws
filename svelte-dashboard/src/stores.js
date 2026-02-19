@@ -3,7 +3,7 @@ import { writable } from 'svelte/store';
 // Core data stores with default values
 export const projectStore = writable({
   name: 'Workspace Project',
-  description: 'AI-Assisted Development Suite',
+  description: 'Development Tool Suite',
   version: '0.44.68455'
 });
 

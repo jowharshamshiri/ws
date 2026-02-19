@@ -11,19 +11,30 @@ permalink: /documentation/
 All tools are subcommands of the `ws` binary:
 
 ```bash
-ws refactor   # String replacement
-ws scrap      # Local trash
-ws unscrap    # File restoration
-ws git        # Git integration
-ws update     # Version update + template rendering
-ws wstemplate # Cross-project version stamping
-ws version    # Database-driven versioning
-ws ldiff      # Line difference visualization
-ws status     # Project status
-ws feature    # Feature management
-ws task       # Task management
-ws test       # Intelligent test runner
-ws code       # AST code analysis
+ws refactor     # String replacement
+ws scrap        # Local trash
+ws unscrap      # File restoration
+ws git          # Git integration
+ws update       # Version update + template rendering
+ws wstemplate   # Cross-project version stamping
+ws version      # Database-driven versioning
+ws template     # Tera template management
+ws ldiff        # Line difference visualization
+ws code         # AST code analysis and codebase tree
+ws test         # Intelligent test runner
+ws status       # Project status
+ws feature      # Feature management
+ws task         # Task management
+ws directive    # Project directive management
+ws note         # Note management
+ws relationship # Entity relationship management
+ws start        # Start development session
+ws end          # End development session
+ws continuity   # Session context management
+ws consolidate  # Documentation consolidation
+ws database     # Database backup and maintenance
+ws mcp-server   # MCP server for Claude AI
+ws sample       # Create sample project
 ```
 
 ### 2. Refactor Operation Modes

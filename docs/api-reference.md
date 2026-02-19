@@ -36,7 +36,6 @@ ws <COMMAND> [OPTIONS]
 | `relationship` | Entity relationship management |
 | `start` | Start development session |
 | `end` | End development session |
-| `artifacts` | Session artifact management |
 | `continuity` | Session continuity and context management |
 | `consolidate` | Documentation consolidation |
 | `database` | Database backup, recovery, maintenance |
@@ -183,7 +182,7 @@ ws update [OPTIONS]
 3. Updates project files (Cargo.toml, package.json, etc.) with the new version
 4. Renders `.tera` templates via the template manager
 5. Renders `.wstemplate` files via the wstemplate engine
-6. Optionally stages all changed files in git
+6. With `--git-add`: stages `version.txt`, rendered `.tera` outputs, and rendered `.wstemplate` outputs
 
 ### Examples
 ```bash
@@ -465,11 +464,31 @@ Project directive and rule management.
 
 ## ws code
 
-AST-based code analysis and transformation.
+AST-based code analysis and codebase exploration.
+
+### Subcommands
+
+| Subcommand | Description |
+|------------|-------------|
+| `tree` | Visual tree of codebase structure (default) |
+| `search` | Search for AST patterns in source code |
+
+### Options for `tree`
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--depth N` | Maximum depth to display | `3` |
+| `--hidden` | Show hidden files and directories | `false` |
+| `--sizes` | Show file sizes | `false` |
+| `--extensions` | Filter by file extensions (e.g., `rs,py,js`) | all |
+| `--no-ignore` | Ignore .gitignore rules | `false` |
 
 ### Examples
 ```bash
-ws code                     # Run code analysis
+ws code                                # Show tree (default)
+ws code tree --depth 5 --sizes         # Deep tree with file sizes
+ws code tree --extensions rs,toml      # Only Rust files
+ws code search "fn main" --language rust
 ```
 
 ---

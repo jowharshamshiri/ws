@@ -2533,7 +2533,7 @@ fn create_sample_project(force: bool) -> Result<()> {
     std::fs::create_dir_all("docs")?;
     
     // Create CLAUDE.md
-    let claude_content = r#"# Sample Project - AI-Assisted Development
+    let claude_content = r#"# Sample Project
 
 ## Project Overview
 
@@ -6872,7 +6872,7 @@ fn create_sample_project_in_dir(output_dir: &str, force: bool) -> Result<()> {
     std::fs::create_dir_all(output_path.join("docs"))?;
     
     // Create CLAUDE.md
-    let claude_content = r#"# Sample Project - AI-Assisted Development
+    let claude_content = r#"# Sample Project
 
 ## Project Overview
 

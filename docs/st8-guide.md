@@ -121,7 +121,9 @@ ws git uninstall
    - `version.txt` (or custom version file)
    - All detected project files (Cargo.toml, package.json, etc.)
    - All `.wstemplate` files relevant to this project
-4. All updated files are automatically staged
+4. Updated output files are automatically staged (version.txt, rendered templates)
+
+**Note**: The `.ws` directory (containing `state.json`, logs, databases) is local project state and should be in `.gitignore`. It is never staged by `ws update`.
 
 ### Manual Mode
 
@@ -356,6 +358,7 @@ tail -f .ws/logs/ws.log
 3. **Consistent Workflow**: Let the hook handle versioning automatically
 4. **Shared Scan Root**: For multi-project workspaces, point all projects' wstemplate to the common root
 5. **Run `ws update` After Setup**: Ensure `version.txt` exists before other projects reference it
+6. **Add `.ws` to `.gitignore`**: The `.ws` directory is local state — do not commit it
 
 ## Integration Examples
 
