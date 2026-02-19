@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
 use axum::{
-    extract::{Path, Query, State, WebSocketUpgrade, ws::{WebSocket, Message}},
+    extract::{Path, Query, State, WebSocketUpgrade, wsb::{WebSocket, Message}},
     http::StatusCode,
     response::{Json, Response},
     routing::{get, post, delete},
