@@ -6,7 +6,7 @@ description: >-
   unscrap (file restoration), and st8 (automatic versioning).
 author: Bahram Shamshiri
 email: jowharshamshiri@gmail.com
-baseurl: "/workspace"
+baseurl: "/ws"
 url: "https://jowharshamshiri.github.io"
 
 # Build settings
@@ -52,10 +52,10 @@ navigation:
     url: /contributing/
 
 # GitHub repository information
-repository: jowharshamshiri/workspace
+repository: jowharshamshiri/ws
 github:
-  repository_name: workspace
-  repository_nwo: jowharshamshiri/workspace
+  repository_name: ws
+  repository_nwo: jowharshamshiri/ws
 
 # Exclude files from processing
 exclude:

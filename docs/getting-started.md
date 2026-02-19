@@ -33,7 +33,7 @@ Workspace is a suite of command-line utilities for developers:
 ### Easy Installation (Recommended)
 
 ```bash
-git clone https://github.com/jowharshamshiri/workspace.git
+git clone https://github.com/jowharshamshiri/ws.git
 cd workspace
 ./install.sh
 ```
