@@ -87,7 +87,7 @@ license = "MIT"
 name = "wsb"
 readme = "README.md"
 repository = "https://github.com/jowharshamshiri/wsb"
-version = "0.75.194064"
+version = "0.76.226710"
 
 [profile.dev]
 debug = true
