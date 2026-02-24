@@ -2,19 +2,23 @@ use anyhow::{Context, Result};
 use clap::{CommandFactory, Parser, Subcommand};
 use clap_complete::{generate, Shell};
 use colored::Colorize;
-use workspace::st8::{St8Config, VersionInfo, detect_project_files, update_version_file, TemplateManager};
-use workspace::workspace_state::WorkspaceState;
-use workspace::entities::EntityManager;
+use log;
+use wsb::st8::{St8Config, VersionInfo, detect_project_files, update_version_file, TemplateManager, WstemplateEngine};
+use wsb::workspace_state::{WorkspaceState, WstemplateEntry};
+use wsb::entities::EntityManager;
+use wsb::logging::{self, log_operation_start, log_operation_complete, log_operation_error, log_warning, log_version_info};
+use sqlx::SqlitePool;
 use sqlx::Row;
 use std::collections::HashMap;
 use std::env;
-use std::fs::{self, OpenOptions};
+use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{self, Command};
+use std::time::Instant;
 
 #[derive(Parser, Debug)]
-#[command(name = "ws")]
+#[command(name = "wsb")]
 #[command(version = env!("CARGO_PKG_VERSION"))]
 #[command(about = "Workspace - All-in-one development tool suite")]
 #[command(after_help = "Shell completions are automatically set up on first run.")]
@@ -29,7 +33,7 @@ enum Commands {
     Refactor {
         /// Arguments for refactor tool
         #[command(flatten)]
-        args: workspace::refac::Args,
+        args: wsb::refac::Args,
     },
     
     /// Git integration and version management
@@ -79,6 +83,25 @@ enum Commands {
         /// Character to use for substitution (default: ░)
         #[arg(default_value = "░")]
         substitute_char: String,
+    },
+
+    /// AST-based code analysis and transformation
+    Code {
+        #[command(subcommand)]
+        action: Option<CodeAction>,
+    },
+    
+    /// Intelligent test runner based on project type
+    Test {
+        /// Show what test command would be run without executing
+        #[arg(long)]
+        dry_run: bool,
+        /// Install missing test runners if needed
+        #[arg(long)]
+        install: bool,
+        /// Additional arguments to pass to test command
+        #[arg(last = true)]
+        args: Vec<String>,
     },
 
     /// MCP server for Claude integration with automatic session management
@@ -219,6 +242,18 @@ enum Commands {
     Continuity {
         #[command(subcommand)]
         action: ContinuityAction,
+    },
+
+    /// Version management with database-driven major version and git-calculated components
+    Version {
+        #[command(subcommand)]
+        action: VersionAction,
+    },
+
+    /// Manage .wstemplate file rendering for version-stamping project files
+    Wstemplate {
+        #[command(subcommand)]
+        action: WstemplateAction,
     },
 }
 
@@ -736,7 +771,7 @@ enum TemplateAction {
 enum DatabaseAction {
     /// Create database backup with metadata
     Backup {
-        /// Backup directory (default: .ws/backups)
+        /// Backup directory (default: .wsb/backups)
         #[arg(short, long)]
         backup_dir: Option<String>,
         /// Enable compression
@@ -787,102 +822,89 @@ enum DatabaseAction {
 }
 
 #[derive(Subcommand, Debug)]
-enum ArtifactAction {
-    /// List all session-generated artifacts with metadata
-    List {
-        /// Filter by artifact type (logs, generated, outputs, templates, diagrams)
-        #[arg(short, long)]
-        artifact_type: Option<String>,
-        /// Filter by session ID
-        #[arg(short, long)]
-        session: Option<String>,
-        /// Show artifacts from last N sessions
-        #[arg(short, long)]
-        recent: Option<u32>,
-        /// Show detailed artifact metadata
-        #[arg(short, long)]
-        verbose: bool,
+enum CodeAction {
+    /// Show visual tree of current codebase structure
+    Tree {
+        /// Maximum depth to display (default: 3)
+        #[arg(short, long, default_value = "3")]
+        depth: usize,
+        /// Show hidden files and directories
+        #[arg(long)]
+        hidden: bool,
+        /// Show file sizes
+        #[arg(long)]
+        sizes: bool,
+        /// Filter by file extensions (e.g., "rs,py,js")
+        #[arg(long)]
+        extensions: Option<String>,
+        /// Ignore .gitignore rules (show all files, default respects .gitignore)
+        #[arg(long)]
+        no_ignore: bool,
     },
-    /// Clean up old or unused artifacts
-    Clean {
-        /// Remove artifacts older than N days
-        #[arg(short, long, default_value = "30")]
-        days: u32,
-        /// Artifact types to clean (logs, generated, outputs, all)
-        #[arg(short, long, default_value = "logs")]
-        artifact_type: String,
-        /// Show what would be cleaned without removing
+    /// Search for AST patterns in source code
+    Search {
+        /// AST pattern to search for
+        pattern: String,
+        /// Target files or directories
+        #[arg(short, long)]
+        files: Vec<PathBuf>,
+        /// Programming language (rust, javascript, python, etc.)
+        #[arg(short, long)]
+        language: Option<String>,
+        /// Include context lines around matches
+        #[arg(short, long, default_value = "3")]
+        context: usize,
+        /// Maximum number of matches to return
+        #[arg(short, long, default_value = "1000")]
+        max_matches: usize,
+        /// Output format (human, json)
+        #[arg(long, default_value = "human")]
+        format: String,
+    },
+    /// Transform code using AST-based patterns
+    Transform {
+        /// AST pattern to match
+        pattern: String,
+        /// Replacement text or pattern
+        replacement: String,
+        /// Target files or directories
+        #[arg(short, long)]
+        files: Vec<PathBuf>,
+        /// Programming language (rust, javascript, python, etc.)
+        #[arg(short, long)]
+        language: Option<String>,
+        /// Show what would be changed without making changes
         #[arg(long)]
         dry_run: bool,
-        /// Force cleanup without confirmation
-        #[arg(short, long)]
-        force: bool,
+        /// Skip creating backup files before transformation
+        #[arg(long)]
+        no_backup: bool,
+        /// Maximum changes per file
+        #[arg(long, default_value = "100")]
+        max_changes: usize,
     },
-    /// Archive session artifacts to compressed storage
-    Archive {
-        /// Session ID to archive
-        session_id: String,
-        /// Archive format (tar.gz, zip)
-        #[arg(short, long, default_value = "tar.gz")]
+    /// List common patterns for a programming language
+    Patterns {
+        /// Programming language to show patterns for
+        language: String,
+        /// Pattern category (search or transform)
+        #[arg(long, default_value = "search")]
+        category: String,
+    },
+    /// Analyze code structure and generate insights
+    Analyze {
+        /// Target files or directories
+        #[arg(short, long)]
+        files: Vec<PathBuf>,
+        /// Programming language (rust, javascript, python, etc.)
+        #[arg(short, long)]
+        language: Option<String>,
+        /// Analysis type (structure, complexity, patterns)
+        #[arg(long, default_value = "structure")]
+        analysis_type: String,
+        /// Output format (human, json)
+        #[arg(long, default_value = "human")]
         format: String,
-        /// Output directory for archive
-        #[arg(short, long)]
-        output: Option<String>,
-        /// Remove original files after archiving
-        #[arg(long)]
-        remove_originals: bool,
-    },
-    /// Track and organize current session artifacts
-    Organize {
-        /// Create directories and categorize current session files
-        #[arg(long)]
-        categorize: bool,
-        /// Generate artifact manifest for current session
-        #[arg(long)]
-        manifest: bool,
-        /// Tag artifacts with metadata
-        #[arg(long)]
-        tag: bool,
-    },
-    /// Search artifacts by content, name, or metadata
-    Search {
-        /// Search query
-        query: String,
-        /// Search in artifact contents
-        #[arg(short, long)]
-        content: bool,
-        /// Search artifact names/paths only
-        #[arg(short, long)]
-        names: bool,
-        /// Limit results
-        #[arg(short, long, default_value = "20")]
-        limit: u32,
-    },
-    /// Show detailed information about specific artifact
-    Show {
-        /// Artifact path or ID
-        artifact_path: String,
-        /// Show artifact content
-        #[arg(short, long)]
-        content: bool,
-        /// Show artifact metadata
-        #[arg(short, long)]
-        metadata: bool,
-    },
-    /// Export artifacts with metadata for backup or sharing
-    Export {
-        /// Session IDs to export
-        #[arg(short, long)]
-        sessions: Vec<String>,
-        /// Export format (json, yaml, csv)
-        #[arg(short, long, default_value = "json")]
-        format: String,
-        /// Output file path
-        #[arg(short, long)]
-        output: Option<String>,
-        /// Include artifact contents in export
-        #[arg(long)]
-        include_content: bool,
     },
 }
 
@@ -905,9 +927,6 @@ enum ArtifactAction {
     },
     /// Clean up old or unused artifacts
     Clean {
-        /// Remove artifacts older than N days
-        #[arg(short, long, default_value = "30")]
-        days: u32,
         /// Artifact types to clean (logs, generated, outputs, all)
         #[arg(short, long, default_value = "logs")]
         artifact_type: String,
@@ -1038,6 +1057,62 @@ enum ContinuityAction {
 }
 
 #[derive(Subcommand, Debug)]
+enum VersionAction {
+    /// Display current version with calculation breakdown
+    Show {
+        /// Show detailed calculation breakdown
+        #[arg(long)]
+        verbose: bool,
+        /// Output format (human, json)
+        #[arg(short, long, default_value = "human")]
+        format: String,
+    },
+    /// Set the major version number (stored in database)
+    Major {
+        /// Major version number to set
+        version: u32,
+    },
+    /// Create git tag with current calculated version
+    Tag {
+        /// Tag prefix (default: 'v')
+        #[arg(long, default_value = "v")]
+        prefix: String,
+        /// Tag message
+        #[arg(short, long)]
+        message: Option<String>,
+    },
+    /// Show version calculation information and git compatibility
+    Info {
+        /// Include git history analysis
+        #[arg(long)]
+        include_history: bool,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+enum WstemplateAction {
+    /// Set the scan root for this project (replaces any existing entry)
+    Add {
+        /// Directory tree to scan for .wstemplate files and peer .wsb/state.json files
+        path: PathBuf,
+        /// Override the auto-derived alias (must be a valid Tera identifier: [a-z_][a-z0-9_]*)
+        #[arg(long)]
+        alias: Option<String>,
+    },
+    /// Remove this project's wstemplate entry
+    Remove {
+        /// Alias of the entry to remove (must match current entry)
+        alias: String,
+    },
+    /// Show this project's wstemplate entry (alias and scan root)
+    ListEntries,
+    /// List all .wstemplate files relevant to this project (no rendering)
+    List,
+    /// Render all .wstemplate files relevant to this project
+    Render,
+}
+
+#[derive(Subcommand, Debug)]
 enum ScrapCommands {
     /// List contents of .scrap folder
     #[command(alias = "ls")]
@@ -1088,27 +1163,45 @@ enum ScrapCommands {
 }
 
 fn main() {
+    // Initialize logging as early as possible
+    let debug_mode = std::env::args().any(|arg| arg == "--debug" || arg == "-v" || arg == "--verbose");
+    
+    if let Err(e) = logging::setup_logging(debug_mode) {
+        eprintln!("Failed to initialize logging: {}", e);
+    }
+    
+    // Log version and startup
+    log_version_info(env!("CARGO_PKG_VERSION"), option_env!("GIT_HASH"));
+    log::info!("Starting workspace tool suite");
+    
     // Setup shell completions on first run (but not when running as a git hook)
     if !is_running_as_git_hook() {
         if let Err(e) = setup_shell_completions() {
-            eprintln!("{}: Failed to setup completions: {:#}", "Warning".yellow(), e);
+            log_warning("Shell completions", &format!("Failed to setup: {}", e));
         }
     }
     
     if let Err(e) = run() {
+        log::error!("Application error: {:#}", e);
         eprintln!("{}: {:#}", "Error".red(), e);
         process::exit(1);
     }
+    
+    log::info!("Workspace tool completed successfully");
 }
 
 fn run() -> Result<()> {
+    let start_time = Instant::now();
     let args = Args::parse();
+    log::debug!("Parsed command line arguments: {:?}", args);
     
     match args.command {
         Commands::Refactor { args } => {
-            match workspace::run_refac(args) {
-                Ok(()) => {}
+            log_operation_start("refactor", &format!("root: {:?}", args.root_dir));
+            match wsb::run_refac(args) {
+                Ok(()) => log_operation_complete("refactor", start_time.elapsed()),
                 Err(error) => {
+                    log_operation_error("refactor", &error);
                     eprintln!("{}: {:#}", "Error".red(), error);
                     process::exit(1);
                 }
@@ -1124,7 +1217,9 @@ fn run() -> Result<()> {
         }
         
         Commands::Update { no_git, git_add } => {
+            log_operation_start("update", &format!("no_git: {}, git_add: {}", no_git, git_add));
             update_state(no_git, git_add)?;
+            log_operation_complete("update", start_time.elapsed());
         }
         
         Commands::Scrap { paths, command } => {
@@ -1137,6 +1232,21 @@ fn run() -> Result<()> {
         
         Commands::Ldiff { substitute_char } => {
             run_ldiff_command(substitute_char)?;
+        }
+
+        Commands::Code { action } => {
+            let action = action.unwrap_or(CodeAction::Tree { 
+                depth: 3, 
+                hidden: false, 
+                sizes: false, 
+                extensions: None,
+                no_ignore: false
+            });
+            handle_code_command(action)?;
+        }
+        
+        Commands::Test { dry_run, install, args } => {
+            handle_test_command(dry_run, install, args)?;
         }
 
         Commands::McpServer { port, debug, migrate } => {
@@ -1155,8 +1265,9 @@ fn run() -> Result<()> {
             run_end_command(summary, debug_mode, force, skip_docs)?;
         }
 
-        Commands::Artifacts { action } => {
-            run_artifacts_command(action)?;
+        Commands::Artifacts { action: _ } => {
+            println!("⚠️  Artifacts command temporarily disabled - F0159 needs proper implementation");
+            println!("   This feature is marked incomplete and requires full rewrite");
         }
 
         Commands::Consolidate { debug_mode, force, generate_diagrams, preserve_complexity } => {
@@ -1194,8 +1305,16 @@ fn run() -> Result<()> {
         Commands::Continuity { action } => {
             run_continuity_command(action)?;
         }
+
+        Commands::Version { action } => {
+            run_version_command(action)?;
+        }
+
+        Commands::Wstemplate { action } => {
+            handle_wstemplate_command(action)?;
+        }
     }
-    
+
     Ok(())
 }
 
@@ -1208,12 +1327,14 @@ fn run_git_command(command: Option<GitCommands>) -> Result<()> {
         None => {
             // Default behavior: install hook if not installed, otherwise update state
             if !is_git_repository() {
+                log::warn!("Git command attempted outside git repository");
                 eprintln!("{}: Not in a git repository", "Warning".yellow());
-                eprintln!("{}: Use 'ws git install' to set up version management", "Tip".blue());
+                eprintln!("{}: Use 'wsb git install' to set up version management", "Tip".blue());
                 return Ok(());
             }
 
             if !is_hook_installed()? {
+                log::info!("Git hook not installed, installing automatically");
                 eprintln!("{}: Git hook not installed", "Info".blue());
                 eprintln!("{}: Installing pre-commit hook for automatic version management", "Info".blue());
                 install_hook(false)?;
@@ -1221,9 +1342,23 @@ fn run_git_command(command: Option<GitCommands>) -> Result<()> {
                 // Hook is installed, just update state
                 let project_root = get_project_root()?;
                 let config = St8Config::load(&project_root)?;
-                let mut workspace_state = WorkspaceState::load(&project_root)?;
-                
-                update_version_in_memory(&mut workspace_state, &config, &project_root)?;
+                let workspace_state = WorkspaceState::load(&project_root)?;
+
+                let version_info = calculate_version(&project_root)?;
+                update_version_file(&version_info, &config)?;
+
+                // Render wstemplate files if configured
+                if let Some(entry) = workspace_state.wstemplate_entry() {
+                    let engine = WstemplateEngine::new(
+                        version_info,
+                        workspace_state.project_name.clone(),
+                        entry.alias.clone(),
+                        project_root.clone(),
+                        entry.root.clone(),
+                    );
+                    engine.render_relevant()?;
+                }
+
                 workspace_state.save(&project_root)?;
             }
         }
@@ -1235,61 +1370,204 @@ fn run_git_command(command: Option<GitCommands>) -> Result<()> {
 fn update_state(no_git: bool, git_add: bool) -> Result<()> {
     let project_root = get_project_root()?;
     let config = St8Config::load(&project_root)?;
-    let mut workspace_state = WorkspaceState::load(&project_root)?;
-    
-    // Update version in memory  
-    update_version_in_memory(&mut workspace_state, &config, &project_root)?;
-    
-    // Render templates
-    let template_manager = TemplateManager::new(&workspace_state)?;
-    let version_info = VersionInfo::calculate()?;
-    let project_name = workspace_state.project_name.as_deref();
-    let rendered_files = template_manager.render_all_templates(&version_info, project_name)?;
-    
-    if !rendered_files.is_empty() {
-        println!("{}: Rendered {} templates", "Info".blue(), rendered_files.len());
-        for file in &rendered_files {
-            println!("  - {}", file);
-        }
-    }
-    
-    // Save state to disk
-    workspace_state.save(&project_root)?;
-    
-    // Update version file on disk
-    let version_info = VersionInfo::calculate()?;
+    let workspace_state = WorkspaceState::load(&project_root)?;
+
+    // Calculate version once
+    let version_info = calculate_version(&project_root)?;
+
+    // Write version.txt first — other projects read our version.txt
+    // when resolving {{ projects.OUR_ALIAS.version }}
     update_version_file(&version_info, &config)?;
     if !config.version_file.is_empty() {
+        log::info!("Updated version file: {}", config.version_file);
         println!("{}: Updated {}", "Info".blue(), config.version_file);
     }
-    
+
+    // Render .tera templates via TemplateManager
+    let template_manager = TemplateManager::new(&workspace_state)?;
+    let project_name = workspace_state.project_name.as_deref();
+    let rendered_tera_files = template_manager.render_all_templates(&version_info, project_name)?;
+    if !rendered_tera_files.is_empty() {
+        log::info!("Rendered {} .tera templates: {}", rendered_tera_files.len(), rendered_tera_files.join(", "));
+    }
+
+    // Render .wstemplate files via WstemplateEngine
+    let mut rendered_wstemplate_files: Vec<String> = Vec::new();
+    if let Some(entry) = workspace_state.wstemplate_entry() {
+        let engine = WstemplateEngine::new(
+            version_info,
+            workspace_state.project_name.clone(),
+            entry.alias.clone(),
+            project_root.clone(),
+            entry.root.clone(),
+        );
+
+        let rendered = engine.render_relevant()?;
+        for r in &rendered {
+            log::info!("wstemplate: {} -> {}", r.source_path.display(), r.output_path.display());
+            rendered_wstemplate_files.push(r.output_path.display().to_string());
+        }
+        if !rendered.is_empty() {
+            println!("{}: Rendered {} .wstemplate files", "Info".blue(), rendered.len());
+        }
+    }
+
+    // Save state
+    workspace_state.save(&project_root)?;
+
     // Add files to git if requested and we're in a git repository
     if !no_git && git_add && is_git_repository() {
         let mut files_to_add = Vec::new();
-        
-        // Add version file if it exists
+
         if !config.version_file.is_empty() {
-            let version_file = &config.version_file;
-            files_to_add.push(version_file.clone());
+            files_to_add.push(config.version_file.clone());
         }
-        
-        // Add rendered template files
-        for file in rendered_files {
-            let path_str = file.clone();
-            files_to_add.push(path_str.to_string());
+
+        for file in &rendered_tera_files {
+            files_to_add.push(file.clone());
         }
-        
+
+        for file in &rendered_wstemplate_files {
+            files_to_add.push(file.clone());
+        }
+
         if !files_to_add.is_empty() {
             let added_files = add_files_to_git(&files_to_add)?;
             if !added_files.is_empty() {
+                log::info!("Added {} files to git staging area: {}", added_files.len(), added_files.join(", "));
                 println!("{}: Added {} files to git staging area", "Info".blue(), added_files.len());
-                for file in added_files {
+                for file in &added_files {
                     println!("  - {}", file);
                 }
             }
         }
     }
-    
+
+    Ok(())
+}
+
+fn handle_wstemplate_command(action: WstemplateAction) -> Result<()> {
+    let project_root = get_project_root()?;
+    let mut workspace_state = WorkspaceState::load(&project_root)?;
+
+    match action {
+        WstemplateAction::Add { path, alias } => {
+            let scan_root = path.canonicalize()
+                .with_context(|| format!("Cannot resolve path: {}", path.display()))?;
+
+            let alias = alias.unwrap_or_else(|| {
+                WstemplateEngine::derive_alias(&project_root)
+            });
+
+            // Validate alias is a valid Tera identifier
+            anyhow::ensure!(
+                !alias.is_empty()
+                    && alias.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
+                    && !alias.starts_with(|c: char| c.is_ascii_digit()),
+                "Invalid alias '{}': must match [a-z_][a-z0-9_]* (Tera identifier)",
+                alias
+            );
+
+            let entry = WstemplateEntry {
+                alias: alias.clone(),
+                root: scan_root.clone(),
+            };
+
+            workspace_state.set_wstemplate_entry(entry);
+            workspace_state.save(&project_root)?;
+
+            println!("{} wstemplate entries:", "1".bold());
+            println!("  {} \u{2192} {}", alias, scan_root.display());
+        }
+
+        WstemplateAction::Remove { alias } => {
+            match workspace_state.wstemplate_entry() {
+                Some(entry) if entry.alias == alias => {
+                    workspace_state.clear_wstemplate_entry();
+                    workspace_state.save(&project_root)?;
+                    println!("Removed wstemplate entry '{}'", alias);
+                }
+                Some(entry) => {
+                    anyhow::bail!(
+                        "No entry with alias '{}'. This project's alias is '{}'.",
+                        alias,
+                        entry.alias
+                    );
+                }
+                None => {
+                    anyhow::bail!("No wstemplate entry configured for this project.");
+                }
+            }
+        }
+
+        WstemplateAction::ListEntries => {
+            match workspace_state.wstemplate_entry() {
+                Some(entry) => {
+                    println!("{} wstemplate entries:", "1".bold());
+                    println!("  {} \u{2192} {}", entry.alias, entry.root.display());
+                }
+                None => {
+                    println!("{} wstemplate entries:", "0".bold());
+                }
+            }
+        }
+
+        WstemplateAction::List => {
+            let entry = workspace_state.wstemplate_entry()
+                .ok_or_else(|| anyhow::anyhow!(
+                    "No wstemplate entry configured. Run 'wsb wstemplate add <scan-root>' first."
+                ))?;
+
+            let version_info = calculate_version(&project_root)?;
+
+            let engine = WstemplateEngine::new(
+                version_info,
+                workspace_state.project_name.clone(),
+                entry.alias.clone(),
+                project_root.clone(),
+                entry.root.clone(),
+            );
+
+            let project_roots = engine.discover_project_roots()?;
+            let templates = engine.discover_relevant(&project_roots)?;
+            if templates.is_empty() {
+                println!("No relevant .wstemplate files found.");
+            } else {
+                println!("{} relevant .wstemplate files:", templates.len());
+                for path in &templates {
+                    println!("  {}", path.display());
+                }
+            }
+        }
+
+        WstemplateAction::Render => {
+            let entry = workspace_state.wstemplate_entry()
+                .ok_or_else(|| anyhow::anyhow!(
+                    "No wstemplate entry configured. Run 'wsb wstemplate add <scan-root>' first."
+                ))?;
+
+            let version_info = calculate_version(&project_root)?;
+
+            let engine = WstemplateEngine::new(
+                version_info,
+                workspace_state.project_name.clone(),
+                entry.alias.clone(),
+                project_root.clone(),
+                entry.root.clone(),
+            );
+
+            let rendered = engine.render_relevant()?;
+            if rendered.is_empty() {
+                println!("No templates to render.");
+            } else {
+                println!("Rendered {} templates:", rendered.len());
+                for r in &rendered {
+                    println!("  {} \u{2192} {}", r.source_path.display(), r.output_path.display());
+                }
+            }
+        }
+    }
+
     Ok(())
 }
 
@@ -1342,7 +1620,7 @@ fn run_scrap_command(paths: Vec<std::path::PathBuf>, command: Option<ScrapComman
         }
     }
     
-    workspace::run_scrap(args)
+    wsb::run_scrap(args)
 }
 
 fn run_unscrap_command(name: Option<String>, force: bool, to: Option<std::path::PathBuf>) -> Result<()> {
@@ -1361,15 +1639,16 @@ fn run_unscrap_command(name: Option<String>, force: bool, to: Option<std::path::
         args.push(target_path.to_string_lossy().to_string());
     }
     
-    workspace::run_unscrap(args)
+    wsb::run_unscrap(args)
 }
 
 fn run_ldiff_command(substitute_char: String) -> Result<()> {
-    workspace::run_ldiff(vec![substitute_char.clone()])
+    wsb::run_ldiff(vec![substitute_char.clone()])
 }
 
 fn install_hook(force: bool) -> Result<()> {
     if !is_git_repository() {
+        log::warn!("install_hook called outside git repository");
         eprintln!("{}: Not in a git repository", "Error".red());
         eprintln!("{}: Navigate to a git repository and try again", "Tip".yellow());
         return Ok(());
@@ -1383,13 +1662,13 @@ fn install_hook(force: bool) -> Result<()> {
     if !hooks_dir.exists() {
         fs::create_dir_all(&hooks_dir)
             .context("Failed to create git hooks directory")?;
-        log_action(&format!("Created git hooks directory: {}", hooks_dir.display()));
+        log::info!("Created git hooks directory: {}", hooks_dir.display());
     }
     
     // Check if already installed
     if !force && is_hook_installed()? {
         println!("{} Git hook is already installed", "Info".blue());
-        println!("{} Use 'ws git install --force' to reinstall", "Tip".yellow());
+        println!("{} Use 'wsb git install --force' to reinstall", "Tip".yellow());
         return Ok(());
     }
     
@@ -1398,7 +1677,7 @@ fn install_hook(force: bool) -> Result<()> {
         .context("Failed to get current executable path")?;
     
     let st8_block = format!(
-        "#!/bin/bash\n# === WS BLOCK START ===\n# DO NOT EDIT THIS BLOCK MANUALLY\n# Use 'ws git uninstall' to remove this hook\n{} ws update --git-add\n# === WS BLOCK END ===\n",
+        "#!/bin/bash\n# === WS BLOCK START ===\n# DO NOT EDIT THIS BLOCK MANUALLY\n# Use 'wsb git uninstall' to remove this hook\n{} wsb update --git-add\n# === WS BLOCK END ===\n",
         current_exe.display()
     );
     
@@ -1420,13 +1699,13 @@ fn install_hook(force: bool) -> Result<()> {
         fs::write(&hook_file, new_content)
             .context("Failed to update pre-commit hook")?;
         
-        log_action(&format!("Updated existing pre-commit hook: {}", hook_file.display()));
+        log::info!("Updated existing pre-commit hook: {}", hook_file.display());
     } else {
         // Create new hook file
         fs::write(&hook_file, &st8_block)
             .context("Failed to create pre-commit hook")?;
         
-        log_action(&format!("Created new pre-commit hook: {}", hook_file.display()));
+        log::info!("Created new pre-commit hook: {}", hook_file.display());
     }
     
     // Make hook executable on Unix systems
@@ -1438,6 +1717,7 @@ fn install_hook(force: bool) -> Result<()> {
         fs::set_permissions(&hook_file, perms)?;
     }
     
+    log::info!("Git pre-commit hook installed successfully at {}", hook_file.display());
     println!("{} Git hook installed successfully", "Success".green());
     println!("{} Version will be updated automatically on each commit", "Info".blue());
     
@@ -1446,6 +1726,7 @@ fn install_hook(force: bool) -> Result<()> {
 
 fn uninstall_hook() -> Result<()> {
     if !is_git_repository() {
+        log::warn!("uninstall_hook called outside git repository");
         eprintln!("{}: Not in a git repository", "Error".red());
         return Ok(());
     }
@@ -1473,13 +1754,13 @@ fn uninstall_hook() -> Result<()> {
         fs::remove_file(&hook_file)
             .context("Failed to remove pre-commit hook")?;
         println!("{} Removed pre-commit hook", "Success".green());
-        log_action(&format!("Removed pre-commit hook: {}", hook_file.display()));
+        log::info!("Removed pre-commit hook: {}", hook_file.display());
     } else {
         // Write back the cleaned content
         fs::write(&hook_file, cleaned_content.trim_end())
             .context("Failed to update pre-commit hook")?;
         println!("{} Removed st8 from pre-commit hook", "Success".green());
-        log_action(&format!("Removed st8 block from pre-commit hook: {}", hook_file.display()));
+        log::info!("Removed st8 block from pre-commit hook: {}", hook_file.display());
     }
     
     Ok(())
@@ -1539,7 +1820,7 @@ fn show_status() -> Result<()> {
         println!("{}: Installed ✓", "Pre-commit Hook".green());
     } else {
         println!("{}: Not installed ✗", "Pre-commit Hook".red());
-        println!("{}: Run 'ws git install' to set up automatic version management", "Tip".yellow());
+        println!("{}: Run 'wsb git install' to set up automatic version management", "Tip".yellow());
     }
     
     // Version file status
@@ -1565,7 +1846,7 @@ fn show_status() -> Result<()> {
     let enabled_count = templates.iter().filter(|t| t.enabled).count();
     
     if !templates.is_empty() {
-        println!("{}: {} total, {} enabled", "Templates".blue(), templates.len(), enabled_count);
+        log::info!("Templates: {} total, {} enabled", templates.len(), enabled_count);
     } else {
         println!("{}: None configured", "Templates".blue());
     }
@@ -1573,18 +1854,16 @@ fn show_status() -> Result<()> {
     Ok(())
 }
 
-fn update_version_in_memory(
-    _workspace_state: &mut WorkspaceState,
-    _config: &St8Config,
-    _project_root: &std::path::Path,
-) -> Result<()> {
-    // Version info is now calculated dynamically via VersionInfo::calculate()
-    // No need to store in workspace state
-    if is_git_repository() {
-        let version_info = VersionInfo::calculate()?;
-        log_action(&format!("Updated version to: {}", version_info.full_version));
-    }
-    Ok(())
+fn calculate_version(project_root: &std::path::Path) -> Result<VersionInfo> {
+    let db_path = project_root.join(".wsb/project.db");
+    let rt = tokio::runtime::Runtime::new()?;
+    let version_info = rt.block_on(async {
+        let pool = wsb::entities::database::initialize_database(&db_path).await?;
+        let major_version = get_project_major_version(&pool).await?;
+        wsb::st8::VersionInfo::calculate_with_major(major_version)
+    })?;
+    log::info!("Version calculated: {}", version_info.full_version);
+    Ok(version_info)
 }
 
 fn log_action(message: &str) {
@@ -1595,23 +1874,8 @@ fn log_action(message: &str) {
 }
 
 fn log_to_file(message: &str) -> Result<()> {
-    if let Ok(project_root) = get_project_root() {
-        let state = WorkspaceState::load(&project_root)?;
-        let log_dir = state.tool_dir("st8").join("logs");
-        
-        if let Err(_) = fs::create_dir_all(&log_dir) {
-            return Ok(()); // Silently fail if we can't create log directory
-        }
-        
-        let log_file = log_dir.join("st8.log");
-        let timestamp = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC");
-        let log_entry = format!("[{}] {}\n", timestamp, message);
-        
-        if let Ok(mut file) = OpenOptions::new().create(true).append(true).open(log_file) {
-            let _ = file.write_all(log_entry.as_bytes());
-        }
-    }
-    
+    // Use structured logging instead of custom file logging
+    log::info!("{}", message);
     Ok(())
 }
 
@@ -1641,13 +1905,13 @@ async fn handle_generate_docs(doc_type: &str, output_dir: Option<&str>, force: b
     use tera::Tera;
     use std::collections::HashMap;
     
-    let db_path = get_project_root()?.join(".ws/project.db");
-    let pool = workspace::entities::database::initialize_database(&db_path).await?;
+    let db_path = get_project_root()?.join(".wsb/project.db");
+    let pool = wsb::entities::database::initialize_database(&db_path).await?;
     let entity_manager = EntityManager::new(pool.clone());
     
     // Get current project
     let project = entity_manager.get_current_project().await?
-        .ok_or_else(|| anyhow::anyhow!("No active project found. Run 'ws sample --create' first."))?;
+        .ok_or_else(|| anyhow::anyhow!("No active project found. Run 'wsb sample --create' first."))?;
     
     // Get all entities for template context  
     let features = entity_manager.list_features().await?;
@@ -1715,10 +1979,10 @@ async fn handle_generate_docs(doc_type: &str, output_dir: Option<&str>, force: b
 
 async fn generate_claude_md(
     tera: &tera::Tera,
-    project: &workspace::entities::schema_models::Project,
-    features: &[workspace::entities::schema_models::Feature],
-    sessions: &[workspace::entities::schema_models::Session],
-    _tasks: &[workspace::entities::schema_models::Task],
+    project: &wsb::entities::schema_models::Project,
+    features: &[wsb::entities::schema_models::Feature],
+    sessions: &[wsb::entities::schema_models::Session],
+    _tasks: &[wsb::entities::schema_models::Task],
     implementation_percentage: usize,
     test_percentage: usize,
     output_path: &str,
@@ -1744,8 +2008,8 @@ async fn generate_claude_md(
 
 async fn generate_features_md(
     tera: &tera::Tera,
-    project: &workspace::entities::schema_models::Project,
-    features: &[workspace::entities::schema_models::Feature],
+    project: &wsb::entities::schema_models::Project,
+    features: &[wsb::entities::schema_models::Feature],
     total_features: usize,
     implementation_percentage: usize,
     test_percentage: usize,
@@ -1763,7 +2027,7 @@ async fn generate_features_md(
     context.insert("generated_at", &chrono::Utc::now());
     
     // Group features by category
-    let mut features_by_category: BTreeMap<String, Vec<&workspace::entities::schema_models::Feature>> = BTreeMap::new();
+    let mut features_by_category: BTreeMap<String, Vec<&wsb::entities::schema_models::Feature>> = BTreeMap::new();
     for feature in features {
         let category = feature.category.as_deref().unwrap_or("General").to_string();
         features_by_category.entry(category).or_insert_with(Vec::new).push(feature);
@@ -1792,7 +2056,7 @@ async fn generate_features_md(
 
 async fn generate_progress_md(
     _tera: &tera::Tera,
-    sessions: &[workspace::entities::schema_models::Session],
+    sessions: &[wsb::entities::schema_models::Session],
     output_path: &str,
     force: bool
 ) -> Result<()> {
@@ -1829,10 +2093,10 @@ async fn generate_progress_md(
 }
 
 async fn generate_status_report(
-    project: &workspace::entities::schema_models::Project,
-    features: &[workspace::entities::schema_models::Feature],
-    tasks: &[workspace::entities::schema_models::Task],
-    sessions: &[workspace::entities::schema_models::Session],
+    project: &wsb::entities::schema_models::Project,
+    features: &[wsb::entities::schema_models::Feature],
+    tasks: &[wsb::entities::schema_models::Task],
+    sessions: &[wsb::entities::schema_models::Session],
     implementation_percentage: usize,
     test_percentage: usize,
     output_path: &str,
@@ -1880,7 +2144,7 @@ async fn generate_status_report(
 }
 
 fn handle_init_docs(_force: bool) -> Result<()> {
-    println!("Documentation template initialization not yet implemented");
+    log::info!("Documentation template initialization not yet implemented");
     Ok(())
 }
 
@@ -1899,22 +2163,9 @@ fn write_doc_file(file_path: &Path, content: &str, force: bool) -> Result<()> {
 }
 
 fn get_project_root() -> Result<PathBuf> {
-    let current_dir = std::env::current_dir()?;
-    let mut current_path = current_dir.as_path();
-    
-    loop {
-        if current_path.join("Cargo.toml").exists() {
-            return Ok(current_path.to_path_buf());
-        }
-        
-        if let Some(parent) = current_path.parent() {
-            current_path = parent;
-        } else {
-            break;
-        }
-    }
-    
-    anyhow::bail!("Could not find project root (no Cargo.toml found)")
+    // Always use current working directory as project root
+    // wsb should work in any directory, even empty ones
+    std::env::current_dir().context("Failed to get current directory")
 }
 
 fn is_hook_installed() -> Result<bool> {
@@ -2007,9 +2258,11 @@ fn add_files_to_git(files: &[String]) -> Result<Vec<String>> {
                 added_files.push(file.clone());
                 log_action(&format!("Added file to git: {}", file));
             } else {
+                log::warn!("Failed to add '{}' to git", file);
                 eprintln!("{} Failed to add '{}' to git", "Warning".yellow(), file);
             }
         } else {
+            log::warn!("File '{}' does not exist, skipping git add", file);
             eprintln!("{} File '{}' does not exist, skipping git add", "Warning".yellow(), file);
         }
     }
@@ -2033,18 +2286,51 @@ fn is_running_as_git_hook() -> bool {
 }
 
 fn setup_shell_completions() -> Result<()> {
-    // Check if completions are already set up in this session
-    if env::var("WS_COMPLETIONS_LOADED").is_ok() {
-        return Ok(());
-    }
-    
     let shell = detect_shell()?;
-    generate_and_activate_completions(shell)?;
-    
-    // Mark completions as loaded for this session
-    env::set_var("WS_COMPLETIONS_LOADED", "1");
-    
+
+    // Always (re)generate the completion script file.
+    generate_completion_file(shell)?;
+
+    // Show the activation hint exactly once per project, tracked in state.json.
+    show_completion_hint_if_needed(shell);
+
     Ok(())
+}
+
+/// Show the shell-completion activation hint once per project.
+///
+/// Reads `.wsb/state.json` from the current directory; if it exists and
+/// `completion_hint_shown` is false, prints the hint and persists the flag.
+/// Errors are silently swallowed — a broken hint must never block wsb.
+fn show_completion_hint_if_needed(shell: Shell) {
+    let project_root = match std::env::current_dir() {
+        Ok(p) => p,
+        Err(_) => return,
+    };
+    if !project_root.join(".wsb").join("state.json").exists() {
+        return;
+    }
+    let mut state = match WorkspaceState::load(&project_root) {
+        Ok(s) => s,
+        Err(_) => return,
+    };
+    if state.completion_hint_shown {
+        return;
+    }
+
+    let completion_dir = match get_completion_dir(shell) {
+        Ok(d) => d,
+        Err(_) => return,
+    };
+    let completion_file = match get_completion_file_path(shell, &completion_dir) {
+        Ok(f) => f,
+        Err(_) => return,
+    };
+
+    print_activation_hint(shell, &completion_file);
+
+    state.completion_hint_shown = true;
+    let _ = state.save(&project_root);
 }
 
 fn detect_shell() -> Result<Shell> {
@@ -2072,32 +2358,26 @@ fn detect_shell() -> Result<Shell> {
     Ok(Shell::Bash)
 }
 
-fn generate_and_activate_completions(shell: Shell) -> Result<()> {
-    
-    // Generate completion script to a temporary string
+/// Generate the shell completion script file (silently, no hints).
+fn generate_completion_file(shell: Shell) -> Result<()> {
     let mut completion_script = Vec::new();
     {
         let mut app = Args::command();
         let name = app.get_name().to_string();
         generate(shell, &mut app, name, &mut completion_script);
     }
-    
+
     let completion_content = String::from_utf8(completion_script)
         .context("Failed to convert completion script to string")?;
-    
-    // Create completion directory if it doesn't exist
+
     let completion_dir = get_completion_dir(shell)?;
     fs::create_dir_all(&completion_dir)
         .context("Failed to create completion directory")?;
-    
-    // Write completion script to appropriate location
+
     let completion_file = get_completion_file_path(shell, &completion_dir)?;
     fs::write(&completion_file, &completion_content)
         .context("Failed to write completion script")?;
-    
-    // Output shell-specific activation commands to stderr so they can be sourced
-    output_activation_commands(shell, &completion_file)?;
-    
+
     Ok(())
 }
 
@@ -2126,44 +2406,41 @@ fn get_completion_dir(shell: Shell) -> Result<PathBuf> {
 fn get_completion_file_path(shell: Shell, completion_dir: &std::path::Path) -> Result<PathBuf> {
     let file_name = match shell {
         Shell::Zsh => "_ws",
-        Shell::Bash => "ws",
-        Shell::Fish => "ws.fish",
-        Shell::PowerShell => "ws.ps1",
-        _ => "ws",
+        Shell::Bash => "wsb",
+        Shell::Fish => "wsb.fish",
+        Shell::PowerShell => "wsb.ps1",
+        _ => "wsb",
     };
     
     Ok(completion_dir.join(file_name))
 }
 
-fn output_activation_commands(shell: Shell, file_path: &std::path::Path) -> Result<()> {
-    // Output to stderr so it doesn't interfere with normal command output
+/// Print the shell-completion activation hint to stderr.
+///
+/// Called at most once per project (gated by `completion_hint_shown` in state.json).
+fn print_activation_hint(shell: Shell, file_path: &std::path::Path) {
     match shell {
         Shell::Bash => {
-            eprintln!("# To enable ws completions for this session, run:");
+            eprintln!("# To enable wsb completions, add this to your ~/.bashrc:");
             eprintln!("source '{}'", file_path.to_string_lossy());
-            eprintln!("# To enable permanently, add the above line to your ~/.bashrc");
-        },
+        }
         Shell::Zsh => {
             let completion_parent = file_path.parent().unwrap_or(std::path::Path::new(""));
-            eprintln!("# To enable ws completions for this session, run:");
+            eprintln!("# To enable wsb completions, add these lines to your ~/.zshrc:");
             eprintln!("fpath=(\"{}\" $fpath)", completion_parent.to_string_lossy());
             eprintln!("autoload -U compinit && compinit");
-            eprintln!("# To enable permanently, add the above lines to your ~/.zshrc");
-        },
+        }
         Shell::Fish => {
-            eprintln!("# ws completions have been installed to: {}", file_path.to_string_lossy());
-            eprintln!("# Fish will automatically load completions from this location");
-        },
+            eprintln!("# wsb completions installed to: {}", file_path.to_string_lossy());
+        }
         Shell::PowerShell => {
-            eprintln!("# To enable ws completions, add this to your PowerShell profile:");
+            eprintln!("# To enable wsb completions, add this to your PowerShell profile:");
             eprintln!(". '{}'", file_path.to_string_lossy());
-        },
+        }
         _ => {
-            eprintln!("# Completion script generated at: {}", file_path.to_string_lossy());
+            eprintln!("# Completion script at: {}", file_path.to_string_lossy());
         }
     }
-    
-    Ok(())
 }
 
 fn run_mcp_server(_port: u16, _debug: bool, migrate: bool) -> Result<()> {
@@ -2175,16 +2452,16 @@ fn run_mcp_server(_port: u16, _debug: bool, migrate: bool) -> Result<()> {
                 println!("Migrating features from {} to database...", features_path.display());
                 
                 // Initialize database and entity manager
-                let db_path = std::env::current_dir()?.join(".ws").join("project.db");
+                let db_path = std::env::current_dir()?.join(".wsb").join("project.db");
                 std::fs::create_dir_all(db_path.parent().unwrap())?;
                 
                 let pool = if db_path.exists() {
                     sqlx::SqlitePool::connect(&format!("sqlite:{}", db_path.display())).await?
                 } else {
-                    workspace::entities::database::initialize_database(&db_path).await?
+                    wsb::entities::database::initialize_database(&db_path).await?
                 };
                 
-                let _entity_manager = workspace::entities::EntityManager::new(pool);
+                let _entity_manager = wsb::entities::EntityManager::new(pool);
                 // Migration method not implemented yet
                 // entity_manager.migrate_features_from_file(features_path).await?;
                 
@@ -2228,10 +2505,11 @@ fn run_sample_command(project: bool, data: bool, force: bool, output: String) ->
     }
     
     if project && data {
+        log::info!("Sample project and data creation completed in: {}", output_path.display());
         println!("{} Sample project and data creation completed!", "✅".green().bold());
         println!("{} Sample project created in: {}", "📁".blue(), output_path.canonicalize().unwrap_or_else(|_| output_path.to_path_buf()).display());
         println!("{} To start the dashboard:", "💡".blue());
-        println!("   cd {} && ws mcp-server --port 3000", output);
+        println!("   cd {} && wsb mcp-server --port 3000", output);
         println!("{} Then access dashboard at http://localhost:3000", "🌐".cyan());
     }
     
@@ -2249,13 +2527,13 @@ fn create_sample_project(force: bool) -> Result<()> {
     
     // Create directories
     std::fs::create_dir_all("internal")?;
-    std::fs::create_dir_all(".ws")?;
+    std::fs::create_dir_all(".wsb")?;
     std::fs::create_dir_all("src")?;
     std::fs::create_dir_all("tests")?;
     std::fs::create_dir_all("docs")?;
     
     // Create CLAUDE.md
-    let claude_content = r#"# Sample Project - AI-Assisted Development
+    let claude_content = r#"# Sample Project
 
 ## Project Overview
 
@@ -2309,7 +2587,7 @@ Use this sample project to:
 
 ---
 
-*Created by ws sample command*"#;
+*Created by wsb sample command*"#;
 
     std::fs::write("CLAUDE.md", claude_content)?;
     println!("  {} Created CLAUDE.md", "✅".green());
@@ -2321,8 +2599,8 @@ Use this sample project to:
   "description": "Sample project for Workspace development suite",
   "main": "index.js",
   "scripts": {
-    "dev": "ws mcp-server",
-    "test": "ws status --include-features --include-metrics"
+    "dev": "wsb mcp-server",
+    "test": "wsb status --include-features --include-metrics"
   },
   "keywords": ["workspace", "dashboard", "sample"],
   "author": "Workspace Development Suite",
@@ -2343,16 +2621,16 @@ This is a sample project created by the Workspace development suite to demonstra
 
 ## Quick Start
 
-1. View project status: `ws status --include-features`
-2. Start dashboard: `ws mcp-server` 
+1. View project status: `wsb status --include-features`
+2. Start dashboard: `wsb mcp-server` 
 3. Open browser: http://localhost:3000
 
 ## Commands
 
-- `ws sample --data` - Populate with more sample data
-- `ws feature list` - View all features
-- `ws task list` - View all tasks
-- `ws status --include-metrics` - View project metrics
+- `wsb sample --data` - Populate with more sample data
+- `wsb feature list` - View all features
+- `wsb task list` - View all tasks
+- `wsb status --include-metrics` - View project metrics
 
 This sample demonstrates real-world usage patterns and can be used as a template for new projects.
 "#;
@@ -2369,7 +2647,7 @@ fn populate_sample_data(force: bool) -> Result<()> {
     println!("{} Populating database with sample data...", "🗄️".blue().bold());
     
     // Ensure database directory exists
-    let db_path = std::path::Path::new(".ws/project.db");
+    let db_path = std::path::Path::new(".wsb/project.db");
     std::fs::create_dir_all(db_path.parent().unwrap())?;
     
     // Check if database exists and has data
@@ -2395,17 +2673,17 @@ fn populate_sample_data(force: bool) -> Result<()> {
 }
 
 async fn populate_sample_data_async(force: bool) -> Result<()> {
-    let db_path = std::env::current_dir()?.join(".ws").join("project.db");
+    let db_path = std::env::current_dir()?.join(".wsb").join("project.db");
     
     // Initialize database if it doesn't exist
     let pool = if db_path.exists() && !force {
         sqlx::SqlitePool::connect(&format!("sqlite:{}", db_path.display())).await
             .map_err(|e| anyhow::anyhow!("Failed to connect to database: {}", e))?
     } else {
-        workspace::entities::database::initialize_database(&db_path).await?
+        wsb::entities::database::initialize_database(&db_path).await?
     };
     
-    let entity_manager = workspace::entities::EntityManager::new(pool);
+    let entity_manager = wsb::entities::EntityManager::new(pool);
     
     // Load test data from test_data.sql if it exists
     let test_data_path = std::path::Path::new("test_data.sql");
@@ -2644,7 +2922,7 @@ fn setup_new_project(first_task: Option<String>) -> Result<()> {
     let internal_dir = std::path::Path::new("internal");
     std::fs::create_dir_all(internal_dir)?;
     
-    let ws_dir = std::path::Path::new(".ws");
+    let ws_dir = std::path::Path::new(".wsb");
     std::fs::create_dir_all(ws_dir)?;
     
     // Get project name once
@@ -3178,6 +3456,7 @@ fn update_progress_tracking(
 }
 
 fn update_feature_states(_context: &ProjectContext, debug_mode: bool) -> Result<()> {
+    log::debug!("Updating feature states (debug mode: {})", debug_mode);
     if debug_mode {
         println!("Updating feature states...");
     }
@@ -3245,34 +3524,6 @@ fn finalize_session(
     Ok(())
 }
 
-fn run_artifacts_command(action: ArtifactAction) -> Result<()> {
-    let rt = tokio::runtime::Runtime::new()?;
-    rt.block_on(async {
-        match action {
-            ArtifactAction::List { artifact_type, session, recent, verbose } => {
-                handle_list_artifacts(artifact_type, session, recent, verbose).await
-            }
-            ArtifactAction::Clean { days, artifact_type, dry_run, force } => {
-                handle_clean_artifacts(days, &artifact_type, dry_run, force).await
-            }
-            ArtifactAction::Archive { session_id, format, output, remove_originals } => {
-                handle_archive_artifacts(&session_id, &format, output, remove_originals).await
-            }
-            ArtifactAction::Organize { categorize, manifest, tag } => {
-                handle_organize_artifacts(categorize, manifest, tag).await
-            }
-            ArtifactAction::Search { query, content, names, limit } => {
-                handle_search_artifacts(&query, content, names, limit).await
-            }
-            ArtifactAction::Show { artifact_path, content, metadata } => {
-                handle_show_artifact(&artifact_path, content, metadata).await
-            }
-            ArtifactAction::Export { sessions, format, output, include_content } => {
-                handle_export_artifacts(&sessions, &format, output, include_content).await
-            }
-        }
-    })
-}
 
 fn run_consolidate_command(
     debug_mode: bool,
@@ -3699,7 +3950,7 @@ digraph system_architecture {{
     subgraph cluster_cli {{
         label="CLI Layer";
         color=blue;
-        CLI [label="ws Binary", fillcolor=lightblue];
+        CLI [label="wsb Binary", fillcolor=lightblue];
         Commands [label="Command Router", fillcolor=lightblue];
     }}
     
@@ -4166,6 +4417,7 @@ fn generate_human_status(
     match &metrics.project_health.compilation_status {
         CompilationStatus::Passing => println!("{}: {}", "Compilation".bold(), "✅ Passing".green()),
         CompilationStatus::Failing(error) => {
+            log::error!("Compilation failing: {}", error.lines().next().unwrap_or("Unknown error"));
             println!("{}: {}", "Compilation".bold(), "❌ Failing".red());
             if include_metrics {
                 println!("  Error: {}", error.lines().next().unwrap_or("Unknown error"));
@@ -4176,7 +4428,10 @@ fn generate_human_status(
     
     match &metrics.project_health.test_status {
         TestStatus::AllPassing(count) => println!("{}: {} ({} tests)", "Tests".bold(), "✅ All Passing".green(), count),
-        TestStatus::SomeFailures(total, failed) => println!("{}: {} ({}/{} failed)", "Tests".bold(), "❌ Some Failures".red(), failed, total),
+        TestStatus::SomeFailures(total, failed) => {
+            log::warn!("Test failures: {}/{} tests failed", failed, total);
+            println!("{}: {} ({}/{} failed)", "Tests".bold(), "❌ Some Failures".red(), failed, total);
+        },
         TestStatus::Unknown => println!("{}: {}", "Tests".bold(), "❓ Unknown".yellow()),
     }
     
@@ -5015,7 +5270,7 @@ fn save_directive_to_file(directive: &Directive) -> Result<()> {
 
 fn create_initial_directives_file() -> String {
     format!(
-        "# Workspace Project - Critical Development Rules\n\n**Date**: {}\n**Purpose**: Project directive and rule management for development methodology enforcement\n**Scope**: All development activities and code changes\n\n## ABSOLUTE CONSTRAINTS - NEVER VIOLATE\n\n### Directive Management System\n\nThis file manages development directives with the following enforcement levels:\n- 🚨 **Mandatory**: Must be followed, violations block development\n- ⚡ **Recommended**: Should be followed, violations generate warnings\n- 💡 **Optional**: Guidelines for best practices\n\nPriority levels:\n- 🔴 **Critical**: Immediate attention required\n- 🟠 **High**: Address promptly\n- 🟡 **Medium**: Normal priority\n- 🟢 **Low**: When convenient\n\n## Project Directives\n\n---\n\n*This file is managed by the ws directive command. Use 'ws directive add' to add new directives.*\n",
+        "# Workspace Project - Critical Development Rules\n\n**Date**: {}\n**Purpose**: Project directive and rule management for development methodology enforcement\n**Scope**: All development activities and code changes\n\n## ABSOLUTE CONSTRAINTS - NEVER VIOLATE\n\n### Directive Management System\n\nThis file manages development directives with the following enforcement levels:\n- 🚨 **Mandatory**: Must be followed, violations block development\n- ⚡ **Recommended**: Should be followed, violations generate warnings\n- 💡 **Optional**: Guidelines for best practices\n\nPriority levels:\n- 🔴 **Critical**: Immediate attention required\n- 🟠 **High**: Address promptly\n- 🟡 **Medium**: Normal priority\n- 🟢 **Low**: When convenient\n\n## Project Directives\n\n---\n\n*This file is managed by the wsb directive command. Use 'wsb directive add' to add new directives.*\n",
         chrono::Utc::now().format("%Y-%m-%d")
     )
 }
@@ -5484,8 +5739,8 @@ fn run_relationship_command(action: RelationshipAction) -> Result<()> {
 fn add_feature_to_database(title: String, description: String, category: String, state: String) -> Result<String> {
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(async {
-        let db_path = get_project_root()?.join(".ws/project.db");
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
+        let db_path = get_project_root()?.join(".wsb/project.db");
+        let pool = wsb::entities::database::initialize_database(&db_path).await?;
         let _entity_manager = EntityManager::new(pool.clone());
         
         println!("{} Adding feature to database via EntityManager", "💾".blue());
@@ -5495,7 +5750,7 @@ fn add_feature_to_database(title: String, description: String, category: String,
         println!("  {} Initial State: {}", "🎯".cyan(), state);
         
         // Map state to FeatureState enum
-        use workspace::entities::schema_models::FeatureState;
+        use wsb::entities::schema_models::FeatureState;
         let feature_state = match state.as_str() {
             "not_started" => FeatureState::NotImplemented,
             "implemented" => FeatureState::ImplementedNoTests,
@@ -5507,7 +5762,7 @@ fn add_feature_to_database(title: String, description: String, category: String,
         };
         
         // Create feature using CRUD operations (the create function doesn't take state parameter)
-        let feature = workspace::entities::crud::features::create(
+        let feature = wsb::entities::crud::features::create(
             &pool,
             "P001".to_string(), // Default project ID for now
             title.clone(),
@@ -5516,7 +5771,7 @@ fn add_feature_to_database(title: String, description: String, category: String,
         ).await?;
         
         // Update state separately
-        workspace::entities::crud::features::update_state(&pool, &feature.id, feature_state).await?;
+        wsb::entities::crud::features::update_state(&pool, &feature.id, feature_state).await?;
         
         println!("{} Feature {} added to database", "✅".green(), feature.id);
         Ok(feature.id)
@@ -5691,6 +5946,7 @@ fn show_feature(feature_id: String) -> Result<()> {
         }
     }
     
+    log::error!("Feature not found: {}", feature_id);
     println!("{} Feature {} not found", "❌".red(), feature_id);
     Ok(())
 }
@@ -5811,14 +6067,14 @@ fn add_feature_to_features_file(id: &str, title: &str, description: &str, state:
 fn update_feature_state(feature_id: &str, new_state: &str, evidence: Option<String>) -> Result<()> {
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(async {
-        let db_path = get_project_root()?.join(".ws/project.db");
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
+        let db_path = get_project_root()?.join(".wsb/project.db");
+        let pool = wsb::entities::database::initialize_database(&db_path).await?;
         let _entity_manager = EntityManager::new(pool.clone());
         
         println!("{} Updating feature {} state to {}", "🔄".blue(), feature_id, new_state);
         
         // Map state string to FeatureState enum
-        use workspace::entities::schema_models::FeatureState;
+        use wsb::entities::schema_models::FeatureState;
         let feature_state = match new_state {
             "❌" => FeatureState::NotImplemented,
             "🟠" => FeatureState::ImplementedNoTests,
@@ -5832,7 +6088,7 @@ fn update_feature_state(feature_id: &str, new_state: &str, evidence: Option<Stri
         };
         
         // Update feature in database
-        workspace::entities::crud::features::update_state(&pool, feature_id, feature_state).await?;
+        wsb::entities::crud::features::update_state(&pool, feature_id, feature_state).await?;
         
         // Update notes if evidence provided
         if let Some(_evidence_text) = evidence {
@@ -6152,8 +6408,8 @@ fn handle_list_features_api(payload: Option<String>) -> Result<()> {
     
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(async {
-        let db_path = get_project_root()?.join(".ws/project.db");
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
+        let db_path = get_project_root()?.join(".wsb/project.db");
+        let pool = wsb::entities::database::initialize_database(&db_path).await?;
         let _entity_manager = EntityManager::new(pool.clone());
         
         let filters = if let Some(json_payload) = payload {
@@ -6168,7 +6424,7 @@ fn handle_list_features_api(payload: Option<String>) -> Result<()> {
         let notes_search = filters["notes_search"].as_str();
         
         // Get all features from database (using list_by_project with default project)
-        let all_features = workspace::entities::crud::features::list_by_project(&pool, "P001").await?;
+        let all_features = wsb::entities::crud::features::list_by_project(&pool, "P001").await?;
         
         // Apply filters and convert to JSON
         let mut filtered_features = Vec::new();
@@ -6296,8 +6552,8 @@ fn handle_project_status_api(payload: Option<String>) -> Result<()> {
     
     let rt = tokio::runtime::Runtime::new()?;
     let response = rt.block_on(async {
-        let db_path = get_project_root()?.join(".ws/project.db");
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
+        let db_path = get_project_root()?.join(".wsb/project.db");
+        let pool = wsb::entities::database::initialize_database(&db_path).await?;
         let entity_manager = EntityManager::new(pool.clone());
         
         // Get current project
@@ -6305,9 +6561,9 @@ fn handle_project_status_api(payload: Option<String>) -> Result<()> {
         let project_name = current_project.map_or("Unknown Project".to_string(), |p| p.name);
         
         // Get database-driven metrics
-        let features = workspace::entities::crud::features::list_by_project(&pool, "P001").await?;
+        let features = wsb::entities::crud::features::list_by_project(&pool, "P001").await?;
         let tasks = if include_tasks {
-            Some(workspace::entities::crud::tasks::list_by_project(&pool, "P001", None).await?)
+            Some(wsb::entities::crud::tasks::list_by_project(&pool, "P001", None).await?)
         } else {
             None
         };
@@ -6414,8 +6670,8 @@ fn handle_project_setup_api(payload: Option<String>) -> Result<()> {
         let rt = tokio::runtime::Runtime::new()?;
         let setup_result = rt.block_on(async {
             // Initialize database and project
-            let db_path = get_project_root()?.join(".ws/project.db");
-            let pool = workspace::entities::database::initialize_database(&db_path).await?;
+            let db_path = get_project_root()?.join(".wsb/project.db");
+            let pool = wsb::entities::database::initialize_database(&db_path).await?;
             let entity_manager = EntityManager::new(pool.clone());
             
             // Create project if it doesn't exist
@@ -6425,7 +6681,7 @@ fn handle_project_setup_api(payload: Option<String>) -> Result<()> {
             let project = if existing_project.is_none() {
                 println!("    {} Creating new project: {}", "➕".green(), project_name);
                 
-                workspace::entities::crud::projects::create(
+                wsb::entities::crud::projects::create(
                     &pool,
                     project_name.clone(),
                     format!("{} project created via API", project_type)
@@ -6472,7 +6728,7 @@ fn handle_project_setup_api(payload: Option<String>) -> Result<()> {
                 
                 for (i, (title, description)) in template_features.iter().enumerate() {
                     let feature_id = format!("F{:05}", i + 1);
-                    workspace::entities::crud::features::create(
+                    wsb::entities::crud::features::create(
                         &pool,
                         "P001".to_string(),
                         title.to_string(),
@@ -6490,7 +6746,7 @@ fn handle_project_setup_api(payload: Option<String>) -> Result<()> {
                 
                 // Create a sample task
                 let task_id = format!("T{:06}", 1);
-                workspace::entities::crud::tasks::create(
+                wsb::entities::crud::tasks::create(
                     &pool,
                     "P001".to_string(),
                     format!("F{:05}", 1),
@@ -6501,18 +6757,18 @@ fn handle_project_setup_api(payload: Option<String>) -> Result<()> {
                 
                 // Create a sample directive
                 let directive_id = format!("D{:03}", 1);
-                workspace::entities::crud::directives::create(
+                wsb::entities::crud::directives::create(
                     &pool,
                     "P001".to_string(),
                     format!("{} Development Standards", project_type),
                     format!("Development standards and practices for {} projects", project_type),
-                    workspace::entities::DirectiveCategory::Architecture,
-                    workspace::entities::Priority::High
+                    wsb::entities::DirectiveCategory::Architecture,
+                    wsb::entities::Priority::High
                 ).await?;
                 sample_items_created += 1;
             }
             
-            Ok::<(String, usize, usize), anyhow::Error>((project.name, features_created, sample_items_created))
+            Ok::<(String, usize, usize), anyhow::Error>((project.name.clone(), features_created, sample_items_created))
         })?;
         
         let (final_project_name, features_count, sample_count) = setup_result;
@@ -6610,13 +6866,13 @@ fn create_sample_project_in_dir(output_dir: &str, force: bool) -> Result<()> {
     
     // Create directories
     std::fs::create_dir_all(output_path.join("internal"))?;
-    std::fs::create_dir_all(output_path.join(".ws"))?;
+    std::fs::create_dir_all(output_path.join(".wsb"))?;
     std::fs::create_dir_all(output_path.join("src"))?;
     std::fs::create_dir_all(output_path.join("tests"))?;
     std::fs::create_dir_all(output_path.join("docs"))?;
     
     // Create CLAUDE.md
-    let claude_content = r#"# Sample Project - AI-Assisted Development
+    let claude_content = r#"# Sample Project
 
 ## Project Overview
 
@@ -6670,7 +6926,7 @@ Use this sample project to:
 
 ---
 
-*Created by ws sample command*"#;
+*Created by wsb sample command*"#;
 
     std::fs::write(output_path.join("CLAUDE.md"), claude_content)?;
     println!("  {} Created CLAUDE.md", "✅".green());
@@ -6682,8 +6938,8 @@ Use this sample project to:
   "description": "Sample project for Workspace development suite",
   "main": "index.js",
   "scripts": {
-    "dev": "ws mcp-server",
-    "test": "ws status --include-features --include-metrics"
+    "dev": "wsb mcp-server",
+    "test": "wsb status --include-features --include-metrics"
   },
   "keywords": ["workspace", "dashboard", "sample"],
   "author": "Workspace Development Suite",
@@ -6712,7 +6968,7 @@ This sample includes:
 
 1. **Start the dashboard server:**
    ```bash
-   ws mcp-server --port 3000
+   wsb mcp-server --port 3000
    ```
 
 2. **Access the web dashboard:**
@@ -6807,7 +7063,7 @@ fn init_sample_git_repo(project_path: &std::path::Path) -> Result<()> {
 - Added basic project structure with package.json
 - Created src/, docs/, tests/ directories  
 - Added project documentation and README
-- Initialized workspace with .ws/ directory";
+- Initialized workspace with .wsb/ directory";
     
     Command::new("git")
         .args(&["commit", "-m", commit_msg])
@@ -7525,7 +7781,7 @@ fn populate_sample_data_in_dir(output_dir: &str, force: bool) -> Result<()> {
     println!("{} Populating database with sample data in {}...", "🗄️".blue().bold(), output_dir);
     
     let output_path = std::path::Path::new(output_dir);
-    let db_path = output_path.join(".ws/project.db");
+    let db_path = output_path.join(".wsb/project.db");
     
     // Check if database exists and has data
     if db_path.exists() && !force {
@@ -7552,10 +7808,10 @@ fn populate_sample_data_in_dir(output_dir: &str, force: bool) -> Result<()> {
 }
 
 async fn populate_sample_data_in_dir_async(output_dir: &str, _force: bool) -> Result<()> {
-    use workspace::entities::{database::initialize_database, EntityManager};
+    use wsb::entities::{database::initialize_database, EntityManager};
     
     let output_path = std::path::Path::new(output_dir);
-    let db_path = output_path.join(".ws/project.db");
+    let db_path = output_path.join(".wsb/project.db");
     
     // Initialize database with proper schema
     let pool = initialize_database(&db_path).await?;
@@ -7715,9 +7971,9 @@ INSERT INTO entity_audit_trails (id, entity_id, entity_type, project_id, operati
 fn link_entities(from_entity: String, from_type: String, to_entity: String, to_type: String, relationship_type: String, description: Option<String>) -> Result<()> {
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(async {
-        let db_path = get_project_root()?.join(".ws/project.db");
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
-        let entity_manager = workspace::entities::EntityManager::new(pool.clone());
+        let db_path = get_project_root()?.join(".wsb/project.db");
+        let pool = wsb::entities::database::initialize_database(&db_path).await?;
+        let entity_manager = wsb::entities::EntityManager::new(pool.clone());
         
         // Get current project
         let project = entity_manager.get_current_project().await?;
@@ -7736,8 +7992,8 @@ fn link_entities(from_entity: String, from_type: String, to_entity: String, to_t
 fn list_entity_relationships(entity_id: String, entity_type: String, _relationship_type: Option<String>, _include_resolved: bool) -> Result<()> {
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(async {
-        let db_path = get_project_root()?.join(".ws/project.db");
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
+        let db_path = get_project_root()?.join(".wsb/project.db");
+        let pool = wsb::entities::database::initialize_database(&db_path).await?;
         
         // Get relationships for this entity
         // TODO: Implement relationship listing when needed
@@ -7751,8 +8007,8 @@ fn list_entity_relationships(entity_id: String, entity_type: String, _relationsh
 fn unlink_entities(dependency_id: String, force: bool) -> Result<()> {
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(async {
-        let db_path = get_project_root()?.join(".ws/project.db");
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
+        let db_path = get_project_root()?.join(".wsb/project.db");
+        let pool = wsb::entities::database::initialize_database(&db_path).await?;
         
         if !force {
             print!("Remove relationship {}? [y/N]: ", dependency_id);
@@ -7783,8 +8039,8 @@ fn unlink_entities(dependency_id: String, force: bool) -> Result<()> {
 fn resolve_entity_relationship(dependency_id: String, description: Option<String>) -> Result<()> {
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(async {
-        let db_path = get_project_root()?.join(".ws/project.db");
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
+        let db_path = get_project_root()?.join(".wsb/project.db");
+        let pool = wsb::entities::database::initialize_database(&db_path).await?;
         
         // TODO: Implement dependency resolution when needed
         println!("Dependency resolution not implemented in new schema");
@@ -7801,9 +8057,9 @@ fn resolve_entity_relationship(dependency_id: String, description: Option<String
 fn show_relationship_stats(detailed: bool, format: String) -> Result<()> {
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(async {
-        let db_path = get_project_root()?.join(".ws/project.db");
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
-        let entity_manager = workspace::entities::EntityManager::new(pool.clone());
+        let db_path = get_project_root()?.join(".wsb/project.db");
+        let pool = wsb::entities::database::initialize_database(&db_path).await?;
+        let entity_manager = wsb::entities::EntityManager::new(pool.clone());
         
         let project = entity_manager.get_current_project().await?.ok_or_else(|| anyhow::anyhow!("No active project"))?;
         // TODO: Implement project dependencies listing when needed
@@ -7833,13 +8089,13 @@ fn show_relationship_stats(detailed: bool, format: String) -> Result<()> {
     })
 }
 
-fn parse_entity_type(type_str: &str) -> Result<workspace::entities::EntityType> {
+fn parse_entity_type(type_str: &str) -> Result<wsb::entities::EntityType> {
     match type_str.to_lowercase().as_str() {
-        "project" => Ok(workspace::entities::EntityType::Project),
-        "feature" => Ok(workspace::entities::EntityType::Feature),
-        "task" => Ok(workspace::entities::EntityType::Task),
-        "session" => Ok(workspace::entities::EntityType::Session),
-        "directive" => Ok(workspace::entities::EntityType::Directive),
+        "project" => Ok(wsb::entities::EntityType::Project),
+        "feature" => Ok(wsb::entities::EntityType::Feature),
+        "task" => Ok(wsb::entities::EntityType::Task),
+        "session" => Ok(wsb::entities::EntityType::Session),
+        "directive" => Ok(wsb::entities::EntityType::Directive),
         // Note: Note, Template, Dependency, Milestone, Test types not in new schema
         _ => Err(anyhow::anyhow!("Unknown entity type: {}", type_str)),
     }
@@ -7884,9 +8140,9 @@ fn run_note_command(action: NoteAction) -> Result<()> {
 fn add_entity_note(entity_type: String, entity_id: String, title: String, content: String, note_type: String, _tags: Option<String>) -> Result<()> {
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(async {
-        let db_path = get_project_root()?.join(".ws/project.db");
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
-        let _entity_manager = workspace::entities::EntityManager::new(pool.clone());
+        let db_path = get_project_root()?.join(".wsb/project.db");
+        let pool = wsb::entities::database::initialize_database(&db_path).await?;
+        let _entity_manager = wsb::entities::EntityManager::new(pool.clone());
 
         let entity_type_enum = parse_entity_type(&entity_type)?;
         let note_type_enum = parse_note_type(&note_type)?;
@@ -7900,9 +8156,9 @@ fn add_entity_note(entity_type: String, entity_id: String, title: String, conten
 fn add_project_note(title: String, content: String, note_type: String, _tags: Option<String>) -> Result<()> {
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(async {
-        let db_path = get_project_root()?.join(".ws/project.db");
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
-        let entity_manager = workspace::entities::EntityManager::new(pool.clone());
+        let db_path = get_project_root()?.join(".wsb/project.db");
+        let pool = wsb::entities::database::initialize_database(&db_path).await?;
+        let entity_manager = wsb::entities::EntityManager::new(pool.clone());
 
         let project = entity_manager.get_current_project().await?;
 
@@ -7915,9 +8171,9 @@ fn add_project_note(title: String, content: String, note_type: String, _tags: Op
 fn list_notes(_entity_type: Option<String>, entity_id: Option<String>, _note_type: Option<String>, project_wide: bool, _pinned: bool) -> Result<()> {
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(async {
-        let db_path = get_project_root()?.join(".ws/project.db");
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
-        let entity_manager = workspace::entities::EntityManager::new(pool.clone());
+        let db_path = get_project_root()?.join(".wsb/project.db");
+        let pool = wsb::entities::database::initialize_database(&db_path).await?;
+        let entity_manager = wsb::entities::EntityManager::new(pool.clone());
 
         let project = entity_manager.get_current_project().await?;
         // TODO: Implement note listing when needed
@@ -7942,9 +8198,9 @@ fn list_notes(_entity_type: Option<String>, entity_id: Option<String>, _note_typ
 fn search_notes(query: String, note_type: Option<String>, format: String) -> Result<()> {
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(async {
-        let db_path = get_project_root()?.join(".ws/project.db");
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
-        let entity_manager = workspace::entities::EntityManager::new(pool.clone());
+        let db_path = get_project_root()?.join(".wsb/project.db");
+        let pool = wsb::entities::database::initialize_database(&db_path).await?;
+        let entity_manager = wsb::entities::EntityManager::new(pool.clone());
 
         let project = entity_manager.get_current_project().await?;
         // TODO: Implement note search in new CRUD system
@@ -7975,8 +8231,8 @@ fn search_notes(query: String, note_type: Option<String>, format: String) -> Res
 fn update_note(note_id: String, title: Option<String>, content: Option<String>, tags: Option<String>) -> Result<()> {
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(async {
-        let db_path = get_project_root()?.join(".ws/project.db");
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
+        let db_path = get_project_root()?.join(".wsb/project.db");
+        let pool = wsb::entities::database::initialize_database(&db_path).await?;
 
         let tags_vec: Option<Vec<String>> = tags.map(|t| t.split(',').map(|s| s.trim().to_string()).collect());
 
@@ -7991,8 +8247,8 @@ fn update_note(note_id: String, title: Option<String>, content: Option<String>, 
 fn delete_note(note_id: String, force: bool) -> Result<()> {
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(async {
-        let db_path = get_project_root()?.join(".ws/project.db");
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
+        let db_path = get_project_root()?.join(".wsb/project.db");
+        let pool = wsb::entities::database::initialize_database(&db_path).await?;
 
         if !force {
             print!("Delete note {}? (y/N): ", note_id);
@@ -8016,8 +8272,8 @@ fn delete_note(note_id: String, force: bool) -> Result<()> {
 fn toggle_note_pin(note_id: String) -> Result<()> {
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(async {
-        let db_path = get_project_root()?.join(".ws/project.db");
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
+        let db_path = get_project_root()?.join(".wsb/project.db");
+        let pool = wsb::entities::database::initialize_database(&db_path).await?;
 
         // TODO: Implement note pin toggle in new CRUD system
         let is_pinned = false;
@@ -8032,9 +8288,9 @@ fn toggle_note_pin(note_id: String) -> Result<()> {
 fn link_note_to_target(source_note_id: String, target_id: String, target_type: String, entity_type: Option<String>, link_type: String) -> Result<()> {
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(async {
-        let db_path = get_project_root()?.join(".ws/project.db");
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
-        let entity_manager = workspace::entities::EntityManager::new(pool);
+        let db_path = get_project_root()?.join(".wsb/project.db");
+        let pool = wsb::entities::database::initialize_database(&db_path).await?;
+        let entity_manager = wsb::entities::EntityManager::new(pool);
 
         let project = entity_manager.get_current_project().await?;
 
@@ -8074,19 +8330,19 @@ fn run_database_command(action: DatabaseAction) -> Result<()> {
 }
 
 fn create_database_backup(backup_dir: Option<String>, compress: bool, max_backups: usize) -> Result<()> {
-    use workspace::entities::database::{BackupConfig, create_backup};
+    use wsb::entities::database::{BackupConfig, create_backup};
     use colored::*;
     
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(async {
-        let db_path = get_project_root()?.join(".ws/project.db");
+        let db_path = get_project_root()?.join(".wsb/project.db");
         
         if !db_path.exists() {
             println!("{} No project database found at {}", "❌".red(), db_path.display());
             return Ok(());
         }
         
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
+        let pool = wsb::entities::database::initialize_database(&db_path).await?;
         
         let mut config = BackupConfig::default();
         if let Some(dir) = backup_dir {
@@ -8111,7 +8367,7 @@ fn create_database_backup(backup_dir: Option<String>, compress: bool, max_backup
 }
 
 fn list_database_backups(backup_dir: Option<String>, format: String) -> Result<()> {
-    use workspace::entities::database::{BackupConfig, list_backups};
+    use wsb::entities::database::{BackupConfig, list_backups};
     use colored::*;
     
     let rt = tokio::runtime::Runtime::new()?;
@@ -8154,7 +8410,7 @@ fn list_database_backups(backup_dir: Option<String>, format: String) -> Result<(
 }
 
 fn restore_database_backup(backup_id: String, target: Option<String>, force: bool) -> Result<()> {
-    use workspace::entities::database::{BackupConfig, list_backups, restore_backup};
+    use wsb::entities::database::{BackupConfig, list_backups, restore_backup};
     use colored::*;
     use std::io::{self, Write};
     
@@ -8179,7 +8435,7 @@ fn restore_database_backup(backup_id: String, target: Option<String>, force: boo
         let target_path = if let Some(target) = target {
             PathBuf::from(target)
         } else {
-            get_project_root()?.join(".ws/project.db")
+            get_project_root()?.join(".wsb/project.db")
         };
         
         if target_path.exists() && !force {
@@ -8210,7 +8466,7 @@ fn restore_database_backup(backup_id: String, target: Option<String>, force: boo
 }
 
 fn cleanup_database_backups(backup_dir: Option<String>, max_backups: usize, dry_run: bool) -> Result<()> {
-    use workspace::entities::database::{BackupConfig, cleanup_old_backups, list_backups};
+    use wsb::entities::database::{BackupConfig, cleanup_old_backups, list_backups};
     use colored::*;
     
     let rt = tokio::runtime::Runtime::new()?;
@@ -8248,19 +8504,19 @@ fn cleanup_database_backups(backup_dir: Option<String>, max_backups: usize, dry_
 }
 
 fn check_database_health(performance: bool) -> Result<()> {
-    use workspace::entities::database::{health_check, optimize_database};
+    use wsb::entities::database::{health_check, optimize_database};
     use colored::*;
     
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(async {
-        let db_path = get_project_root()?.join(".ws/project.db");
+        let db_path = get_project_root()?.join(".wsb/project.db");
         
         if !db_path.exists() {
             println!("{} No project database found at {}", "❌".red(), db_path.display());
             return Ok(());
         }
         
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
+        let pool = wsb::entities::database::initialize_database(&db_path).await?;
         
         println!("{} Checking database health...", "⏳".yellow());
         
@@ -8316,21 +8572,21 @@ fn run_continuity_command(action: ContinuityAction) -> Result<()> {
 }
 
 fn save_session_continuity_state(session_id: String, focus: String, notes: Option<String>) -> Result<()> {
-    use workspace::entities::database::{SessionContinuityState, create_context_snapshot, save_session_continuity};
+    use wsb::entities::database::{SessionContinuityState, create_context_snapshot, save_session_continuity};
     use colored::*;
     use std::collections::HashMap;
     
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(async {
-        let db_path = get_project_root()?.join(".ws/project.db");
+        let db_path = get_project_root()?.join(".wsb/project.db");
         
         if !db_path.exists() {
             println!("{} No project database found at {}", "❌".red(), db_path.display());
             return Ok(());
         }
         
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
-        let entity_manager = workspace::entities::EntityManager::new(pool.clone());
+        let pool = wsb::entities::database::initialize_database(&db_path).await?;
+        let entity_manager = wsb::entities::EntityManager::new(pool.clone());
         
         let project = entity_manager.get_current_project().await?
             .ok_or_else(|| anyhow::anyhow!("No active project found"))?;
@@ -8341,13 +8597,13 @@ fn save_session_continuity_state(session_id: String, focus: String, notes: Optio
         let context_snapshot = create_context_snapshot(&pool, &project.id).await?;
         
         // Get active features and tasks
-        let active_features = workspace::entities::crud::features::list_by_project(&pool, &project.id).await?
+        let active_features = wsb::entities::crud::features::list_by_project(&pool, &project.id).await?
             .into_iter()
             .filter(|f| matches!(f.state.as_str(), "implemented_no_tests" | "implemented_failing_tests"))
             .map(|f| f.id)
             .collect();
         
-        let in_progress_tasks = workspace::entities::crud::tasks::list_by_project(&pool, &project.id, None).await?
+        let in_progress_tasks = wsb::entities::crud::tasks::list_by_project(&pool, &project.id, None).await?
             .into_iter()
             .filter(|t| t.status == "in_progress")
             .map(|t| t.id)
@@ -8382,19 +8638,19 @@ fn save_session_continuity_state(session_id: String, focus: String, notes: Optio
 }
 
 fn load_session_continuity_state(session_id: String, format: String) -> Result<()> {
-    use workspace::entities::database::load_session_continuity;
+    use wsb::entities::database::load_session_continuity;
     use colored::*;
     
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(async {
-        let db_path = get_project_root()?.join(".ws/project.db");
+        let db_path = get_project_root()?.join(".wsb/project.db");
         
         if !db_path.exists() {
             println!("{} No project database found at {}", "❌".red(), db_path.display());
             return Ok(());
         }
         
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
+        let pool = wsb::entities::database::initialize_database(&db_path).await?;
         
         let state = load_session_continuity(&pool, &session_id).await?;
         
@@ -8466,20 +8722,20 @@ fn load_session_continuity_state(session_id: String, format: String) -> Result<(
 }
 
 fn transfer_session_continuity(from_session: String, to_session: String, force: bool) -> Result<()> {
-    use workspace::entities::database::transfer_session_knowledge;
+    use wsb::entities::database::transfer_session_knowledge;
     use colored::*;
     use std::io::{self, Write};
     
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(async {
-        let db_path = get_project_root()?.join(".ws/project.db");
+        let db_path = get_project_root()?.join(".wsb/project.db");
         
         if !db_path.exists() {
             println!("{} No project database found at {}", "❌".red(), db_path.display());
             return Ok(());
         }
         
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
+        let pool = wsb::entities::database::initialize_database(&db_path).await?;
         
         if !force {
             print!("{} Transfer knowledge from session {} to {}? (y/N): ", 
@@ -8512,14 +8768,14 @@ fn list_session_continuity_states(project: Option<String>, format: String) -> Re
     
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(async {
-        let db_path = get_project_root()?.join(".ws/project.db");
+        let db_path = get_project_root()?.join(".wsb/project.db");
         
         if !db_path.exists() {
             println!("{} No project database found at {}", "❌".red(), db_path.display());
             return Ok(());
         }
         
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
+        let pool = wsb::entities::database::initialize_database(&db_path).await?;
         
         let rows = if let Some(project_id) = project {
             sqlx::query(r#"
@@ -8596,20 +8852,20 @@ fn list_session_continuity_states(project: Option<String>, format: String) -> Re
 }
 
 fn create_project_context_snapshot(project: Option<String>, format: String) -> Result<()> {
-    use workspace::entities::database::create_context_snapshot;
+    use wsb::entities::database::create_context_snapshot;
     use colored::*;
     
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(async {
-        let db_path = get_project_root()?.join(".ws/project.db");
+        let db_path = get_project_root()?.join(".wsb/project.db");
         
         if !db_path.exists() {
             println!("{} No project database found at {}", "❌".red(), db_path.display());
             return Ok(());
         }
         
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
-        let entity_manager = workspace::entities::EntityManager::new(pool.clone());
+        let pool = wsb::entities::database::initialize_database(&db_path).await?;
+        let entity_manager = wsb::entities::EntityManager::new(pool.clone());
         
         let project_id = if let Some(pid) = project {
             pid
@@ -8670,9 +8926,9 @@ fn create_project_context_snapshot(project: Option<String>, format: String) -> R
 fn unlink_note(link_id: String, force: bool) -> Result<()> {
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(async {
-        let db_path = get_project_root()?.join(".ws/project.db");
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
-        let entity_manager = workspace::entities::EntityManager::new(pool);
+        let db_path = get_project_root()?.join(".wsb/project.db");
+        let pool = wsb::entities::database::initialize_database(&db_path).await?;
+        let entity_manager = wsb::entities::EntityManager::new(pool);
 
         if !force {
             print!("Remove link {}? (y/N): ", link_id);
@@ -8700,9 +8956,9 @@ fn unlink_note(link_id: String, force: bool) -> Result<()> {
 fn list_note_links(id: String, incoming: bool, outgoing: bool, format: String) -> Result<()> {
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(async {
-        let db_path = get_project_root()?.join(".ws/project.db");
-        let pool = workspace::entities::database::initialize_database(&db_path).await?;
-        let entity_manager = workspace::entities::EntityManager::new(pool);
+        let db_path = get_project_root()?.join(".wsb/project.db");
+        let pool = wsb::entities::database::initialize_database(&db_path).await?;
+        let entity_manager = wsb::entities::EntityManager::new(pool);
 
         // If neither incoming nor outgoing specified, show both
         let show_incoming = incoming || (!incoming && !outgoing);
@@ -8773,13 +9029,7 @@ async fn handle_list_artifacts(
     
     // Define artifact locations
     let artifact_paths = [
-        (".ws", "workspace state"),
-        ("internal/diagrams/generated", "generated diagrams"),
-        ("generated", "generated files"),
-        ("svelte-dashboard/server.log", "dashboard logs"),
-        (".ws/st8/logs", "st8 logs"),
-        ("target/debug", "build artifacts"),
-        ("internal/archive", "archived documentation"),
+        (".wsb", "workspace state"),
     ];
     
     // Collect artifacts from various locations
@@ -8806,17 +9056,13 @@ async fn handle_list_artifacts(
         let cutoff = SystemTime::now() - std::time::Duration::from_secs(days as u64 * 24 * 3600);
         artifacts.retain(|a| a.modified_time > cutoff);
     }
-    
-    // Sort by modification time (newest first)
-    artifacts.sort_by(|a, b| b.modified_time.cmp(&a.modified_time));
-    
     if artifacts.is_empty() {
         println!("No artifacts found matching criteria.");
         return Ok(());
     }
     
     // Display artifacts
-    for artifact in artifacts {
+    for artifact in &artifacts {
         use chrono::{DateTime, Utc};
         let modified: DateTime<Utc> = artifact.modified_time.into();
         let size = format_file_size(artifact.size);
@@ -8839,7 +9085,7 @@ async fn handle_list_artifacts(
                 size.cyan(),
                 artifact.category.yellow(),
                 artifact.path,
-                session_info.dim()
+                session_info.dimmed()
             );
         }
     }
@@ -8848,187 +9094,11 @@ async fn handle_list_artifacts(
     Ok(())
 }
 
-async fn handle_clean_artifacts(days: u32, artifact_type: &str, dry_run: bool, force: bool) -> Result<()> {
-    println!("{}", "=== Clean Artifacts ===".bold().blue());
-    println!("Would clean {} artifacts older than {} days (dry run: {})", artifact_type, days, dry_run);
-    Ok(())
-}
 
-async fn handle_organize_artifacts(categorize: bool, manifest: bool, tag: bool) -> Result<()> {
-    println!("{}", "=== Organize Session Artifacts ===".bold().blue());
-    if categorize { println!("Categorizing artifacts..."); }
-    if manifest { println!("Generating manifest..."); }
-    if tag { println!("Tagging artifacts..."); }
-    Ok(())
-}
 
-async fn handle_search_artifacts(query: &str, content: bool, names: bool, limit: u32) -> Result<()> {
-    println!("{}", format!("=== Search Artifacts: '{}' ===", query).bold().blue());
-    println!("Searching {} artifacts (content: {}, names: {}, limit: {})", query, content, names, limit);
-    Ok(())
-}
 
-async fn handle_show_artifact(artifact_path: &str, content: bool, metadata: bool) -> Result<()> {
-    println!("{}", format!("=== Artifact: {} ===", artifact_path).bold().blue());
-    println!("Showing artifact (content: {}, metadata: {})", content, metadata);
-    Ok(())
-}
 
-async fn handle_export_artifacts(sessions: &[String], format: &str, output: Option<String>, include_content: bool) -> Result<()> {
-    println!("{}", "=== Export Artifacts ===".bold().blue());
-    println!("Exporting {} sessions in {} format", sessions.len(), format);
-    Ok(())
-}
 
-async fn handle_archive_artifacts(session_id: &str, format: &str, output: Option<String>, remove_originals: bool) -> Result<()> {
-    println!("{}", "=== Archive Session Artifacts ===".bold().blue());
-    println!("Archiving session {} in {} format", session_id, format);
-    Ok(())
-}
-
-// Helper structures and functions
-
-#[derive(Debug)]
-struct ArtifactInfo {
-    path: String,
-    category: String,
-    size: u64,
-    modified_time: std::time::SystemTime,
-    session_id: Option<String>,
-}
-
-fn collect_artifacts_recursive(
-    dir: &Path, 
-    category: &str, 
-    artifacts: &mut Vec<ArtifactInfo>
-) -> Result<()> {
-    use std::fs;
-    
-    if !dir.exists() || !dir.is_dir() {
-        return Ok(());
-    }
-    
-    for entry in fs::read_dir(dir)? {
-        let entry = entry?;
-        let path = entry.path();
-        let metadata = entry.metadata()?;
-        
-        if path.is_file() {
-            artifacts.push(ArtifactInfo {
-                path: path.display().to_string(),
-                category: category.to_string(),
-                size: metadata.len(),
-                modified_time: metadata.modified()?,
-                session_id: None, // TODO: Extract from path
-            });
-        } else if path.is_dir() {
-            collect_artifacts_recursive(&path, category, artifacts)?;
-        }
-    }
-    
-    Ok(())
-}
-
-fn format_file_size(bytes: u64) -> String {
-    const UNITS: &[&str] = &["B", "KB", "MB", "GB"];
-    
-    let mut size = bytes as f64;
-    let mut unit_index = 0;
-    
-    while size >= 1024.0 && unit_index < UNITS.len() - 1 {
-        size /= 1024.0;
-        unit_index += 1;
-    }
-    
-    if unit_index == 0 {
-        format!("{} {}", bytes, UNITS[unit_index])
-    } else {
-        format!("{:.1} {}", size, UNITS[unit_index])
-    }
-}
-            if let Some(session) = &artifact.session_id {
-            }
-            if let Some(desc) = &artifact.description {
-            }
-        } else {
-            let session_info = artifact.session_id
-                .as_ref()
-                .map(|s| format\!(" [{}]", s))
-                .unwrap_or_default();
-                modified.format("%m-%d %H:%M"),
-                size.cyan(),
-                artifact.category.yellow(),
-                artifact.path,
-                session_info.dim()
-            );
-        }
-    }
-    
-{} artifacts found.", artifacts.len());
-    Ok(())
-}
-
-async fn handle_clean_artifacts(days: u32, artifact_type: &str, dry_run: bool, force: bool) -> anyhow::Result<()> {
-    use std::fs;
-    use std::time::SystemTime;
-    
-    
-    let cutoff = SystemTime::now() - std::time::Duration::from_secs(days as u64 * 24 * 3600);
-    let workspace_path = std::env::current_dir()?;
-    let mut to_remove = Vec::new();
-    
-    // Define cleanable paths based on type
-    let clean_paths = match artifact_type {
-        "logs" => vec\![".ws/st8/logs", "svelte-dashboard"],
-        "generated" => vec\!["generated", "internal/diagrams/generated", "target/debug"],
-        "outputs" => vec\!["generated", "internal/diagrams/generated"],
-        "all" => vec\![".ws/st8/logs", "generated", "internal/diagrams/generated", "target/debug"],
-        _ => vec\![artifact_type],
-    };
-    
-    for path_str in clean_paths {
-        let path = workspace_path.join(path_str);
-        if path.exists() {
-            find_old_files(&path, cutoff, &mut to_remove)?;
-        }
-    }
-    
-    if to_remove.is_empty() {
-        return Ok(());
-    }
-    
-    if dry_run {
-        for file in &to_remove {
-        }
-        return Ok(());
-    }
-    
-    if \!force {
-        use std::io::{self, Write};
-        print\!("Remove {} old artifacts? [y/N]: ", to_remove.len());
-        io::stdout().flush()?;
-        
-        let mut input = String::new();
-        io::stdin().read_line(&mut input)?;
-        
-        if \!input.trim().eq_ignore_ascii_case("y") && \!input.trim().eq_ignore_ascii_case("yes") {
-            return Ok(());
-        }
-    }
-    
-    let mut removed_count = 0;
-    for file_path in to_remove {
-        match fs::remove_file(&file_path) {
-            Ok(_) => {
-                removed_count += 1;
-            }
-            Err(e) => {
-            }
-        }
-    }
-    
-    Ok(())
-}
 
 async fn handle_organize_artifacts(categorize: bool, manifest: bool, tag: bool) -> anyhow::Result<()> {
     use std::fs;
@@ -9040,7 +9110,7 @@ async fn handle_organize_artifacts(categorize: bool, manifest: bool, tag: bool) 
     if categorize {
         // Create category directories
         let categories = ["logs", "generated", "diagrams", "exports", "archives"];
-        let artifacts_dir = workspace_path.join(".ws/artifacts");
+        let artifacts_dir = workspace_path.join(".wsb/artifacts");
         
         for category in categories {
             let category_path = artifacts_dir.join(category);
@@ -9051,16 +9121,16 @@ async fn handle_organize_artifacts(categorize: bool, manifest: bool, tag: bool) 
     if manifest {
         // Generate artifact manifest
         let mut artifacts = Vec::new();
-        collect_artifacts_recursive(&workspace_path.join(".ws"), "workspace", &mut artifacts)?;
+        collect_artifacts_recursive(&workspace_path.join(".wsb"), "workspace", &mut artifacts)?;
         if workspace_path.join("generated").exists() {
             collect_artifacts_recursive(&workspace_path.join("generated"), "generated", &mut artifacts)?;
         }
         
-        let manifest_path = workspace_path.join(".ws/artifact_manifest.json");
-        let manifest_data = serde_json::json\!({
+        let manifest_path = workspace_path.join(".wsb/artifact_manifest.json");
+        let manifest_data = serde_json::json!({
             "generated_at": chrono::Utc::now().to_rfc3339(),
             "total_artifacts": artifacts.len(),
-            "artifacts": artifacts.iter().map(|a| serde_json::json\!({
+            "artifacts": artifacts.iter().map(|a| serde_json::json!({
                 "path": a.path,
                 "category": a.category,
                 "size": a.size,
@@ -9087,7 +9157,7 @@ async fn handle_search_artifacts(query: &str, content: bool, names: bool, limit:
     
     // Search in various artifact locations
     let search_paths = [
-        ".ws",
+        ".wsb",
         "generated", 
         "internal/diagrams/generated",
         "internal/archive",
@@ -9118,7 +9188,7 @@ async fn handle_show_artifact(artifact_path: &str, content: bool, metadata: bool
     
     
     let path = PathBuf::from(artifact_path);
-    if \!path.exists() {
+    if !path.exists() {
         return Ok(());
     }
     
@@ -9134,18 +9204,25 @@ async fn handle_show_artifact(artifact_path: &str, content: bool, metadata: bool
     }
     
     if content && path.is_file() {
-{}", "=== Content ===".bold());
+        println!("{}", "=== Content ===".bold());
         
         match fs::read_to_string(&path) {
             Ok(file_content) => {
                 if file_content.len() > 10000 {
-[Content truncated - {} total characters]", 
+                    println!("{}\n[Content truncated - {} total characters]", 
                         &file_content[..10000], file_content.len());
                 } else {
+                    println!("{}", file_content);
                 }
             }
             Err(e) => {
                 match fs::read(&path) {
+                    Ok(binary_content) => {
+                        println!("[Binary file - {} bytes]", binary_content.len());
+                    }
+                    Err(_) => {
+                        println!("Error reading file: {}", e);
+                    }
                 }
             }
         }
@@ -9161,6 +9238,395 @@ async fn handle_export_artifacts(sessions: &[String], format: &str, output: Opti
 async fn handle_archive_artifacts(session_id: &str, format: &str, output: Option<String>, remove_originals: bool) -> anyhow::Result<()> {
     Ok(())
 }
+
+fn handle_code_command(action: CodeAction) -> Result<()> {
+    use wsb::code_analysis::{
+        SupportedLanguage,
+        search::{AstSearchEngine, SearchOptions},
+        transform::{AstTransformEngine, TransformOptions, TransformRule, CommonTransforms},
+    };
+
+    match action {
+        CodeAction::Tree { depth, hidden, sizes, extensions, no_ignore } => {
+            // Always use interactive tree
+            show_interactive_codebase_tree(depth, hidden, sizes, extensions, no_ignore)?;
+        }
+
+        CodeAction::Search { pattern, files, language, context, max_matches, format } => {
+            let lang = language.and_then(|l| match l.as_str() {
+                "rust" => Some(SupportedLanguage::Rust),
+                "javascript" | "js" => Some(SupportedLanguage::JavaScript),
+                "typescript" | "ts" => Some(SupportedLanguage::TypeScript),
+                "python" | "py" => Some(SupportedLanguage::Python),
+                "go" => Some(SupportedLanguage::Go),
+                "java" => Some(SupportedLanguage::Java),
+                "c" => Some(SupportedLanguage::C),
+                "cpp" | "c++" => Some(SupportedLanguage::Cpp),
+                _ => None,
+            });
+
+            let options = SearchOptions {
+                pattern,
+                language: lang,
+                include_context: context > 0,
+                context_lines: context,
+                max_matches: Some(max_matches),
+                ..Default::default()
+            };
+
+            let engine = AstSearchEngine::new(options);
+            let results = engine.search_files(&files)?;
+
+            match format.as_str() {
+                "json" => {
+                    println!("{}", serde_json::to_string_pretty(&results)?);
+                }
+                _ => {
+                    for (file_path, matches) in results {
+                        println!("\n{}:", file_path.display().to_string().bright_blue());
+                        for search_match in matches {
+                            println!("  {}:{} - {}", 
+                                search_match.line.to_string().yellow(),
+                                search_match.column.to_string().yellow(),
+                                search_match.matched_text.trim()
+                            );
+                            if !search_match.context_before.is_empty() {
+                                for line in search_match.context_before.lines() {
+                                    println!("    {}", line.dimmed());
+                                }
+                            }
+                            if !search_match.context_after.is_empty() {
+                                for line in search_match.context_after.lines() {
+                                    println!("    {}", line.dimmed());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        CodeAction::Transform { pattern, replacement, files, language, dry_run, no_backup, max_changes } => {
+            let lang = language.and_then(|l| match l.as_str() {
+                "rust" => Some(SupportedLanguage::Rust),
+                "javascript" | "js" => Some(SupportedLanguage::JavaScript),
+                "typescript" | "ts" => Some(SupportedLanguage::TypeScript),
+                "python" | "py" => Some(SupportedLanguage::Python),
+                "go" => Some(SupportedLanguage::Go),
+                "java" => Some(SupportedLanguage::Java),
+                "c" => Some(SupportedLanguage::C),
+                "cpp" | "c++" => Some(SupportedLanguage::Cpp),
+                _ => None,
+            }).unwrap_or(SupportedLanguage::Rust);
+
+            let options = TransformOptions {
+                dry_run,
+                backup_files: !no_backup,
+                max_changes_per_file: Some(max_changes),
+                ..Default::default()
+            };
+
+            let rule = TransformRule {
+                name: "user_transform".to_string(),
+                pattern,
+                replacement,
+                language: lang,
+            };
+
+            let engine = AstTransformEngine::new(options);
+            let results = engine.transform_files(&files, &rule)?;
+
+            for result in results {
+                if result.successful {
+                    println!("{}: {} changes applied", 
+                        result.file_path.display().to_string().green(),
+                        result.changes_made.to_string().yellow()
+                    );
+                    if dry_run {
+                        println!("  (dry run - no files modified)");
+                    }
+                } else {
+                    println!("{}: failed - {}", 
+                        result.file_path.display().to_string().red(),
+                        result.error_message.unwrap_or_default()
+                    );
+                }
+            }
+        }
+
+        CodeAction::Patterns { language, category } => {
+            let lang = match language.as_str() {
+                "rust" => SupportedLanguage::Rust,
+                "javascript" | "js" => SupportedLanguage::JavaScript,
+                "typescript" | "ts" => SupportedLanguage::TypeScript,
+                "python" | "py" => SupportedLanguage::Python,
+                "go" => SupportedLanguage::Go,
+                "java" => SupportedLanguage::Java,
+                "c" => SupportedLanguage::C,
+                "cpp" | "c++" => SupportedLanguage::Cpp,
+                _ => {
+                    eprintln!("Unsupported language: {}", language);
+                    return Ok(());
+                }
+            };
+
+            println!("Common {} patterns for {}:", category, language);
+            
+            if category == "transform" {
+                let transforms = CommonTransforms::for_language(lang);
+                for transform in transforms {
+                    println!("  {}: {} -> {}", 
+                        transform.name.bright_blue(),
+                        transform.pattern.yellow(),
+                        transform.replacement.green()
+                    );
+                }
+            } else {
+                println!("Search patterns will be available in full implementation");
+            }
+        }
+
+        CodeAction::Analyze { files, language: _language, analysis_type, format } => {
+            println!("Code Analysis ({}): analyzing {} files", analysis_type, files.len());
+            
+            for file in files {
+                if let Ok(content) = std::fs::read_to_string(&file) {
+                    let lines = content.lines().count();
+                    let chars = content.len();
+                    
+                    match format.as_str() {
+                        "json" => {
+                            println!("{{\"file\": \"{}\", \"lines\": {}, \"chars\": {}}}", 
+                                file.display(), lines, chars);
+                        }
+                        _ => {
+                            println!("{}: {} lines, {} characters", 
+                                file.display().to_string().bright_blue(),
+                                lines.to_string().yellow(),
+                                chars.to_string().yellow()
+                            );
+                        }
+                    }
+                } else {
+                    println!("{}: could not read file", file.display().to_string().red());
+                }
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn show_codebase_tree(depth: usize, show_hidden: bool, show_sizes: bool, extensions_filter: Option<String>, no_ignore: bool) -> Result<()> {
+    use colored::Colorize;
+    use ignore::gitignore::GitignoreBuilder;
+
+    let current_dir = std::env::current_dir()?;
+    let project_root = find_project_root(&current_dir);
+    
+    // Show project information
+    println!("{}", "📁 Codebase Structure".bright_blue().bold());
+    println!("{} {}", "Project Root:".bright_green(), project_root.display());
+    println!("{} {}", "Current Location:".bright_yellow(), current_dir.display());
+    
+    if current_dir != project_root {
+        let relative_path = current_dir.strip_prefix(&project_root).unwrap_or(&current_dir);
+        println!("{} {}", "Relative Path:".bright_cyan(), relative_path.display());
+    }
+    
+    println!();
+    
+    // Parse extensions filter
+    let extensions: Option<Vec<String>> = extensions_filter.map(|ext_str| {
+        ext_str.split(',').map(|s| s.trim().to_lowercase()).collect()
+    });
+    
+    // Initialize gitignore if needed
+    let gitignore = if no_ignore {
+        None
+    } else {
+        let mut builder = GitignoreBuilder::new(&project_root);
+        let _ = builder.add(&project_root.join(".gitignore"));
+        builder.build().ok()
+    };
+    
+    // Display tree
+    display_tree(&project_root, "", depth, 0, show_hidden, show_sizes, &extensions, &gitignore)?;
+    
+    Ok(())
+}
+
+fn show_interactive_codebase_tree(depth: usize, show_hidden: bool, show_sizes: bool, extensions_filter: Option<String>, no_ignore: bool) -> Result<()> {
+    use wsb::interactive_tree::InteractiveTree;
+    
+    let current_dir = std::env::current_dir()?;
+    let project_root = find_project_root(&current_dir);
+    
+    // Show brief project info before launching interactive mode
+    println!("{}", "🌳 Interactive Codebase Navigator".bright_blue().bold());
+    println!("{} {}", "Project Root:".bright_green(), project_root.display());
+    println!();
+    println!("{}", "Loading interactive tree... Press 'q' to exit when ready.".dimmed());
+    
+    // Small delay to let user read the info
+    std::thread::sleep(std::time::Duration::from_millis(1500));
+    
+    // Create and run interactive tree
+    let max_depth = if depth > 0 { Some(depth) } else { None };
+    let mut tree = InteractiveTree::new(&project_root, max_depth, show_hidden)?;
+    
+    // Set callback for when Enter is pressed
+    tree.set_callback(|selected_paths| {
+        if !selected_paths.is_empty() {
+            println!("\n🎯 Selected items:");
+            for path in selected_paths {
+                println!("  • {}", path.display().to_string().bright_cyan());
+            }
+            println!("\n{}", "✓ Callback executed! Press any key to continue...".bright_green());
+            
+            // Wait for user input before continuing
+            use std::io::Read;
+            let mut buffer = [0; 1];
+            let _ = std::io::stdin().read(&mut buffer);
+        } else {
+            println!("\n{}", "No items selected.".yellow());
+        }
+        Ok(())
+    });
+    
+    tree.run()?;
+    
+    println!("\n{}", "Interactive navigation completed.".bright_green());
+    Ok(())
+}
+
+fn find_project_root(current: &Path) -> std::path::PathBuf {
+    let mut path = current.to_path_buf();
+    
+    // Look for common project markers
+    let project_markers = [
+        "Cargo.toml", "package.json", "pyproject.toml", "setup.py", 
+        "composer.json", "pom.xml", "build.gradle", "CMakeLists.txt",
+        ".git", ".svn", ".hg", "Makefile", "go.mod"
+    ];
+    
+    loop {
+        for marker in &project_markers {
+            if path.join(marker).exists() {
+                return path;
+            }
+        }
+        
+        if !path.pop() {
+            break;
+        }
+    }
+    
+    // If no markers found, return current directory
+    current.to_path_buf()
+}
+
+fn display_tree(
+    dir: &Path, 
+    prefix: &str, 
+    max_depth: usize, 
+    current_depth: usize,
+    show_hidden: bool,
+    show_sizes: bool,
+    extensions: &Option<Vec<String>>,
+    gitignore: &Option<ignore::gitignore::Gitignore>
+) -> Result<()> {
+    if current_depth >= max_depth {
+        return Ok(());
+    }
+    
+    let entries = fs::read_dir(dir)?;
+    let mut entries: Vec<_> = entries.collect::<Result<Vec<_>, _>>()?;
+    
+    // Filter out gitignored files first
+    if let Some(ref gi) = gitignore {
+        entries.retain(|entry| {
+            let path = entry.path();
+            let is_dir = entry.file_type().map(|ft| ft.is_dir()).unwrap_or(false);
+            let matched = gi.matched(&path, is_dir);
+            !matched.is_ignore()
+        });
+    }
+    
+    entries.sort_by_key(|entry| {
+        let is_dir = entry.file_type().map(|ft| ft.is_dir()).unwrap_or(false);
+        (!is_dir, entry.file_name())
+    });
+    
+    let total_entries = entries.len();
+    
+    for (index, entry) in entries.iter().enumerate() {
+        let file_name = entry.file_name();
+        let file_name_str = file_name.to_string_lossy();
+        let path = entry.path();
+        let is_last = index == total_entries - 1;
+        
+        // Skip hidden files unless requested
+        if !show_hidden && file_name_str.starts_with('.') {
+            continue;
+        }
+        
+        let is_dir = entry.file_type()?.is_dir();
+        let connector = if is_last { "└── " } else { "├── " };
+        let new_prefix = if is_last { "    " } else { "│   " };
+        
+        // Apply extension filter for files
+        if !is_dir {
+            if let Some(ref exts) = extensions {
+                if let Some(ext) = path.extension() {
+                    let ext_str = ext.to_string_lossy().to_lowercase();
+                    if !exts.contains(&ext_str) {
+                        continue;
+                    }
+                } else if !exts.is_empty() {
+                    continue;
+                }
+            }
+        }
+        
+        // Format output
+        print!("{}{}", prefix, connector);
+        
+        if is_dir {
+            print!("{}", file_name_str.bright_blue().bold());
+        } else {
+            let colored_name = match path.extension().and_then(|s| s.to_str()) {
+                Some("rs") => file_name_str.bright_red(),
+                Some("py") => file_name_str.bright_yellow(),
+                Some("js" | "ts" | "jsx" | "tsx") => file_name_str.bright_green(),
+                Some("json" | "yaml" | "yml" | "toml") => file_name_str.bright_cyan(),
+                Some("md" | "txt" | "doc") => file_name_str.white(),
+                Some("sh" | "bash" | "zsh") => file_name_str.bright_magenta(),
+                _ => file_name_str.normal(),
+            };
+            print!("{}", colored_name);
+        }
+        
+        // Show file size if requested
+        if show_sizes && !is_dir {
+            if let Ok(metadata) = entry.metadata() {
+                let size = format_file_size(metadata.len());
+                print!(" {}", size.dimmed());
+            }
+        }
+        
+        println!();
+        
+        // Recurse into directories
+        if is_dir && current_depth + 1 < max_depth {
+            let next_prefix = format!("{}{}", prefix, new_prefix);
+            display_tree(&path, &next_prefix, max_depth, current_depth + 1, show_hidden, show_sizes, extensions, gitignore)?;
+        }
+    }
+    
+    Ok(())
+}
+
 
 // Helper structures and functions
 
@@ -9187,7 +9653,7 @@ fn collect_artifacts_recursive(
 ) -> anyhow::Result<()> {
     use std::fs;
     
-    if \!dir.exists() || \!dir.is_dir() {
+    if !dir.exists() || !dir.is_dir() {
         return Ok(());
     }
     
@@ -9215,6 +9681,24 @@ fn collect_artifacts_recursive(
     Ok(())
 }
 
+fn format_file_size(bytes: u64) -> String {
+    const UNITS: &[&str] = &["B", "KB", "MB", "GB"];
+    
+    let mut size = bytes as f64;
+    let mut unit_index = 0;
+    
+    while size >= 1024.0 && unit_index < UNITS.len() - 1 {
+        size /= 1024.0;
+        unit_index += 1;
+    }
+    
+    if unit_index == 0 {
+        format!("{} {}", bytes, UNITS[unit_index])
+    } else {
+        format!("{:.1} {}", size, UNITS[unit_index])
+    }
+}
+
 fn extract_session_id_from_path(_path: &Path) -> Option<String> {
     None
 }
@@ -9222,7 +9706,7 @@ fn extract_session_id_from_path(_path: &Path) -> Option<String> {
 fn find_old_files(dir: &Path, cutoff: std::time::SystemTime, files: &mut Vec<PathBuf>) -> anyhow::Result<()> {
     use std::fs;
     
-    if \!dir.exists() || \!dir.is_dir() {
+    if !dir.exists() || !dir.is_dir() {
         return Ok(());
     }
     
@@ -9252,7 +9736,7 @@ fn search_artifacts_recursive(
 ) -> anyhow::Result<()> {
     use std::fs;
     
-    if \!dir.exists() || \!dir.is_dir() {
+    if !dir.exists() || !dir.is_dir() {
         return Ok(());
     }
     
@@ -9264,7 +9748,7 @@ fn search_artifacts_recursive(
             let path_str = path.display().to_string();
             let mut matches = Vec::new();
             
-            if names || \!content {
+            if names || !content {
                 if path_str.contains(query) {
                     matches.push("filename match".to_string());
                 }
@@ -9278,7 +9762,7 @@ fn search_artifacts_recursive(
                 }
             }
             
-            if \!matches.is_empty() {
+            if !matches.is_empty() {
                 results.push(SearchResult {
                     path: path_str,
                     match_info: matches.join(", "),
@@ -9292,195 +9776,487 @@ fn search_artifacts_recursive(
     Ok(())
 }
 
-// ============================================================================
-// Session Artifact Management Functions (F0159)
-// ============================================================================
-
-async fn handle_list_artifacts(
-    artifact_type: Option<String>, 
-    session: Option<String>, 
-    recent: Option<u32>, 
-    verbose: bool
-) -> Result<()> {
-    use std::fs;
-    use std::time::SystemTime;
-    use chrono::{DateTime, Utc};
-    
-    println!("{}", "=== Session Artifacts ===".bold().blue());
-    
-    let workspace_path = std::env::current_dir()?;
-    let mut artifacts = Vec::new();
-    
-    // Define artifact locations
-    let artifact_paths = [
-        (".ws", "workspace state"),
-        ("internal/diagrams/generated", "generated diagrams"),
-        ("generated", "generated files"),
-        ("svelte-dashboard/server.log", "dashboard logs"),
-        (".ws/st8/logs", "st8 logs"),
-        ("target/debug", "build artifacts"),
-        ("internal/archive", "archived documentation"),
-    ];
-    
-    // Collect artifacts from various locations
-    for (path_str, category) in artifact_paths {
-        let path = workspace_path.join(path_str);
-        if path.exists() {
-            collect_artifacts_recursive(&path, category, &mut artifacts)?;
+fn run_version_command(action: VersionAction) -> Result<()> {
+    match action {
+        VersionAction::Show { verbose, format } => {
+            handle_version_show(verbose, format)
+        }
+        VersionAction::Major { version } => {
+            handle_version_major(version)
+        }
+        VersionAction::Tag { prefix, message } => {
+            handle_version_tag(prefix, message)
+        }
+        VersionAction::Info { include_history } => {
+            handle_version_info(include_history)
         }
     }
-    
-    // Filter by type if specified
-    if let Some(ref filter_type) = artifact_type {
-        artifacts.retain(|a| a.category.contains(filter_type));
-    }
-    
-    // Filter by session if specified
-    if let Some(ref session_id) = session {
-        artifacts.retain(|a| a.session_id.as_ref().map_or(false, |s| s.contains(session_id)));
-    }
-    
-    // Filter by recent sessions
-    if let Some(days) = recent {
-        let cutoff = SystemTime::now() - std::time::Duration::from_secs(days as u64 * 24 * 3600);
-        artifacts.retain(|a| a.modified_time > cutoff);
-    }
-    
-    // Sort by modification time (newest first)
-    artifacts.sort_by(|a, b| b.modified_time.cmp(&a.modified_time));
-    
-    if artifacts.is_empty() {
-        println!("No artifacts found matching criteria.");
-        return Ok(());
-    }
-    
-    // Display artifacts
-    for artifact in artifacts {
-        let modified: DateTime<Utc> = artifact.modified_time.into();
-        let size = format_file_size(artifact.size);
+}
+
+fn handle_version_show(verbose: bool, format: String) -> Result<()> {
+    let rt = tokio::runtime::Runtime::new()?;
+    rt.block_on(async {
+        let db_path = get_project_root()?.join(".wsb/project.db");
+        let pool = wsb::entities::database::initialize_database(&db_path).await?;
+        let entity_manager = EntityManager::new(pool.clone());
         
-        if verbose {
-            println!("\n{}: {}", "Artifact".bold(), artifact.path);
-            println!("  Category: {}", artifact.category);
-            println!("  Size: {}", size);
-            println!("  Modified: {}", modified.format("%Y-%m-%d %H:%M:%S UTC"));
-            if let Some(session) = &artifact.session_id {
-                println!("  Session: {}", session);
+        // Get current project and major version
+        let project = entity_manager.get_current_project().await?;
+        let major_version = get_project_major_version(&pool).await?;
+        
+        // Calculate version using new system
+        let version_info = wsb::st8::VersionInfo::calculate_with_major(major_version)?;
+        
+        match format.as_str() {
+            "json" => {
+                let json_output = if verbose {
+                    let calc_info = wsb::st8::VersionInfo::get_calculation_info(major_version)?;
+                    serde_json::json!({
+                        "version": version_info.full_version,
+                        "major": major_version,
+                        "minor": version_info.minor_version,
+                        "patch": version_info.patch_version,
+                        "project": project.map(|p| p.name.clone()).unwrap_or_else(|| "Unknown".to_string()),
+                        "calculation": {
+                            "total_commits": calc_info.total_commits,
+                            "changes_since_release": calc_info.changes_since_release,
+                            "last_release_tag": calc_info.last_release_tag,
+                            "method": calc_info.calculation_method
+                        }
+                    })
+                } else {
+                    serde_json::json!({
+                        "version": version_info.full_version,
+                        "major": major_version,
+                        "minor": version_info.minor_version,
+                        "patch": version_info.patch_version,
+                        "project": project.map(|p| p.name.clone()).unwrap_or_else(|| "Unknown".to_string())
+                    })
+                };
+                println!("{}", serde_json::to_string_pretty(&json_output)?);
             }
-        } else {
-            let session_info = artifact.session_id
-                .as_ref()
-                .map(|s| format!(" [{}]", s))
-                .unwrap_or_default();
-            println!("{} {} {} {} {}", 
-                modified.format("%m-%d %H:%M"),
-                size.cyan(),
-                artifact.category.yellow(),
-                artifact.path,
-                session_info.dim()
-            );
+            _ => {
+                println!("{} {}", "Version:".blue().bold(), version_info.full_version.green().bold());
+                let project_name = project.map(|p| p.name.clone()).unwrap_or_else(|| "Unknown".to_string());
+                println!("{} {}", "Project:".blue(), project_name);
+                
+                if verbose {
+                    let calc_info = wsb::st8::VersionInfo::get_calculation_info(major_version)?;
+                    println!("\n{}", "Calculation Breakdown:".blue().bold());
+                    println!("  {} {}", "Major (DB):".blue(), major_version.to_string().yellow());
+                    println!("  {} {}", "Minor (commits):".blue(), version_info.minor_version.to_string().yellow());
+                    println!("  {} {}", "Patch (changes):".blue(), version_info.patch_version.to_string().yellow());
+                    
+                    if let Some(tag) = calc_info.last_release_tag {
+                        println!("  {} {}", "Last release tag:".blue(), tag.green());
+                    } else {
+                        println!("  {} {}", "Last release tag:".blue(), "none".yellow());
+                    }
+                    
+                    println!("  {} {}", "Method:".blue(), calc_info.calculation_method.cyan());
+                }
+            }
         }
+        
+        anyhow::Ok(())
+    })
+}
+
+fn handle_version_major(version: u32) -> Result<()> {
+    let rt = tokio::runtime::Runtime::new()?;
+    rt.block_on(async {
+        let db_path = get_project_root()?.join(".wsb/project.db");
+        let pool = wsb::entities::database::initialize_database(&db_path).await?;
+        
+        // Update major version in database
+        sqlx::query("UPDATE projects SET major_version = ?, updated_at = datetime('now') WHERE id = (SELECT id FROM projects LIMIT 1)")
+            .bind(version)
+            .execute(&pool)
+            .await?;
+        
+        // Calculate new version
+        let version_info = wsb::st8::VersionInfo::calculate_with_major(version)?;
+        
+        log::info!("Major version set to {}, new version: {}", version, version_info.full_version);
+        println!("{} Major version set to {}", "✅".green(), version.to_string().green().bold());
+        println!("{} New version: {}", "🔢".blue(), version_info.full_version.green().bold());
+        log::info!("Version set successfully - minor/patch calculated from git state");
+        println!("\n{} {}", "Note:".blue(), "Minor/patch are calculated from git state");
+        println!("{} Use 'wsb version tag' to create a release tag", "💡".yellow());
+        
+        anyhow::Ok(())
+    })
+}
+
+fn handle_version_tag(prefix: String, message: Option<String>) -> Result<()> {
+    let rt = tokio::runtime::Runtime::new()?;
+    rt.block_on(async {
+        let db_path = get_project_root()?.join(".wsb/project.db");
+        let pool = wsb::entities::database::initialize_database(&db_path).await?;
+        
+        let major_version = get_project_major_version(&pool).await?;
+        let version_info = wsb::st8::VersionInfo::calculate_with_major(major_version)?;
+        
+        let tag_name = format!("{}{}", prefix, version_info.full_version);
+        let tag_message = message.unwrap_or_else(|| format!("Release version {}", version_info.full_version));
+        
+        // Create git tag
+        let output = Command::new("git")
+            .args(["tag", "-a", &tag_name, "-m", &tag_message])
+            .output()
+            .context("Failed to create git tag")?;
+        
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            anyhow::bail!("Failed to create git tag: {}", stderr);
+        }
+        
+        log::info!("Created git tag: {}", tag_name);
+        println!("{} Created git tag: {}", "✅".green(), tag_name.green().bold());
+        println!("{} Message: {}", "📝".blue(), tag_message);
+        println!("\n{} To push tag to remote: git push origin {}", "💡".yellow(), tag_name);
+        
+        anyhow::Ok(())
+    })
+}
+
+fn handle_version_info(include_history: bool) -> Result<()> {
+    let rt = tokio::runtime::Runtime::new()?;
+    rt.block_on(async {
+        let db_path = get_project_root()?.join(".wsb/project.db");
+        let pool = wsb::entities::database::initialize_database(&db_path).await?;
+        
+        let major_version = get_project_major_version(&pool).await?;
+        let calc_info = wsb::st8::VersionInfo::get_calculation_info(major_version)?;
+        let version_info = wsb::st8::VersionInfo::calculate_with_major(major_version)?;
+        
+        println!("{}", "Version Calculation Information".blue().bold());
+        println!("=====================================");
+        println!();
+        
+        println!("{}", "Current Version Breakdown:".green().bold());
+        println!("  {} {}.{}.{}", "Version:".blue(), major_version.to_string().green(), 
+                 version_info.minor_version.to_string().yellow(), 
+                 version_info.patch_version.to_string().cyan());
+        println!("  {} {} (stored in database)", "Major:".blue(), major_version.to_string().green());
+        println!("  {} {} (total git commits)", "Minor:".blue(), version_info.minor_version.to_string().yellow());
+        println!("  {} {} (changes since last v{}.* tag)", "Patch:".blue(), version_info.patch_version.to_string().cyan(), major_version);
+        println!();
+        
+        println!("{}", "Git Integration:".green().bold());
+        if let Some(ref git_root) = calc_info.git_root {
+            println!("  {} {}", "Git Root:".blue(), git_root.display().to_string().cyan());
+        }
+        
+        if let Some(ref tag) = calc_info.last_release_tag {
+            println!("  {} {}", "Last Release Tag:".blue(), tag.green());
+        } else {
+            println!("  {} {}", "Last Release Tag:".blue(), "none found".yellow());
+        }
+        println!();
+        
+        println!("{}", "Commands:".green().bold());
+        println!("  {} Set major version", format!("wsb version major <number>").cyan());
+        println!("  {} Create release tag", "wsb version tag".cyan());
+        println!("  {} Show current version", "wsb version show".cyan());
+        println!();
+        
+        if include_history {
+            println!("{}", "Git History Analysis:".green().bold());
+            
+            // Show recent tags
+            let output = Command::new("git")
+                .args(["tag", "--list", "--sort=-version:refname"])
+                .output();
+                
+            if let Ok(output) = output {
+                if output.status.success() {
+                    let tags = String::from_utf8_lossy(&output.stdout);
+                    if !tags.trim().is_empty() {
+                        println!("  {}:", "Recent Tags".blue());
+                        for (i, tag) in tags.lines().take(5).enumerate() {
+                            println!("    {}. {}", i + 1, tag.trim().green());
+                        }
+                    } else {
+                        println!("  {} {}", "Recent Tags:".blue(), "none found".yellow());
+                    }
+                } else {
+                    println!("  {} {}", "Recent Tags:".blue(), "error retrieving".red());
+                }
+            }
+            println!();
+        }
+        
+        anyhow::Ok(())
+    })
+}
+
+async fn get_project_major_version(pool: &SqlitePool) -> Result<u32> {
+    let row = sqlx::query("SELECT major_version FROM projects LIMIT 1")
+        .fetch_optional(pool)
+        .await?;
+    
+    if let Some(row) = row {
+        Ok(row.get::<i64, _>("major_version") as u32)
+    } else {
+        // No project found, return default
+        Ok(0)
     }
+}
+
+fn handle_test_command(dry_run: bool, install: bool, args: Vec<String>) -> Result<()> {
+    use wsb::st8::detect_project_files;
     
-    println!("\n{} artifacts found.", artifacts.len());
-    Ok(())
-}
-
-async fn handle_clean_artifacts(days: u32, artifact_type: &str, dry_run: bool, force: bool) -> Result<()> {
-    println!("{}", "=== Clean Artifacts ===".bold().blue());
-    println!("Would clean {} artifacts older than {} days (dry run: {})", artifact_type, days, dry_run);
-    Ok(())
-}
-
-async fn handle_organize_artifacts(categorize: bool, manifest: bool, tag: bool) -> Result<()> {
-    println!("{}", "=== Organize Session Artifacts ===".bold().blue());
-    if categorize { println!("Categorizing artifacts..."); }
-    if manifest { println!("Generating manifest..."); }
-    if tag { println!("Tagging artifacts..."); }
-    Ok(())
-}
-
-async fn handle_search_artifacts(query: &str, content: bool, names: bool, limit: u32) -> Result<()> {
-    println!("{}", format!("=== Search Artifacts: '{}' ===", query).bold().blue());
-    println!("Searching {} artifacts (content: {}, names: {}, limit: {})", query, content, names, limit);
-    Ok(())
-}
-
-async fn handle_show_artifact(artifact_path: &str, content: bool, metadata: bool) -> Result<()> {
-    println!("{}", format!("=== Artifact: {} ===", artifact_path).bold().blue());
-    println!("Showing artifact (content: {}, metadata: {})", content, metadata);
-    Ok(())
-}
-
-async fn handle_export_artifacts(sessions: &[String], format: &str, output: Option<String>, include_content: bool) -> Result<()> {
-    println!("{}", "=== Export Artifacts ===".bold().blue());
-    println!("Exporting {} sessions in {} format", sessions.len(), format);
-    Ok(())
-}
-
-async fn handle_archive_artifacts(session_id: &str, format: &str, output: Option<String>, remove_originals: bool) -> Result<()> {
-    println!("{}", "=== Archive Session Artifacts ===".bold().blue());
-    println!("Archiving session {} in {} format", session_id, format);
-    Ok(())
-}
-
-// Helper structures and functions
-
-#[derive(Debug)]
-struct ArtifactInfo {
-    path: String,
-    category: String,
-    size: u64,
-    modified_time: std::time::SystemTime,
-    session_id: Option<String>,
-}
-
-fn collect_artifacts_recursive(
-    dir: &Path, 
-    category: &str, 
-    artifacts: &mut Vec<ArtifactInfo>
-) -> Result<()> {
-    use std::fs;
+    // Get project root (current directory)
+    let project_root = get_project_root()?;
     
-    if !dir.exists() || !dir.is_dir() {
+    // Detect project files to determine project type
+    let project_files = detect_project_files(&project_root)?;
+    
+    if project_files.is_empty() {
+        println!("{} No project files detected in current directory", "⚠️".yellow());
+        println!("{} Supported project types: Rust (Cargo.toml), Node.js (package.json), Python (pyproject.toml), PHP (composer.json), Dart (pubspec.yaml), Java (pom.xml, build.gradle), C++ (CMakeLists.txt)", "💡".blue());
         return Ok(());
     }
     
-    for entry in fs::read_dir(dir)? {
-        let entry = entry?;
-        let path = entry.path();
-        let metadata = entry.metadata()?;
-        
-        if path.is_file() {
-            artifacts.push(ArtifactInfo {
-                path: path.display().to_string(),
-                category: category.to_string(),
-                size: metadata.len(),
-                modified_time: metadata.modified()?,
-                session_id: None, // TODO: Extract from path
-            });
-        } else if path.is_dir() {
-            collect_artifacts_recursive(&path, category, artifacts)?;
-        }
+    // Determine primary project type and test command
+    let (test_cmd, test_args, description) = determine_test_command(&project_files)?;
+    
+    println!("{} Detected project: {}", "🔍".blue(), description);
+    println!("{} Test command: {} {}", "🚀".green(), test_cmd, test_args.join(" "));
+    
+    if !args.is_empty() {
+        println!("{} Additional args: {}", "📋".blue(), args.join(" "));
+    }
+    
+    if dry_run {
+        println!("{} Dry run - would execute:", "👀".cyan());
+        let mut full_args = test_args.clone();
+        full_args.extend(args);
+        println!("  {} {}", test_cmd, full_args.join(" "));
+        return Ok(());
+    }
+    
+    // Check if test runner is available and install if needed
+    if install {
+        ensure_test_runner_available(&test_cmd, &project_files)?;
+    }
+    
+    // Execute the test command
+    let mut full_args = test_args.clone();
+    full_args.extend(args);
+    
+    println!("{} Running tests...", "🧪".green());
+    let mut command = Command::new(&test_cmd);
+    command.args(&full_args);
+    
+    let status = command.status()?;
+    
+    if status.success() {
+        println!("{} Tests completed successfully!", "✅".green());
+    } else {
+        println!("{} Tests failed with exit code: {}", "❌".red(), status.code().unwrap_or(-1));
+        std::process::exit(status.code().unwrap_or(1));
     }
     
     Ok(())
 }
 
-fn format_file_size(bytes: u64) -> String {
-    const UNITS: &[&str] = &["B", "KB", "MB", "GB"];
+fn determine_test_command(project_files: &[wsb::st8::ProjectFile]) -> Result<(String, Vec<String>, String)> {
+    use wsb::st8::ProjectFileType;
     
-    let mut size = bytes as f64;
-    let mut unit_index = 0;
-    
-    while size >= 1024.0 && unit_index < UNITS.len() - 1 {
-        size /= 1024.0;
-        unit_index += 1;
+    // Priority order for when multiple project files exist
+    for project_file in project_files {
+        match project_file.file_type {
+            ProjectFileType::CargoToml => {
+                return Ok((
+                    "cargo".to_string(),
+                    vec!["nextest".to_string(), "run".to_string(), "--no-fail-fast".to_string()],
+                    "Rust (Cargo.toml)".to_string(),
+                ));
+            }
+            ProjectFileType::PackageJson => {
+                return Ok((
+                    "npm".to_string(),
+                    vec!["test".to_string()],
+                    "Node.js (package.json)".to_string(),
+                ));
+            }
+            ProjectFileType::PyprojectToml => {
+                return Ok((
+                    "pytest".to_string(),
+                    vec![],
+                    "Python (pyproject.toml)".to_string(),
+                ));
+            }
+            ProjectFileType::SetupPy => {
+                return Ok((
+                    "python".to_string(),
+                    vec!["-m".to_string(), "pytest".to_string()],
+                    "Python (setup.py)".to_string(),
+                ));
+            }
+            ProjectFileType::ComposerJson => {
+                return Ok((
+                    "vendor/bin/phpunit".to_string(),
+                    vec![],
+                    "PHP (composer.json)".to_string(),
+                ));
+            }
+            ProjectFileType::PubspecYaml => {
+                return Ok((
+                    "flutter".to_string(),
+                    vec!["test".to_string()],
+                    "Dart/Flutter (pubspec.yaml)".to_string(),
+                ));
+            }
+            ProjectFileType::PomXml => {
+                return Ok((
+                    "mvn".to_string(),
+                    vec!["test".to_string()],
+                    "Java Maven (pom.xml)".to_string(),
+                ));
+            }
+            ProjectFileType::BuildGradle => {
+                return Ok((
+                    "./gradlew".to_string(),
+                    vec!["test".to_string()],
+                    "Java Gradle (build.gradle)".to_string(),
+                ));
+            }
+            ProjectFileType::BuildGradleKts => {
+                return Ok((
+                    "./gradlew".to_string(),
+                    vec!["test".to_string()],
+                    "Kotlin Gradle (build.gradle.kts)".to_string(),
+                ));
+            }
+            ProjectFileType::CMakeLists => {
+                return Ok((
+                    "ctest".to_string(),
+                    vec!["--output-on-failure".to_string()],
+                    "C/C++ (CMakeLists.txt)".to_string(),
+                ));
+            }
+            ProjectFileType::PackageSwift => {
+                return Ok((
+                    "swift".to_string(),
+                    vec!["test".to_string()],
+                    "Swift (Package.swift)".to_string(),
+                ));
+            }
+            ProjectFileType::Gemspec => {
+                return Ok((
+                    "bundle".to_string(),
+                    vec!["exec".to_string(), "rspec".to_string()],
+                    "Ruby (gemspec)".to_string(),
+                ));
+            }
+            ProjectFileType::Csproj => {
+                return Ok((
+                    "dotnet".to_string(),
+                    vec!["test".to_string()],
+                    ".NET (csproj)".to_string(),
+                ));
+            }
+            ProjectFileType::GoMod => {
+                return Ok((
+                    "go".to_string(),
+                    vec!["test".to_string(), "./...".to_string()],
+                    "Go (go.mod)".to_string(),
+                ));
+            }
+            ProjectFileType::MixExs => {
+                return Ok((
+                    "mix".to_string(),
+                    vec!["test".to_string()],
+                    "Elixir (mix.exs)".to_string(),
+                ));
+            }
+            ProjectFileType::BuildSbt => {
+                return Ok((
+                    "sbt".to_string(),
+                    vec!["test".to_string()],
+                    "Scala (build.sbt)".to_string(),
+                ));
+            }
+            ProjectFileType::ShardYml => {
+                return Ok((
+                    "crystal".to_string(),
+                    vec!["spec".to_string()],
+                    "Crystal (shard.yml)".to_string(),
+                ));
+            }
+            ProjectFileType::JuliaProject => {
+                return Ok((
+                    "julia".to_string(),
+                    vec!["--project=.".to_string(), "-e".to_string(), "using Pkg; Pkg.test()".to_string()],
+                    "Julia (Project.toml)".to_string(),
+                ));
+            }
+        }
     }
-    
-    if unit_index == 0 {
-        format!("{} {}", bytes, UNITS[unit_index])
-    } else {
-        format!("{:.1} {}", size, UNITS[unit_index])
-    }
+
+    anyhow::bail!("No supported test runner found for detected project files")
 }
+
+fn ensure_test_runner_available(test_cmd: &str, project_files: &[wsb::st8::ProjectFile]) -> Result<()> {
+    use wsb::st8::ProjectFileType;
+    
+    // Check if command exists
+    let check_status = Command::new("which")
+        .arg(test_cmd)
+        .output();
+    
+    if let Ok(output) = check_status {
+        if output.status.success() {
+            println!("{} Test runner {} is already available", "✅".green(), test_cmd);
+            return Ok(());
+        }
+    }
+    
+    // Try to install missing test runners
+    for project_file in project_files {
+        match project_file.file_type {
+            ProjectFileType::CargoToml if test_cmd.contains("nextest") => {
+                println!("{} Installing cargo-nextest...", "📦".blue());
+                let status = Command::new("cargo")
+                    .args(["install", "cargo-nextest", "--locked"])
+                    .status()?;
+                
+                if status.success() {
+                    println!("{} Successfully installed cargo-nextest", "✅".green());
+                } else {
+                    println!("{} Failed to install cargo-nextest, falling back to standard cargo test", "⚠️".yellow());
+                    // Could modify the test command here to fallback to regular cargo test
+                }
+                return Ok(());
+            }
+            ProjectFileType::PyprojectToml | ProjectFileType::SetupPy if test_cmd.contains("pytest") => {
+                println!("{} Installing pytest...", "📦".blue());
+                let status = Command::new("pip")
+                    .args(["install", "pytest"])
+                    .status()?;
+                
+                if status.success() {
+                    println!("{} Successfully installed pytest", "✅".green());
+                } else {
+                    println!("{} Failed to install pytest", "❌".red());
+                    anyhow::bail!("Could not install pytest");
+                }
+                return Ok(());
+            }
+            _ => {}
+        }
+    }
+    
+    println!("{} Test runner {} not found, please install it manually", "⚠️".yellow(), test_cmd);
+    Ok(())
+}
+
+
+
+
+
+
+

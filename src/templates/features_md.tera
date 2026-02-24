@@ -39,7 +39,7 @@
 
 - **{{ project.version }}**: Current version with database-backed documentation generation
 - **Previous Versions**: Major architectural improvements and feature implementation
-- **Integration Status**: All tools successfully consolidated under ws binary
+- **Integration Status**: All tools successfully consolidated under wsb binary
 - **Test Migration**: Comprehensive test coverage maintained across feature implementation
 
 ---

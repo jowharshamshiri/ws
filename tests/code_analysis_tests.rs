@@ -7,7 +7,7 @@ use std::fs;
 /// Test the code command help functionality
 #[test]
 fn test_code_command_help() {
-    let mut cmd = Command::cargo_bin("ws").unwrap();
+    let mut cmd = Command::cargo_bin("wsb").unwrap();
     cmd.args(&["code", "--help"]);
     
     cmd.assert()
@@ -30,7 +30,7 @@ fn test_code_search_basic() {
     writeln!(temp_file, "}}").unwrap();
     temp_file.flush().unwrap();
 
-    let mut cmd = Command::cargo_bin("ws").unwrap();
+    let mut cmd = Command::cargo_bin("wsb").unwrap();
     cmd.args(&[
         "code", "search", 
         "println",
@@ -52,7 +52,7 @@ fn test_code_search_json_output() {
     writeln!(temp_file, "console.log('Value:', x);").unwrap();
     temp_file.flush().unwrap();
 
-    let mut cmd = Command::cargo_bin("ws").unwrap();
+    let mut cmd = Command::cargo_bin("wsb").unwrap();
     cmd.args(&[
         "code", "search",
         "console.log",
@@ -76,7 +76,7 @@ fn test_code_transform_dry_run() {
     writeln!(temp_file, "}}").unwrap();
     temp_file.flush().unwrap();
 
-    let mut cmd = Command::cargo_bin("ws").unwrap();
+    let mut cmd = Command::cargo_bin("wsb").unwrap();
     cmd.args(&[
         "code", "transform",
         "unwrap",
@@ -99,7 +99,7 @@ fn test_code_transform_actual() {
     
     fs::write(&file_path, "var x = 42;\nvar y = 'hello';\n").unwrap();
 
-    let mut cmd = Command::cargo_bin("ws").unwrap();
+    let mut cmd = Command::cargo_bin("wsb").unwrap();
     cmd.args(&[
         "code", "transform",
         "var",
@@ -121,7 +121,7 @@ fn test_code_transform_actual() {
 /// Test code patterns for different languages
 #[test]
 fn test_code_patterns_rust() {
-    let mut cmd = Command::cargo_bin("ws").unwrap();
+    let mut cmd = Command::cargo_bin("wsb").unwrap();
     cmd.args(&["code", "patterns", "rust", "--category", "transform"]);
 
     cmd.assert()
@@ -131,7 +131,7 @@ fn test_code_patterns_rust() {
 
 #[test]
 fn test_code_patterns_javascript() {
-    let mut cmd = Command::cargo_bin("ws").unwrap();
+    let mut cmd = Command::cargo_bin("wsb").unwrap();
     cmd.args(&["code", "patterns", "javascript", "--category", "transform"]);
 
     cmd.assert()
@@ -141,7 +141,7 @@ fn test_code_patterns_javascript() {
 
 #[test]
 fn test_code_patterns_unsupported_language() {
-    let mut cmd = Command::cargo_bin("ws").unwrap();
+    let mut cmd = Command::cargo_bin("wsb").unwrap();
     cmd.args(&["code", "patterns", "cobol"]);
 
     cmd.assert()
@@ -159,7 +159,7 @@ fn test_code_analyze_basic() {
     writeln!(temp_file, "}}").unwrap();
     temp_file.flush().unwrap();
 
-    let mut cmd = Command::cargo_bin("ws").unwrap();
+    let mut cmd = Command::cargo_bin("wsb").unwrap();
     cmd.args(&[
         "code", "analyze",
         "--files", temp_file.path().to_str().unwrap(),
@@ -181,7 +181,7 @@ fn test_code_analyze_json() {
     writeln!(temp_file, "x = 42").unwrap();
     temp_file.flush().unwrap();
 
-    let mut cmd = Command::cargo_bin("ws").unwrap();
+    let mut cmd = Command::cargo_bin("wsb").unwrap();
     cmd.args(&[
         "code", "analyze",
         "--files", temp_file.path().to_str().unwrap(),
@@ -209,7 +209,7 @@ fn test_code_search_multiple_files() {
     let file2 = temp_dir.path().join("file2.rs");
     fs::write(&file2, "fn helper() { println!(\"File 2\"); }").unwrap();
 
-    let mut cmd = Command::cargo_bin("ws").unwrap();
+    let mut cmd = Command::cargo_bin("wsb").unwrap();
     cmd.args(&[
         "code", "search",
         "println",
@@ -236,7 +236,7 @@ fn test_code_search_with_context() {
              let x = 42;\n\
          }\n").unwrap();
 
-    let mut cmd = Command::cargo_bin("ws").unwrap();
+    let mut cmd = Command::cargo_bin("wsb").unwrap();
     cmd.args(&[
         "code", "search",
         "Target line",
@@ -252,7 +252,7 @@ fn test_code_search_with_context() {
 /// Test code tree default functionality  
 #[test]
 fn test_code_tree_default() {
-    let mut cmd = Command::cargo_bin("ws").unwrap();
+    let mut cmd = Command::cargo_bin("wsb").unwrap();
     cmd.arg("code");
 
     cmd.assert()
@@ -265,7 +265,7 @@ fn test_code_tree_default() {
 /// Test code tree with options
 #[test]
 fn test_code_tree_with_options() {
-    let mut cmd = Command::cargo_bin("ws").unwrap();
+    let mut cmd = Command::cargo_bin("wsb").unwrap();
     cmd.args(&[
         "code", "tree",
         "--depth", "2",
@@ -282,7 +282,7 @@ fn test_code_tree_with_options() {
 /// Test tree respects gitignore by default
 #[test]
 fn test_code_tree_respects_gitignore() {
-    let mut cmd = Command::cargo_bin("ws").unwrap();
+    let mut cmd = Command::cargo_bin("wsb").unwrap();
     cmd.args(&["code", "tree", "--depth", "2"]);
 
     let output = cmd.output().unwrap();
@@ -298,7 +298,7 @@ fn test_code_tree_respects_gitignore() {
 /// Test tree --no-ignore shows all files
 #[test]
 fn test_code_tree_no_ignore_shows_all() {
-    let mut cmd = Command::cargo_bin("ws").unwrap();
+    let mut cmd = Command::cargo_bin("wsb").unwrap();
     cmd.args(&["code", "tree", "--depth", "1", "--no-ignore"]);
 
     let output = cmd.output().unwrap();
@@ -319,7 +319,7 @@ fn test_code_transform_max_changes() {
     writeln!(temp_file, "var d = 4;").unwrap();
     temp_file.flush().unwrap();
 
-    let mut cmd = Command::cargo_bin("ws").unwrap();
+    let mut cmd = Command::cargo_bin("wsb").unwrap();
     cmd.args(&[
         "code", "transform",
         "var",
@@ -338,7 +338,7 @@ fn test_code_transform_max_changes() {
 /// Test error handling for non-existent files
 #[test]
 fn test_code_search_nonexistent_file() {
-    let mut cmd = Command::cargo_bin("ws").unwrap();
+    let mut cmd = Command::cargo_bin("wsb").unwrap();
     cmd.args(&[
         "code", "search",
         "test",
@@ -357,7 +357,7 @@ fn test_code_search_language_autodetect() {
     let file_path = temp_dir.path().join("test.py");
     fs::write(&file_path, "print('Hello, Python!')").unwrap();
 
-    let mut cmd = Command::cargo_bin("ws").unwrap();
+    let mut cmd = Command::cargo_bin("wsb").unwrap();
     cmd.args(&[
         "code", "search",
         "print",
@@ -384,7 +384,7 @@ fn test_code_full_workflow() {
     ).unwrap();
 
     // Step 1: Search for var declarations
-    let mut cmd = Command::cargo_bin("ws").unwrap();
+    let mut cmd = Command::cargo_bin("wsb").unwrap();
     cmd.args(&[
         "code", "search",
         "var",
@@ -394,7 +394,7 @@ fn test_code_full_workflow() {
     cmd.assert().success();
 
     // Step 2: Transform var to let
-    let mut cmd = Command::cargo_bin("ws").unwrap();
+    let mut cmd = Command::cargo_bin("wsb").unwrap();
     cmd.args(&[
         "code", "transform",
         "var",
@@ -406,7 +406,7 @@ fn test_code_full_workflow() {
     cmd.assert().success();
 
     // Step 3: Analyze the transformed file
-    let mut cmd = Command::cargo_bin("ws").unwrap();
+    let mut cmd = Command::cargo_bin("wsb").unwrap();
     cmd.args(&[
         "code", "analyze",
         "--files", file_path.to_str().unwrap()

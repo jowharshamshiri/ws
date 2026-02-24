@@ -16,13 +16,13 @@ This guide covers installation methods for the Workspace tool suite.
 ## Quick Install (Recommended)
 
 ```bash
-git clone https://github.com/jowharshamshiri/ws.git
+git clone https://github.com/jowharshamshiri/wsb.git
 cd workspace
 ./install.sh
 ```
 
 The installation script will:
-- Build the unified `ws` binary in release mode (includes all tools as subcommands)
+- Build the unified `wsb` binary in release mode (includes all tools as subcommands)
 - Install to `~/.local/bin` by default (or customize with `-d` option)
 - Check for updates and handle dependencies automatically
 
@@ -39,18 +39,18 @@ The installation script will:
 ### Quick Verification
 
 ```bash
-ws --version
-ws --help
-ws refactor --help
-ws scrap --help
-ws git --help
-ws wstemplate --help
-ws version --help
+wsb --version
+wsb --help
+wsb refactor --help
+wsb scrap --help
+wsb git --help
+wsb wstemplate --help
+wsb version --help
 
 # Test basic functionality
-echo "hello world" | ws ldiff               # Test pattern recognition
-ws refactor . "test" "test" --verbose       # Test string replacement preview
-ws git status                               # Test git integration status
+echo "hello world" | wsb ldiff               # Test pattern recognition
+wsb refactor . "test" "test" --verbose       # Test string replacement preview
+wsb git status                               # Test git integration status
 ```
 
 ### Uninstall
@@ -65,7 +65,7 @@ ws git status                               # Test git integration status
 ### Build and Install
 
 ```bash
-git clone https://github.com/jowharshamshiri/ws.git
+git clone https://github.com/jowharshamshiri/wsb.git
 cd workspace
 cargo build --release
 cargo install --path .
@@ -83,7 +83,7 @@ cargo install --path . --root /usr/local    # Requires sudo
 For development or testing the latest changes:
 
 ```bash
-git clone https://github.com/jowharshamshiri/ws.git
+git clone https://github.com/jowharshamshiri/wsb.git
 cd workspace
 
 # Run tools directly without installing
@@ -123,7 +123,7 @@ sudo apt update
 sudo apt install build-essential git curl
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 source ~/.cargo/env
-git clone https://github.com/jowharshamshiri/ws.git
+git clone https://github.com/jowharshamshiri/wsb.git
 cd workspace && ./install.sh
 ```
 
@@ -131,7 +131,7 @@ cd workspace && ./install.sh
 ```bash
 sudo pacman -S base-devel git rustup
 rustup default stable
-git clone https://github.com/jowharshamshiri/ws.git
+git clone https://github.com/jowharshamshiri/wsb.git
 cd workspace && ./install.sh
 ```
 
@@ -149,7 +149,7 @@ xcode-select --install
 brew install ripgrep
 
 # Install Workspace
-git clone https://github.com/jowharshamshiri/ws.git
+git clone https://github.com/jowharshamshiri/wsb.git
 cd workspace && ./install.sh
 ```
 
@@ -157,11 +157,11 @@ cd workspace && ./install.sh
 
 ```bash
 # Comprehensive functionality check
-ws refactor . "test" "test" --verbose        # Test refactor preview
-echo -e "line1\nline2\nline1" | ws ldiff     # Test ldiff pattern recognition
-ws scrap list                                # Test scrap
-ws git status                                # Test git integration
-ws unscrap --help                            # Test unscrap help
+wsb refactor . "test" "test" --verbose        # Test refactor preview
+echo -e "line1\nline2\nline1" | wsb ldiff     # Test ldiff pattern recognition
+wsb scrap list                                # Test scrap
+wsb git status                                # Test git integration
+wsb unscrap --help                            # Test unscrap help
 ```
 
 ### Post-Installation Health Check
@@ -170,18 +170,18 @@ ws unscrap --help                            # Test unscrap help
 # Test template system
 cd /tmp && mkdir test-project && cd test-project
 git init
-ws git install
-ws template add test-template --template "Version: {{ project.version }}" --output test.txt
-ws template list
-ws template render
+wsb git install
+wsb template add test-template --template "Version: {{ project.version }}" --output test.txt
+wsb template list
+wsb template render
 cd .. && rm -rf test-project
 
 # Test scrap system
 mkdir test-scrap && cd test-scrap
 echo "test content" > test.txt
-ws scrap test.txt
-ws scrap list
-ws unscrap test.txt
+wsb scrap test.txt
+wsb scrap list
+wsb unscrap test.txt
 cd .. && rm -rf test-scrap
 ```
 
@@ -257,8 +257,8 @@ sudo dnf groupinstall "Development Tools"  # Fedora
 
 **"No such file or directory" when running tools**
 ```bash
-which ws
-ls -la ~/.cargo/bin/ws    # Should be executable
+which wsb
+ls -la ~/.cargo/bin/wsb    # Should be executable
 cargo install --path . --force
 ```
 
@@ -267,7 +267,7 @@ cargo install --path . --force
 If you encounter issues:
 
 1. Check [Usage Guide]({{ '/usage/' | relative_url }}) and [API Reference]({{ '/api-reference/' | relative_url }})
-2. Search [GitHub Issues](https://github.com/jowharshamshiri/ws/issues)
+2. Search [GitHub Issues](https://github.com/jowharshamshiri/wsb/issues)
 3. Create a new issue with: OS/version, Rust version, error message, steps to reproduce
 
 ## Next Steps

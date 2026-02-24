@@ -9,7 +9,7 @@ fn test_scrap_creates_directory() {
     let temp_path = temp_dir.path();
     
     // Run scrap with no arguments
-    Command::cargo_bin("ws")
+    Command::cargo_bin("wsb")
         .unwrap()
         .arg("scrap")
         .current_dir(temp_path)

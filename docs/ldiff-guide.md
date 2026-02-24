@@ -32,7 +32,7 @@ While replacing repeated tokens, `ldiff` carefully preserves:
 ### Simple Usage
 ```bash
 # Read from stdin with default substitute character (░)
-echo -e "hello world\nhello universe" | ws ldiff
+echo -e "hello world\nhello universe" | wsb ldiff
 # Output:
 # hello world
 # ░░░░░ universe
@@ -41,7 +41,7 @@ echo -e "hello world\nhello universe" | ws ldiff
 ### Custom Substitute Character
 ```bash
 # Use a custom character for substitution
-echo -e "test line\ntest another" | ws ldiff "*"
+echo -e "test line\ntest another" | wsb ldiff "*"
 # Output:
 # test line
 # **** another
@@ -50,13 +50,13 @@ echo -e "test line\ntest another" | ws ldiff "*"
 ### Reading from Files
 ```bash
 # Process a file
-ws ldiff < input.txt
+wsb ldiff < input.txt
 
 # Process compressed logs
-gunzip -c app.log.gz | ws ldiff
+gunzip -c app.log.gz | wsb ldiff
 
 # Use with other commands
-cat /var/log/system.log | tail -n 100 | ws ldiff
+cat /var/log/system.log | tail -n 100 | wsb ldiff
 ```
 
 ## Log Analysis
@@ -64,28 +64,28 @@ cat /var/log/system.log | tail -n 100 | ws ldiff
 ### System Logs
 ```bash
 # Analyze system logs for patterns
-tail -f /var/log/syslog | ws ldiff
+tail -f /var/log/syslog | wsb ldiff
 
 # Find repeated patterns in auth logs
-grep "Failed password" /var/log/auth.log | ws ldiff
+grep "Failed password" /var/log/auth.log | wsb ldiff
 ```
 
 ### Application Logs
 ```bash
 # Monitor application logs in real-time
-tail -f /var/log/myapp.log | ws ldiff
+tail -f /var/log/myapp.log | wsb ldiff
 
 # Analyze historical logs
-cat /var/log/myapp.log.1 | ws ldiff > patterns.txt
+cat /var/log/myapp.log.1 | wsb ldiff > patterns.txt
 ```
 
 ### Web Server Logs
 ```bash
 # Analyze access patterns
-cat /var/log/nginx/access.log | ws ldiff "■"
+cat /var/log/nginx/access.log | wsb ldiff "■"
 
 # Find common request patterns
-awk '{print $7}' /var/log/apache2/access.log | sort | ws ldiff
+awk '{print $7}' /var/log/apache2/access.log | sort | wsb ldiff
 ```
 
 ### Example Log Analysis
@@ -95,7 +95,7 @@ awk '{print $7}' /var/log/apache2/access.log | sort | ws ldiff
 # 2023-01-01 10:00:01 INFO Loading configuration
 # 2023-01-01 10:00:02 ERROR Failed to connect
 
-cat app.log | ws ldiff
+cat app.log | wsb ldiff
 # Output:
 # 2023-01-01 10:00:00 INFO Starting application
 # ░░░░-░░-░░ ░░:░░:01 ░░░░ Loading configuration
@@ -107,28 +107,28 @@ cat app.log | ws ldiff
 ### File Listings
 ```bash
 # Analyze directory structures
-find /usr/local -type f | ws ldiff
+find /usr/local -type f | wsb ldiff
 
 # Compare file paths
-ls -la /usr/bin/ | ws ldiff "●"
+ls -la /usr/bin/ | wsb ldiff "●"
 ```
 
 ### Process Lists
 ```bash
 # Analyze running processes
-ps aux | ws ldiff
+ps aux | wsb ldiff
 
 # Monitor process changes
-watch -n 1 "ps aux | head -20" | ws ldiff
+watch -n 1 "ps aux | head -20" | wsb ldiff
 ```
 
 ### Network Analysis
 ```bash
 # Analyze network connections
-netstat -tulpn | ws ldiff
+netstat -tulpn | wsb ldiff
 
 # Monitor network activity
-ss -tulpn | ws ldiff "█"
+ss -tulpn | wsb ldiff "█"
 ```
 
 ## Advanced Features
@@ -136,33 +136,33 @@ ss -tulpn | ws ldiff "█"
 ### Unicode Support
 ```bash
 # Use Unicode characters for substitution
-echo -e "hello world\nhello universe" | ws ldiff "█"
-echo -e "test line\ntest another" | ws ldiff "▓"
-echo -e "data point\ndata value" | ws ldiff "◆"
+echo -e "hello world\nhello universe" | wsb ldiff "█"
+echo -e "test line\ntest another" | wsb ldiff "▓"
+echo -e "data point\ndata value" | wsb ldiff "◆"
 ```
 
 ### Piping and Redirection
 ```bash
 # Save patterns to file
-cat large.log | ws ldiff > patterns.txt
+cat large.log | wsb ldiff > patterns.txt
 
 # Combine with other tools
-cat access.log | grep "GET" | ws ldiff | head -50
+cat access.log | grep "GET" | wsb ldiff | head -50
 
 # Chain multiple filters
-journalctl -f | grep "ERROR" | ws ldiff "*" | tee error_patterns.log
+journalctl -f | grep "ERROR" | wsb ldiff "*" | tee error_patterns.log
 ```
 
 ### Real-time Monitoring
 ```bash
 # Monitor multiple log sources
-tail -f /var/log/app1.log /var/log/app2.log | ws ldiff
+tail -f /var/log/app1.log /var/log/app2.log | wsb ldiff
 
 # Monitor system activity
-dmesg -w | ws ldiff
+dmesg -w | wsb ldiff
 
 # Watch command output
-watch -n 2 "df -h" | ws ldiff
+watch -n 2 "df -h" | wsb ldiff
 ```
 
 ## Workflow Examples
@@ -170,7 +170,7 @@ watch -n 2 "df -h" | ws ldiff
 ### Development Debugging
 ```bash
 # 1. Start monitoring your application logs
-tail -f /var/log/myapp.log | ws ldiff &
+tail -f /var/log/myapp.log | wsb ldiff &
 
 # 2. Reproduce the issue
 ./trigger_bug.sh
@@ -180,26 +180,26 @@ tail -f /var/log/myapp.log | ws ldiff &
 
 # 4. Save interesting patterns
 pkill tail
-cat /var/log/myapp.log | tail -100 | ws ldiff > debug_patterns.txt
+cat /var/log/myapp.log | tail -100 | wsb ldiff > debug_patterns.txt
 ```
 
 ### System Administration
 ```bash
 # 1. Monitor system health
-tail -f /var/log/syslog | ws ldiff "■" &
+tail -f /var/log/syslog | wsb ldiff "■" &
 
 # 2. Check for unusual patterns
 # Normal startup messages will show patterns
 # Anomalies will show unique content
 
 # 3. Investigate specific issues
-grep "$(date +%Y-%m-%d)" /var/log/syslog | ws ldiff
+grep "$(date +%Y-%m-%d)" /var/log/syslog | wsb ldiff
 ```
 
 ### Performance Analysis
 ```bash
 # 1. Capture performance data
-top -b -n 10 | ws ldiff > perf_patterns.txt
+top -b -n 10 | wsb ldiff > perf_patterns.txt
 
 # 2. Analyze patterns
 cat perf_patterns.txt | grep -v "░"
@@ -231,28 +231,28 @@ The tool recognizes these separator patterns:
 ### With grep
 ```bash
 # Filter then analyze patterns
-grep "ERROR" /var/log/app.log | ws ldiff
+grep "ERROR" /var/log/app.log | wsb ldiff
 ```
 
 ### With awk
 ```bash
 # Extract specific fields then analyze
-awk '{print $1, $7}' /var/log/access.log | ws ldiff
+awk '{print $1, $7}' /var/log/access.log | wsb ldiff
 ```
 
 ### With sort/uniq
 ```bash
 # Find unique patterns
-cat /var/log/app.log | ws ldiff | sort | uniq -c
+cat /var/log/app.log | wsb ldiff | sort | uniq -c
 ```
 
 ### With head/tail
 ```bash
 # Analyze recent entries
-tail -100 /var/log/app.log | ws ldiff
+tail -100 /var/log/app.log | wsb ldiff
 
 # Check first patterns
-head -50 /var/log/app.log | ws ldiff
+head -50 /var/log/app.log | wsb ldiff
 ```
 
 ## Safety Features
@@ -290,28 +290,28 @@ head -50 /var/log/app.log | ws ldiff
 ### Security Monitoring
 ```bash
 # Monitor failed login attempts
-tail -f /var/log/auth.log | grep "Failed" | ws ldiff
+tail -f /var/log/auth.log | grep "Failed" | wsb ldiff
 
 # Analyze access patterns
-cat /var/log/nginx/access.log | ws ldiff | grep -v "░"
+cat /var/log/nginx/access.log | wsb ldiff | grep -v "░"
 ```
 
 ### Application Monitoring
 ```bash
 # Track API response patterns
-tail -f /var/log/api.log | grep "response_time" | ws ldiff
+tail -f /var/log/api.log | grep "response_time" | wsb ldiff
 
 # Monitor database queries
-tail -f /var/log/mysql/slow.log | ws ldiff
+tail -f /var/log/mysql/slow.log | wsb ldiff
 ```
 
 ### System Analysis
 ```bash
 # Analyze process startup patterns
-dmesg | grep "systemd" | ws ldiff
+dmesg | grep "systemd" | wsb ldiff
 
 # Monitor resource usage patterns
-vmstat 1 | ws ldiff
+vmstat 1 | wsb ldiff
 ```
 
 ## See Also

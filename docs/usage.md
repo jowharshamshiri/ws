@@ -11,37 +11,37 @@ This guide covers all aspects of using the Workspace tool suite for string repla
 
 ### Refactor - String Replacement
 ```bash
-ws refactor <ROOT_DIR> <OLD_STRING> <NEW_STRING> [OPTIONS]
+wsb refactor <ROOT_DIR> <OLD_STRING> <NEW_STRING> [OPTIONS]
 ```
 
 ### Ldiff - Line Difference Visualizer
 ```bash
-ws ldiff [SUBSTITUTE_CHAR]
+wsb ldiff [SUBSTITUTE_CHAR]
 ```
 
 ### Scrap - Local Trash
 ```bash
-ws scrap [PATH...] [SUBCOMMAND] [OPTIONS]
+wsb scrap [PATH...] [SUBCOMMAND] [OPTIONS]
 ```
 
 ### Unscrap - File Restoration
 ```bash
-ws unscrap [NAME] [OPTIONS]
+wsb unscrap [NAME] [OPTIONS]
 ```
 
 ### Git Integration - Version Management
 ```bash
-ws git <SUBCOMMAND> [OPTIONS]
+wsb git <SUBCOMMAND> [OPTIONS]
 ```
 
 ### Version - Database-Driven Versioning
 ```bash
-ws version <SUBCOMMAND> [OPTIONS]
+wsb version <SUBCOMMAND> [OPTIONS]
 ```
 
 ### Wstemplate - Cross-Project Version Stamping
 ```bash
-ws wstemplate <SUBCOMMAND> [OPTIONS]
+wsb wstemplate <SUBCOMMAND> [OPTIONS]
 ```
 
 ## Refactor - String Replacement
@@ -49,7 +49,7 @@ ws wstemplate <SUBCOMMAND> [OPTIONS]
 ### Command Syntax
 
 ```bash
-ws refactor <ROOT_DIR> <OLD_STRING> <NEW_STRING> [OPTIONS]
+wsb refactor <ROOT_DIR> <OLD_STRING> <NEW_STRING> [OPTIONS]
 ```
 
 - `ROOT_DIR`: Directory to search in (use `.` for current directory)
@@ -59,9 +59,9 @@ ws refactor <ROOT_DIR> <OLD_STRING> <NEW_STRING> [OPTIONS]
 ### Simple Examples
 
 ```bash
-ws refactor . "oldname" "newname"
-ws refactor ./src "OldClass" "NewClass"
-ws refactor . "oldname" "newname" --verbose
+wsb refactor . "oldname" "newname"
+wsb refactor ./src "OldClass" "NewClass"
+wsb refactor . "oldname" "newname" --verbose
 ```
 
 ## Operation Modes
@@ -74,10 +74,10 @@ Refactor operates on two levels by default:
 ### Mode Flags
 
 ```bash
-ws refactor . "oldname" "newname" --names-only     # Only rename files/directories
-ws refactor . "oldname" "newname" --content-only   # Only replace content
-ws refactor . "oldname" "newname" --files-only     # Only process files
-ws refactor . "oldname" "newname" --dirs-only      # Only process directories
+wsb refactor . "oldname" "newname" --names-only     # Only rename files/directories
+wsb refactor . "oldname" "newname" --content-only   # Only replace content
+wsb refactor . "oldname" "newname" --files-only     # Only process files
+wsb refactor . "oldname" "newname" --dirs-only      # Only process directories
 ```
 
 ## Safety Features
@@ -85,20 +85,20 @@ ws refactor . "oldname" "newname" --dirs-only      # Only process directories
 ### Dry Run Mode
 
 ```bash
-ws refactor . "oldname" "newname" --verbose
-ws refactor . "oldname" "newname" --verbose --verbose
+wsb refactor . "oldname" "newname" --verbose
+wsb refactor . "oldname" "newname" --verbose --verbose
 ```
 
 ### Backup Files
 
 ```bash
-ws refactor . "oldname" "newname" --backup
+wsb refactor . "oldname" "newname" --backup
 ```
 
 ### Force Mode
 
 ```bash
-ws refactor . "oldname" "newname" --force
+wsb refactor . "oldname" "newname" --force
 ```
 
 ## Filtering Options
@@ -106,21 +106,21 @@ ws refactor . "oldname" "newname" --force
 ### Include Patterns
 
 ```bash
-ws refactor . "oldname" "newname" --include "*.rs"
-ws refactor . "oldname" "newname" --include "*.rs" --include "*.toml"
+wsb refactor . "oldname" "newname" --include "*.rs"
+wsb refactor . "oldname" "newname" --include "*.rs" --include "*.toml"
 ```
 
 ### Exclude Patterns
 
 ```bash
-ws refactor . "oldname" "newname" --exclude "*.log"
-ws refactor . "oldname" "newname" --exclude "target/*" --exclude "*.log"
+wsb refactor . "oldname" "newname" --exclude "*.log"
+wsb refactor . "oldname" "newname" --exclude "target/*" --exclude "*.log"
 ```
 
 ### Combining Filters
 
 ```bash
-ws refactor ./src "oldname" "newname" \
+wsb refactor ./src "oldname" "newname" \
   --include "*.rs" \
   --include "*.toml" \
   --exclude "*test*"
@@ -131,31 +131,31 @@ ws refactor ./src "oldname" "newname" \
 ### Depth Control
 
 ```bash
-ws refactor . "oldname" "newname" --max-depth 1
-ws refactor . "oldname" "newname" --max-depth 3
+wsb refactor . "oldname" "newname" --max-depth 1
+wsb refactor . "oldname" "newname" --max-depth 3
 ```
 
 ### Threading
 
 ```bash
-ws refactor . "oldname" "newname" --threads 8
-ws refactor . "oldname" "newname" --threads 0    # Auto-detect
+wsb refactor . "oldname" "newname" --threads 8
+wsb refactor . "oldname" "newname" --threads 0    # Auto-detect
 ```
 
 ### Pattern Matching
 
 ```bash
-ws refactor . "oldname" "newname" --ignore-case
-ws refactor . "old_\\w+" "new_name" --regex
-ws refactor . "old.*name" "newname" --regex --ignore-case
+wsb refactor . "oldname" "newname" --ignore-case
+wsb refactor . "old_\\w+" "new_name" --regex
+wsb refactor . "old.*name" "newname" --regex --ignore-case
 ```
 
 ### Output Formats
 
 ```bash
-ws refactor . "oldname" "newname"                   # Human-readable (default)
-ws refactor . "oldname" "newname" --format json     # Machine-readable
-ws refactor . "oldname" "newname" --format plain    # No colors
+wsb refactor . "oldname" "newname"                   # Human-readable (default)
+wsb refactor . "oldname" "newname" --format json     # Machine-readable
+wsb refactor . "oldname" "newname" --format plain    # No colors
 ```
 
 ## Ldiff - Line Difference Visualizer
@@ -165,12 +165,12 @@ The `ldiff` tool processes input lines, replacing repeated tokens with a substit
 ### Basic Usage
 
 ```bash
-echo -e "hello world\nhello universe" | ws ldiff
+echo -e "hello world\nhello universe" | wsb ldiff
 # Output:
 # hello world
 # ░░░░░ universe
 
-echo -e "test line\ntest another" | ws ldiff "*"
+echo -e "test line\ntest another" | wsb ldiff "*"
 # Output:
 # test line
 # **** another
@@ -179,16 +179,16 @@ echo -e "test line\ntest another" | ws ldiff "*"
 ### Log Analysis
 
 ```bash
-tail -f /var/log/syslog | ws ldiff
-cat /var/log/nginx/access.log | ws ldiff
-journalctl -u myapp | ws ldiff
+tail -f /var/log/syslog | wsb ldiff
+cat /var/log/nginx/access.log | wsb ldiff
+journalctl -u myapp | wsb ldiff
 ```
 
 ### Real-time Monitoring
 
 ```bash
-tail -f /var/log/app1.log /var/log/app2.log | ws ldiff
-dmesg -w | ws ldiff
+tail -f /var/log/app1.log /var/log/app2.log | wsb ldiff
+dmesg -w | wsb ldiff
 ```
 
 ## Scrap - Local Trash Can
@@ -198,11 +198,11 @@ The scrap tool provides a local trash can using a `.scrap` folder.
 ### Basic Operations
 
 ```bash
-ws scrap temp_file.txt old_directory/
-ws scrap list
-ws scrap find "*.log"
-ws scrap clean --days 30
-ws scrap archive --remove
+wsb scrap temp_file.txt old_directory/
+wsb scrap list
+wsb scrap find "*.log"
+wsb scrap clean --days 30
+wsb scrap archive --remove
 ```
 
 For detailed information, see the [Scrap Tool Guide]({{ '/scrap-guide/' | relative_url }}).
@@ -210,10 +210,10 @@ For detailed information, see the [Scrap Tool Guide]({{ '/scrap-guide/' | relati
 ## Unscrap - File Restoration
 
 ```bash
-ws unscrap                              # Restore last item
-ws unscrap filename.txt                 # Restore specific file
-ws unscrap file.txt --to /new/location/ # Custom destination
-ws unscrap file.txt --force             # Overwrite existing
+wsb unscrap                              # Restore last item
+wsb unscrap filename.txt                 # Restore specific file
+wsb unscrap file.txt --to /new/location/ # Custom destination
+wsb unscrap file.txt --force             # Overwrite existing
 ```
 
 For detailed information, see the [Unscrap Tool Guide]({{ '/unscrap-guide/' | relative_url }}).
@@ -223,33 +223,33 @@ For detailed information, see the [Unscrap Tool Guide]({{ '/unscrap-guide/' | re
 ### Git Hook Integration
 
 ```bash
-ws git install           # Install pre-commit hook
-ws git show              # Show current version
-ws git status            # Check configuration
-ws git uninstall         # Remove hook
+wsb git install           # Install pre-commit hook
+wsb git show              # Show current version
+wsb git status            # Check configuration
+wsb git uninstall         # Remove hook
 ```
 
 ### Manual Version Update
 
 ```bash
-ws update                # Update version and render templates
-ws update --git-add      # Also stage changed files
-ws update --no-git       # Skip git integration
+wsb update                # Update version and render templates
+wsb update --git-add      # Also stage changed files
+wsb update --no-git       # Skip git integration
 ```
 
 ### Database-Driven Versioning
 
 ```bash
-ws version show          # Display current version breakdown
-ws version major 2       # Set major version to 2
-ws version tag           # Create git tag
-ws version info          # Show calculation details
+wsb version show          # Display current version breakdown
+wsb version major 2       # Set major version to 2
+wsb version tag           # Create git tag
+wsb version info          # Show calculation details
 ```
 
 ### Version Format
 
 `{major}.{minor}.{patch}` where:
-- **Major**: Set via `ws version major` (stored in database)
+- **Major**: Set via `wsb version major` (stored in database)
 - **Minor**: Total commits in the repository
 - **Patch**: Total line changes (additions + deletions)
 
@@ -269,21 +269,21 @@ Create `.st8.json` in your repository root:
 
 ### Overview
 
-`.wstemplate` files are Tera templates that render to the file with the `.wstemplate` suffix stripped (e.g., `Cargo.toml.wstemplate` renders to `Cargo.toml`). They're rendered automatically during `ws update`.
+`.wstemplate` files are Tera templates that render to the file with the `.wstemplate` suffix stripped (e.g., `Cargo.toml.wstemplate` renders to `Cargo.toml`). They're rendered automatically during `wsb update`.
 
 ### Setup
 
 Each project needs a single wstemplate entry: its alias and a scan root.
 
 ```bash
-ws wstemplate add /path/to/workspace     # Set scan root for this project
-ws wstemplate list-entries               # Verify entry
+wsb wstemplate add /path/to/workspace     # Set scan root for this project
+wsb wstemplate list-entries               # Verify entry
 ```
 
 The alias is auto-derived from the project directory name (e.g., `my-project` becomes `my_project`). Override with `--alias`:
 
 ```bash
-ws wstemplate add /path/to/workspace --alias mylib
+wsb wstemplate add /path/to/workspace --alias mylib
 ```
 
 ### Template Syntax
@@ -299,23 +299,23 @@ Templates use Tera syntax. Available variables:
 
 ### Dynamic Cross-Project Resolution
 
-When rendering, the engine scans the root for all `.ws/state.json` files to discover peer projects. No explicit cross-project entries are needed. If a template references `{{ projects.tagged_urn_js.version }}`, the engine finds `tagged_urn_js`'s project root and reads its `version.txt`.
+When rendering, the engine scans the root for all `.wsb/state.json` files to discover peer projects. No explicit cross-project entries are needed. If a template references `{{ projects.tagged_urn_js.version }}`, the engine finds `tagged_urn_js`'s project root and reads its `version.txt`.
 
 ### Error Handling
 
 - **Unresolvable alias**: Hard error listing all known aliases
-- **Missing `version.txt`**: Hard error — run `ws update` in the dependency first
+- **Missing `version.txt`**: Hard error — run `wsb update` in the dependency first
 - **Multiple entries in state.json**: Hard error — single-entry model enforced
 
 ### Commands
 
 ```bash
-ws wstemplate add /path/to/root              # Set scan root
-ws wstemplate add /path/to/root --alias lib  # With custom alias
-ws wstemplate list-entries                    # Show entry
-ws wstemplate list                            # List relevant templates
-ws wstemplate render                          # Render all relevant
-ws wstemplate remove my_alias                 # Remove entry
+wsb wstemplate add /path/to/root              # Set scan root
+wsb wstemplate add /path/to/root --alias lib  # With custom alias
+wsb wstemplate list-entries                    # Show entry
+wsb wstemplate list                            # List relevant templates
+wsb wstemplate render                          # Render all relevant
+wsb wstemplate remove my_alias                 # Remove entry
 ```
 
 ## Tool Integration
@@ -324,15 +324,15 @@ ws wstemplate remove my_alias                 # Remove entry
 
 ```bash
 # Development workflow
-ws git install                              # Set up versioning
-ws scrap temp_* *.log build/                # Clear workspace
-ws refactor . "OldClass" "NewClass" --verbose # Preview changes
-ws refactor . "OldClass" "NewClass"          # Apply changes
+wsb git install                              # Set up versioning
+wsb scrap temp_* *.log build/                # Clear workspace
+wsb refactor . "OldClass" "NewClass" --verbose # Preview changes
+wsb refactor . "OldClass" "NewClass"          # Apply changes
 git add . && git commit -m "Refactor class"  # Auto-version bump
 
 # Cross-project version update
-ws wstemplate add /path/to/workspace         # Set scan root
-ws update --git-add                          # Update + render + stage
+wsb wstemplate add /path/to/workspace         # Set scan root
+wsb update --git-add                          # Update + render + stage
 ```
 
 ## Next Steps

@@ -4,7 +4,7 @@
 [![Downloads](https://img.shields.io/crates/d/wsb.svg)](https://crates.io/crates/wsb)
 [![License](https://img.shields.io/crates/l/wsb.svg)](https://crates.io/crates/wsb)
 
-Multi-tool CLI suite for file operations, version management, and development workflow automation. All tools accessible through a single `ws` binary.
+Multi-tool CLI suite for file operations, version management, and development workflow automation. All tools accessible through a single `wsb` binary.
 
 ## Install
 
@@ -15,8 +15,8 @@ cargo install wsb
 Or build from source:
 
 ```bash
-git clone https://github.com/jowharshamshiri/ws.git
-cd ws
+git clone https://github.com/jowharshamshiri/wsb.git
+cd wsb
 cargo build --release
 ```
 
@@ -24,56 +24,56 @@ cargo build --release
 
 | Command | Description |
 |---------|-------------|
-| `ws refactor` | Recursive string replacement in files and directories |
-| `ws scrap` | Local trash can with `.scrap` folder |
-| `ws unscrap` | Restore files from `.scrap` folder |
-| `ws ldiff` | Line difference visualization for pattern analysis |
-| `ws git` | Git integration (install/uninstall hooks, show version, status) |
-| `ws update` | Update version file and render all templates |
-| `ws template` | Tera template management (add, list, show, render, delete) |
-| `ws wstemplate` | Cross-project version stamping with `.wstemplate` files |
-| `ws version` | Version management (show, major, tag, info) |
-| `ws code` | AST-based code analysis and transformation |
-| `ws test` | Intelligent test runner based on project type |
-| `ws status` | Project status with feature metrics and progress |
-| `ws feature` | Feature management with state machine workflow |
-| `ws task` | Feature-centric task management |
-| `ws directive` | Project directive and rule management |
-| `ws note` | Note management for any entity |
-| `ws mcp-server` | MCP server for Claude AI integration |
+| `wsb refactor` | Recursive string replacement in files and directories |
+| `wsb scrap` | Local trash can with `.scrap` folder |
+| `wsb unscrap` | Restore files from `.scrap` folder |
+| `wsb ldiff` | Line difference visualization for pattern analysis |
+| `wsb git` | Git integration (install/uninstall hooks, show version, status) |
+| `wsb update` | Update version file and render all templates |
+| `wsb template` | Tera template management (add, list, show, render, delete) |
+| `wsb wstemplate` | Cross-project version stamping with `.wstemplate` files |
+| `wsb version` | Version management (show, major, tag, info) |
+| `wsb code` | AST-based code analysis and transformation |
+| `wsb test` | Intelligent test runner based on project type |
+| `wsb status` | Project status with feature metrics and progress |
+| `wsb feature` | Feature management with state machine workflow |
+| `wsb task` | Feature-centric task management |
+| `wsb directive` | Project directive and rule management |
+| `wsb note` | Note management for any entity |
+| `wsb mcp-server` | MCP server for Claude AI integration |
 
 ## Quick Start
 
 ```bash
 # Recursive string replacement
-ws refactor ./src "OldClassName" "NewClassName" --verbose
+wsb refactor ./src "OldClassName" "NewClassName" --verbose
 
 # Safe file disposal and recovery
-ws scrap temp_files/ experimental/
-ws unscrap important_config.toml
+wsb scrap temp_files/ experimental/
+wsb unscrap important_config.toml
 
 # Git-based versioning with auto-detection of Cargo.toml, package.json, etc.
-ws git install
-ws update --git-add
+wsb git install
+wsb update --git-add
 
 # Cross-project version stamping
-ws wstemplate add /path/to/workspace-root
-ws wstemplate render
+wsb wstemplate add /path/to/workspace-root
+wsb wstemplate render
 
 # Line difference visualization
-tail -f /var/log/app.log | ws ldiff
+tail -f /var/log/app.log | wsb ldiff
 
 # Project management
-ws feature add "User authentication"
-ws task add "Implement login" --feature F00001
-ws status --include-features
+wsb feature add "User authentication"
+wsb task add "Implement login" --feature F00001
+wsb status --include-features
 ```
 
 ## Version Management
 
 wsb uses a three-part versioning scheme: `{major}.{minor}.{patch}`
 
-- **Major**: Set via `ws version major` (stored in project database)
+- **Major**: Set via `wsb version major` (stored in project database)
 - **Minor**: Total commits in the repository
 - **Patch**: Total line changes (additions + deletions)
 
@@ -92,15 +92,15 @@ version = "{{ project.version }}"
 my-lib = { path = "../my-lib", version = "{{ projects.my_lib.version }}" }
 ```
 
-Cross-project references are resolved dynamically by scanning for `.ws/state.json` files — no explicit dependency declarations needed.
+Cross-project references are resolved dynamically by scanning for `.wsb/state.json` files — no explicit dependency declarations needed.
 
 ## Documentation
 
-- [Installation Guide](https://jowharshamshiri.github.io/ws/installation/)
-- [Getting Started](https://jowharshamshiri.github.io/ws/getting-started/)
-- [Usage Guide](https://jowharshamshiri.github.io/ws/usage/)
-- [St8 Guide (Versioning & Wstemplate)](https://jowharshamshiri.github.io/ws/st8-guide/)
-- [API Reference](https://jowharshamshiri.github.io/ws/api-reference/)
+- [Installation Guide](https://jowharshamshiri.github.io/wsb/installation/)
+- [Getting Started](https://jowharshamshiri.github.io/wsb/getting-started/)
+- [Usage Guide](https://jowharshamshiri.github.io/wsb/usage/)
+- [St8 Guide (Versioning & Wstemplate)](https://jowharshamshiri.github.io/wsb/st8-guide/)
+- [API Reference](https://jowharshamshiri.github.io/wsb/api-reference/)
 
 ## License
 

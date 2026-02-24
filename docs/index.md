@@ -6,7 +6,7 @@ toc: false
 
 # Workspace
 
-Multi-tool CLI suite with real-time project dashboard and entity-driven management system. All tools accessible through a single `ws` binary.
+Multi-tool CLI suite with real-time project dashboard and entity-driven management system. All tools accessible through a single `wsb` binary.
 
 **Build Status**: Clean compilation with structured logging
 
@@ -16,35 +16,35 @@ Multi-tool CLI suite with real-time project dashboard and entity-driven manageme
 
 **Refactor**: Recursive string replacement with collision detection
 ```bash
-ws refactor ./src "OldClassName" "NewClassName" --verbose
-ws refactor ./src "OldApi" "NewApi" --backup --include "*.rs"
+wsb refactor ./src "OldClassName" "NewClassName" --verbose
+wsb refactor ./src "OldApi" "NewApi" --backup --include "*.rs"
 ```
 
 **Scrap/Unscrap**: Local trash system with metadata tracking
 ```bash
-ws scrap experimental_feature/ temp_logs/ *.bak
-ws scrap list --sort date
-ws unscrap important.rs
+wsb scrap experimental_feature/ temp_logs/ *.bak
+wsb scrap list --sort date
+wsb unscrap important.rs
 ```
 
 **Version Management**: Git-based semantic versioning with template integration
 ```bash
-ws git install
-ws update --git-add
+wsb git install
+wsb update --git-add
 ```
 
 **Ldiff**: Line difference visualization for pattern analysis
 ```bash
-tail -f /var/log/system.log | ws ldiff
+tail -f /var/log/system.log | wsb ldiff
 ```
 
 ### Version Stamping with Wstemplate
 
 **Wstemplate**: Cross-project version stamping using `.wstemplate` files
 ```bash
-ws wstemplate add /path/to/workspace     # Set scan root for this project
-ws wstemplate list                        # Show relevant templates
-ws wstemplate render                      # Render all relevant templates
+wsb wstemplate add /path/to/workspace     # Set scan root for this project
+wsb wstemplate list                        # Show relevant templates
+wsb wstemplate render                      # Render all relevant templates
 ```
 
 Templates use Tera syntax with automatic cross-project version resolution:
@@ -55,14 +55,14 @@ dependency = "{{ projects.other_lib.version }}"
 
 Each project has a single wstemplate entry (alias + scan root). Cross-project
 references like `{{ projects.OTHER.version }}` are resolved dynamically by
-scanning for sibling `.ws/state.json` files.
+scanning for sibling `.wsb/state.json` files.
 
 ### MCP Server Integration
 
 **MCP Server**: API endpoints for Claude integration
 ```bash
-ws mcp-server                # Start on localhost:3000
-ws mcp-server --port 8080    # Custom port
+wsb mcp-server                # Start on localhost:3000
+wsb mcp-server --port 8080    # Custom port
 ```
 
 **Entity-Driven Management**: Core entity types with relationship tracking
@@ -72,64 +72,64 @@ ws mcp-server --port 8080    # Custom port
 
 **SQLite Backend**: Entity management with relationship tracking
 ```bash
-ws status --include-features
-ws feature add "New capability"
-ws task add "Implement feature" --feature F00001
+wsb status --include-features
+wsb feature add "New capability"
+wsb task add "Implement feature" --feature F00001
 ```
 
 **Template System**: Tera-based file generation with version integration
 ```bash
-ws template add version-header --template "v{{ project.version }}" --output version.h
+wsb template add version-header --template "v{{ project.version }}" --output version.h
 ```
 
 **Version Management**: Database-driven major version with git-calculated components
 ```bash
-ws version show              # Display current version breakdown
-ws version major 2           # Set major version to 2
-ws version tag               # Create git tag with current version
+wsb version show              # Display current version breakdown
+wsb version major 2           # Set major version to 2
+wsb version tag               # Create git tag with current version
 ```
 
 ## All Commands
 
 | Command | Description |
 |---------|-------------|
-| `ws refactor` | Recursive string replacement in files and directories |
-| `ws git` | Git integration (install/uninstall hooks, show version, status) |
-| `ws template` | Tera template management (add, list, show, update, delete, render) |
-| `ws update` | Update version file and render all templates |
-| `ws wstemplate` | Manage `.wstemplate` cross-project version stamping |
-| `ws version` | Version management (show, major, tag, info) |
-| `ws scrap` | Local trash can with `.scrap` folder |
-| `ws unscrap` | Restore files from `.scrap` folder |
-| `ws ldiff` | Line difference visualization for pattern analysis |
-| `ws code` | AST-based code analysis and transformation |
-| `ws test` | Intelligent test runner based on project type |
-| `ws status` | Project status with feature metrics and progress |
-| `ws feature` | Feature management with state machine workflow |
-| `ws task` | Feature-centric task management |
-| `ws directive` | Project directive and rule management |
-| `ws note` | Note management for any entity |
-| `ws relationship` | Entity relationship management |
-| `ws start` | Start development session with context loading |
-| `ws end` | End development session with documentation |
-| `ws continuity` | Session continuity and context management |
-| `ws consolidate` | Documentation consolidation with diagrams |
-| `ws database` | Database backup, recovery, and maintenance |
-| `ws mcp-server` | MCP server for Claude AI integration |
-| `ws sample` | Create sample project with test data |
+| `wsb refactor` | Recursive string replacement in files and directories |
+| `wsb git` | Git integration (install/uninstall hooks, show version, status) |
+| `wsb template` | Tera template management (add, list, show, update, delete, render) |
+| `wsb update` | Update version file and render all templates |
+| `wsb wstemplate` | Manage `.wstemplate` cross-project version stamping |
+| `wsb version` | Version management (show, major, tag, info) |
+| `wsb scrap` | Local trash can with `.scrap` folder |
+| `wsb unscrap` | Restore files from `.scrap` folder |
+| `wsb ldiff` | Line difference visualization for pattern analysis |
+| `wsb code` | AST-based code analysis and transformation |
+| `wsb test` | Intelligent test runner based on project type |
+| `wsb status` | Project status with feature metrics and progress |
+| `wsb feature` | Feature management with state machine workflow |
+| `wsb task` | Feature-centric task management |
+| `wsb directive` | Project directive and rule management |
+| `wsb note` | Note management for any entity |
+| `wsb relationship` | Entity relationship management |
+| `wsb start` | Start development session with context loading |
+| `wsb end` | End development session with documentation |
+| `wsb continuity` | Session continuity and context management |
+| `wsb consolidate` | Documentation consolidation with diagrams |
+| `wsb database` | Database backup, recovery, and maintenance |
+| `wsb mcp-server` | MCP server for Claude AI integration |
+| `wsb sample` | Create sample project with test data |
 
 ## Installation
 
 ```bash
-git clone https://github.com/jowharshamshiri/ws.git
+git clone https://github.com/jowharshamshiri/wsb.git
 cd workspace
 ./install.sh
 ```
 
 **Verification**:
 ```bash
-ws --version
-ws --help
+wsb --version
+wsb --help
 ```
 
 ## Usage Examples
@@ -137,32 +137,32 @@ ws --help
 ### Multi-Tool Operations
 ```bash
 # File refactoring with safety checks
-ws refactor ./src "old_name" "new_name" --backup
+wsb refactor ./src "old_name" "new_name" --backup
 
 # Safe file disposal and recovery
-ws scrap temp_files/ experimental/
-ws unscrap important_config.toml
+wsb scrap temp_files/ experimental/
+wsb unscrap important_config.toml
 
 # Version management with git integration
-ws git install
-ws update --git-add
+wsb git install
+wsb update --git-add
 ```
 
 ### Project Management
 ```bash
 # Entity management
-ws feature add "User authentication"
-ws task add "Implement login" --feature F00001
-ws status --include-features
+wsb feature add "User authentication"
+wsb task add "Implement login" --feature F00001
+wsb status --include-features
 ```
 
 ### Cross-Project Version Stamping
 ```bash
 # Set up wstemplate for a project
-ws wstemplate add /path/to/workspace
+wsb wstemplate add /path/to/workspace
 
-# Render templates (happens automatically on ws update)
-ws wstemplate render
+# Render templates (happens automatically on wsb update)
+wsb wstemplate render
 ```
 
 ## Documentation

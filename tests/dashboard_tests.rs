@@ -49,7 +49,7 @@ async fn test_dashboard_server_startup() -> Result<()> {
     
     let health_data: serde_json::Value = response.json().await?;
     assert_eq!(health_data["status"], "healthy");
-    assert_eq!(health_data["service"], "ws-mcp-server");
+    assert_eq!(health_data["service"], "wsb-mcp-server");
     
     // Clean shutdown
     server_handle.abort();

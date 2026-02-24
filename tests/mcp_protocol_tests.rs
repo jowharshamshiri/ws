@@ -13,7 +13,7 @@ use workspace::mcp_protocol::McpProtocolHandler;
 #[tokio::test]
 async fn test_mcp_protocol_command_available() -> Result<()> {
     // Test that the mcp-protocol command is available and shows help
-    let mut cmd = Command::cargo_bin("ws")?;
+    let mut cmd = Command::cargo_bin("wsb")?;
     let output = cmd.args(&["mcp-server", "--help"]).output()?;
     
     assert!(output.status.success());
@@ -145,7 +145,7 @@ async fn test_mcp_tool_execution() -> Result<()> {
     assert!(!result.content[0].text.is_empty());
     
     // Result should either be successful or an error (both are valid responses)
-    // We can't guarantee ws status command exists in test environment
+    // We can't guarantee wsb status command exists in test environment
     assert!(result.is_error.is_some());
     
     Ok(())
@@ -323,7 +323,7 @@ fn test_mcp_protocol_module_integration() -> Result<()> {
     // Test that MCP protocol module is properly integrated
     
     // Verify command line help includes mcp-protocol
-    let mut cmd = Command::cargo_bin("ws")?;
+    let mut cmd = Command::cargo_bin("wsb")?;
     let output = cmd.args(&["--help"]).output()?;
     
     assert!(output.status.success());

@@ -910,7 +910,7 @@ pub struct BackupConfig {
 impl Default for BackupConfig {
     fn default() -> Self {
         Self {
-            backup_directory: PathBuf::from(".ws/backups"),
+            backup_directory: PathBuf::from(".wsb/backups"),
             max_backups: 10,
             compression_enabled: true,
             automatic_cleanup: true,

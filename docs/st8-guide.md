@@ -11,7 +11,7 @@ St8 is the version management component of Workspace. It integrates with Git to 
 
 St8 uses a three-part versioning scheme:
 
-- **Major Version**: Set via `ws version major` (stored in the project database)
+- **Major Version**: Set via `wsb version major` (stored in the project database)
 - **Minor Version**: Total number of commits in the repository
 - **Patch Version**: Total number of line changes (additions + deletions)
 
@@ -21,7 +21,7 @@ St8 uses a three-part versioning scheme:
 
 ```bash
 # Repository state:
-# - Major version set to 2 (via ws version major 2)
+# - Major version set to 2 (via wsb version major 2)
 # - Total commits: 150
 # - Total line changes: 4200
 
@@ -42,7 +42,7 @@ Navigate to your Git repository and install the pre-commit hook:
 
 ```bash
 cd your-git-repo
-ws git install
+wsb git install
 ```
 
 This creates a pre-commit hook that automatically updates your version file before each commit.
@@ -69,53 +69,53 @@ Create a `.st8.json` configuration file in your repository root:
 
 ### Install Hook
 ```bash
-ws git install
-ws git install --force    # Force reinstall
+wsb git install
+wsb git install --force    # Force reinstall
 ```
 
 ### Show Version Information
 ```bash
-ws git show
-ws version show
-ws version show --verbose
-ws version show --format json
+wsb git show
+wsb version show
+wsb version show --verbose
+wsb version show --format json
 ```
 
 ### Manual Version Update
 ```bash
-ws update                 # Update version and render templates
-ws update --git-add       # Also stage changed files
-ws update --no-git        # Skip git integration
+wsb update                 # Update version and render templates
+wsb update --git-add       # Also stage changed files
+wsb update --no-git        # Skip git integration
 ```
 
 ### Set Major Version
 ```bash
-ws version major 1        # Set major to 1
-ws version major 2        # Bump major to 2
+wsb version major 1        # Set major to 1
+wsb version major 2        # Bump major to 2
 ```
 
 ### Create Git Tag
 ```bash
-ws version tag                    # Tag with current version
-ws version tag --prefix "release-"  # Custom prefix
-ws version tag --message "Release"  # With message
+wsb version tag                    # Tag with current version
+wsb version tag --prefix "release-"  # Custom prefix
+wsb version tag --message "Release"  # With message
 ```
 
 ### Check Status
 ```bash
-ws git status
+wsb git status
 ```
 
 ### Uninstall Hook
 ```bash
-ws git uninstall
+wsb git uninstall
 ```
 
 ## Workflow Integration
 
 ### Automatic Mode (Recommended)
 
-1. Install the git hook once: `ws git install`
+1. Install the git hook once: `wsb git install`
 2. Work normally — commit as usual
 3. Version files are automatically updated before each commit:
    - `version.txt` (or custom version file)
@@ -123,13 +123,13 @@ ws git uninstall
    - All `.wstemplate` files relevant to this project
 4. Updated output files are automatically staged (version.txt, rendered templates)
 
-**Note**: The `.ws` directory (containing `state.json`, logs, databases) is local project state and should be in `.gitignore`. It is never staged by `ws update`.
+**Note**: The `.wsb` directory (containing `state.json`, logs, databases) is local project state and should be in `.gitignore`. It is never staged by `wsb update`.
 
 ### Manual Mode
 
 1. Set `"enabled": false` in `.st8.json`
-2. Run `ws update` when needed
-3. Use `ws update --git-add` to stage updated files
+2. Run `wsb update` when needed
+3. Use `wsb update --git-add` to stage updated files
 4. Commit version changes manually
 
 ## Project File Auto-Detection
@@ -161,17 +161,17 @@ Workspace supports Tera templates for generating files with version information.
 ### Managing Templates
 
 ```bash
-ws template add version-header \
+wsb template add version-header \
   --template "Version: {{ project.version }}" \
   --output version.h
 
-ws template list
-ws template show version-header
-ws template render
-ws template delete version-header
+wsb template list
+wsb template show version-header
+wsb template render
+wsb template delete version-header
 ```
 
-Templates are rendered automatically during `ws update`.
+Templates are rendered automatically during `wsb update`.
 
 ## Wstemplate System (.wstemplate)
 
@@ -179,9 +179,9 @@ The wstemplate system provides cross-project version stamping. A `.wstemplate` f
 
 ### Single-Entry Model
 
-Each project has at most one wstemplate entry in its `.ws/state.json`:
+Each project has at most one wstemplate entry in its `.wsb/state.json`:
 - **alias**: A Tera-compatible identifier for this project (auto-derived from directory name)
-- **root**: The directory tree to scan for `.wstemplate` files and peer `.ws/state.json` files
+- **root**: The directory tree to scan for `.wstemplate` files and peer `.wsb/state.json` files
 
 Cross-project references are resolved dynamically — no explicit cross-project entries are needed.
 
@@ -189,10 +189,10 @@ Cross-project references are resolved dynamically — no explicit cross-project 
 
 ```bash
 # Register this project with the wstemplate system
-ws wstemplate add /path/to/workspace
+wsb wstemplate add /path/to/workspace
 
 # Verify the entry
-ws wstemplate list-entries
+wsb wstemplate list-entries
 # Output:
 # 1 wstemplate entries:
 #   my_project -> /path/to/workspace
@@ -205,7 +205,7 @@ The alias is auto-derived from the project directory name:
 
 Override with `--alias`:
 ```bash
-ws wstemplate add /path/to/workspace --alias mylib
+wsb wstemplate add /path/to/workspace --alias mylib
 ```
 
 ### Template Variables
@@ -237,7 +237,7 @@ version = "{{ project.version }}"
 my-lib = { path = "../my-lib", version = "{{ projects.my_lib.version }}" }
 ```
 
-When `ws update` runs in this project (or in `my-lib`), this template renders to `Cargo.toml` with actual version numbers.
+When `wsb update` runs in this project (or in `my-lib`), this template renders to `Cargo.toml` with actual version numbers.
 
 ### Example: package.json.wstemplate
 
@@ -253,7 +253,7 @@ When `ws update` runs in this project (or in `my-lib`), this template renders to
 
 ### How Template Selection Works
 
-When `ws update` (or `ws wstemplate render`) runs for project X:
+When `wsb update` (or `wsb wstemplate render`) runs for project X:
 
 1. All `.wstemplate` files in the scan root are discovered
 2. A template is rendered if:
@@ -264,7 +264,7 @@ When `ws update` (or `ws wstemplate render`) runs for project X:
 
 ### Dynamic Cross-Project Resolution
 
-The engine discovers all projects by scanning for `.ws/state.json` files in the scan root. When a template references `{{ projects.other_lib.version }}`:
+The engine discovers all projects by scanning for `.wsb/state.json` files in the scan root. When a template references `{{ projects.other_lib.version }}`:
 
 1. The engine finds `other_lib`'s project root from its `state.json`
 2. Reads `{project_root}/version.txt`
@@ -275,7 +275,7 @@ The engine discovers all projects by scanning for `.ws/state.json` files in the 
 All errors are hard failures — no silent fallbacks:
 
 - **Unresolvable alias**: Lists all known aliases so you can fix the reference
-- **Missing `version.txt`**: Tells you to run `ws update` in the dependency project
+- **Missing `version.txt`**: Tells you to run `wsb update` in the dependency project
 - **Multiple entries in state.json**: Reports the count and explains single-entry constraint
 - **Duplicate aliases across projects**: Reports both projects claiming the same alias
 
@@ -292,7 +292,7 @@ register() {
     local project="$1"
     echo "=== $project ==="
     cd "$ROOT/$project"
-    ws wstemplate add "$ROOT"
+    wsb wstemplate add "$ROOT"
     echo
 }
 
@@ -300,65 +300,65 @@ register my-lib
 register my-app
 register my-tests
 
-echo "Done. Run 'ws update' in any project to render its templates."
+echo "Done. Run 'wsb update' in any project to render its templates."
 ```
 
 ### Wstemplate Commands
 
 ```bash
-ws wstemplate add <PATH> [--alias <ALIAS>]  # Set scan root
-ws wstemplate remove <ALIAS>                 # Remove entry
-ws wstemplate list-entries                    # Show this project's entry
-ws wstemplate list                            # List relevant templates
-ws wstemplate render                          # Render all relevant templates
+wsb wstemplate add <PATH> [--alias <ALIAS>]  # Set scan root
+wsb wstemplate remove <ALIAS>                 # Remove entry
+wsb wstemplate list-entries                    # Show this project's entry
+wsb wstemplate list                            # List relevant templates
+wsb wstemplate render                          # Render all relevant templates
 ```
 
 ## Troubleshooting
 
 ### Hook Not Running
 
-1. Check if hook is installed: `ws git status`
+1. Check if hook is installed: `wsb git status`
 2. Verify hook file exists: `ls -la .git/hooks/pre-commit`
 3. Ensure hook is executable: `chmod +x .git/hooks/pre-commit`
 
 ### Version Not Updating
 
 1. Check git repository status: `git status`
-2. Test manually: `ws git show`
-3. Check configuration: `ws git status`
+2. Test manually: `wsb git show`
+3. Check configuration: `wsb git status`
 
 ### Wstemplate Not Rendering
 
-1. Check entry exists: `ws wstemplate list-entries`
-2. Check for relevant templates: `ws wstemplate list`
-3. Try explicit render: `ws wstemplate render`
-4. Check that dependency projects have `version.txt` (run `ws update` in them)
+1. Check entry exists: `wsb wstemplate list-entries`
+2. Check for relevant templates: `wsb wstemplate list`
+3. Try explicit render: `wsb wstemplate render`
+4. Check that dependency projects have `version.txt` (run `wsb update` in them)
 
 ### Removing Version Management
 
 ```bash
-ws git uninstall        # Remove git hook
+wsb git uninstall        # Remove git hook
 rm .st8.json            # Remove configuration (optional)
 rm version.txt          # Remove version file (optional)
-ws wstemplate remove my_alias  # Remove wstemplate entry (optional)
+wsb wstemplate remove my_alias  # Remove wstemplate entry (optional)
 ```
 
 ## Logging
 
-St8 logs all actions to `.ws/logs/ws.log`:
+St8 logs all actions to `.wsb/logs/wsb.log`:
 
 ```bash
-tail -f .ws/logs/ws.log
+tail -f .wsb/logs/wsb.log
 ```
 
 ## Best Practices
 
 1. **Install Early**: Set up versioning when creating a new repository
-2. **Use `ws version major`**: Set major version via database, not git tags
+2. **Use `wsb version major`**: Set major version via database, not git tags
 3. **Consistent Workflow**: Let the hook handle versioning automatically
 4. **Shared Scan Root**: For multi-project workspaces, point all projects' wstemplate to the common root
-5. **Run `ws update` After Setup**: Ensure `version.txt` exists before other projects reference it
-6. **Add `.ws` to `.gitignore`**: The `.ws` directory is local state — do not commit it
+5. **Run `wsb update` After Setup**: Ensure `version.txt` exists before other projects reference it
+6. **Add `.wsb` to `.gitignore`**: The `.wsb` directory is local state — do not commit it
 
 ## Integration Examples
 

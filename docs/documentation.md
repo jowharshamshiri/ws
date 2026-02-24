@@ -8,33 +8,33 @@ permalink: /documentation/
 
 ### 1. All-in-One Binary
 
-All tools are subcommands of the `ws` binary:
+All tools are subcommands of the `wsb` binary:
 
 ```bash
-ws refactor     # String replacement
-ws scrap        # Local trash
-ws unscrap      # File restoration
-ws git          # Git integration
-ws update       # Version update + template rendering
-ws wstemplate   # Cross-project version stamping
-ws version      # Database-driven versioning
-ws template     # Tera template management
-ws ldiff        # Line difference visualization
-ws code         # AST code analysis and codebase tree
-ws test         # Intelligent test runner
-ws status       # Project status
-ws feature      # Feature management
-ws task         # Task management
-ws directive    # Project directive management
-ws note         # Note management
-ws relationship # Entity relationship management
-ws start        # Start development session
-ws end          # End development session
-ws continuity   # Session context management
-ws consolidate  # Documentation consolidation
-ws database     # Database backup and maintenance
-ws mcp-server   # MCP server for Claude AI
-ws sample       # Create sample project
+wsb refactor     # String replacement
+wsb scrap        # Local trash
+wsb unscrap      # File restoration
+wsb git          # Git integration
+wsb update       # Version update + template rendering
+wsb wstemplate   # Cross-project version stamping
+wsb version      # Database-driven versioning
+wsb template     # Tera template management
+wsb ldiff        # Line difference visualization
+wsb code         # AST code analysis and codebase tree
+wsb test         # Intelligent test runner
+wsb status       # Project status
+wsb feature      # Feature management
+wsb task         # Task management
+wsb directive    # Project directive management
+wsb note         # Note management
+wsb relationship # Entity relationship management
+wsb start        # Start development session
+wsb end          # End development session
+wsb continuity   # Session context management
+wsb consolidate  # Documentation consolidation
+wsb database     # Database backup and maintenance
+wsb mcp-server   # MCP server for Claude AI
+wsb sample       # Create sample project
 ```
 
 ### 2. Refactor Operation Modes
@@ -54,14 +54,14 @@ ws sample       # Create sample project
 ### 4. Version Management
 
 Two template systems for version stamping:
-- **`.tera` templates**: Managed via `ws template`, stored in `.ws/templates/`
+- **`.tera` templates**: Managed via `wsb template`, stored in `.wsb/templates/`
 - **`.wstemplate` files**: Live alongside project files, support cross-project references
 
 ### 5. Pattern Matching
 
 ```bash
-ws refactor . "oldname" "newname" --ignore-case
-ws refactor . "old_\\w+" "new_name" --regex
+wsb refactor . "oldname" "newname" --ignore-case
+wsb refactor . "old_\\w+" "new_name" --regex
 ```
 
 [View Full API Reference]({{ '/api-reference/' | relative_url }}){: .btn .btn-outline }

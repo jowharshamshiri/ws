@@ -39,7 +39,7 @@ cargo test
 ```
 src/
 ├── bin/
-│   └── ws.rs               # CLI entry point (clap parser, command dispatch)
+│   └── wsb.rs               # CLI entry point (clap parser, command dispatch)
 ├── lib.rs                   # Library root
 ├── refac/                   # Refactor tool (string replacement)
 │   ├── mod.rs
@@ -49,7 +49,7 @@ src/
 │   ├── st8_common.rs        # Version calculation, project file updates
 │   ├── templates.rs         # Tera template manager
 │   └── wstemplate.rs        # Cross-project .wstemplate engine
-├── workspace_state.rs       # Per-project state (WstemplateEntry, .ws/state.json)
+├── workspace_state.rs       # Per-project state (WstemplateEntry, .wsb/state.json)
 ├── entities/                # Entity system (features, tasks, directives, etc.)
 ├── ldiff/                   # Line difference visualizer
 ├── logging.rs               # Structured logging

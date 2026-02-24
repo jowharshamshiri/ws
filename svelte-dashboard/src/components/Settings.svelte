@@ -5,7 +5,7 @@
   let settings = {
     general: {
       projectName: 'Workspace Development Suite',
-      rootDirectory: '/Users/bahram/ws/prj/workspace',
+      rootDirectory: '/Users/bahram/wsb/prj/workspace',
       version: '0.46.79711',
       autoSave: true,
       theme: 'dark',

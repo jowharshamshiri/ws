@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
 
-/// MCP Protocol implementation for registering ws as an MCP server with Claude
+/// MCP Protocol implementation for registering wsb as an MCP server with Claude
 /// Complete production implementation following Model Context Protocol specification
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -80,7 +80,7 @@ pub struct ToolContent {
     pub text: String,
 }
 
-/// Complete MCP Protocol handler for ws integration with Claude
+/// Complete MCP Protocol handler for wsb integration with Claude
 pub struct McpProtocolHandler {
     message_id_counter: u64,
     stdin_writer: Option<tokio::io::Stdin>,
@@ -160,7 +160,7 @@ impl McpProtocolHandler {
         Ok(())
     }
 
-    /// Register ws as an MCP server with complete capabilities
+    /// Register wsb as an MCP server with complete capabilities
     pub async fn register_server(&mut self) -> Result<()> {
         // Send initialize message
         let init_message = self.create_initialize_message().await?;
@@ -296,7 +296,7 @@ impl McpProtocolHandler {
                 "protocolVersion": "2024-11-05",
                 "capabilities": capabilities,
                 "serverInfo": {
-                    "name": "ws-workspace-tools",
+                    "name": "wsb-workspace-tools",
                     "version": "0.42.55914"
                 }
             })),
@@ -321,7 +321,7 @@ impl McpProtocolHandler {
             "protocolVersion": "2024-11-05",
             "capabilities": capabilities,
             "serverInfo": {
-                "name": "ws-workspace-tools",
+                "name": "wsb-workspace-tools",
                 "version": "0.42.55914"
             }
         });
@@ -889,8 +889,8 @@ impl McpProtocolHandler {
             "timestamp": chrono::Utc::now().to_rfc3339()
         });
 
-        // Store metrics via ws command
-        let output = Command::new("ws")
+        // Store metrics via wsb command
+        let output = Command::new("wsb")
             .args(&["store-metrics", &metrics_json.to_string()])
             .output()
             .await
@@ -922,7 +922,7 @@ impl McpProtocolHandler {
             .and_then(|v| v.as_str())
             .unwrap_or("medium");
 
-        let output = Command::new("ws")
+        let output = Command::new("wsb")
             .args(&["feature", "add", name, description, "--category", category, "--priority", priority])
             .output()
             .await
@@ -965,7 +965,7 @@ impl McpProtocolHandler {
         let mut full_args = vec!["feature", "update"];
         full_args.extend(cmd_args.into_iter().skip(1)); // Skip the "update-feature" part
         
-        let output = Command::new("ws")
+        let output = Command::new("wsb")
             .args(&full_args)
             .output()
             .await
@@ -1001,7 +1001,7 @@ impl McpProtocolHandler {
             cmd_args.push("--recent");
         }
 
-        let output = Command::new("ws")
+        let output = Command::new("wsb")
             .args(&cmd_args)
             .output()
             .await
@@ -1041,7 +1041,7 @@ impl McpProtocolHandler {
             cmd_args.extend_from_slice(&["--priority", priority]);
         }
 
-        let output = Command::new("ws")
+        let output = Command::new("wsb")
             .args(&cmd_args)
             .output()
             .await
@@ -1077,7 +1077,7 @@ impl McpProtocolHandler {
             cmd_args.extend_from_slice(&["--notes", notes]);
         }
 
-        let output = Command::new("ws")
+        let output = Command::new("wsb")
             .args(&cmd_args)
             .output()
             .await
@@ -1109,7 +1109,7 @@ impl McpProtocolHandler {
             cmd_args.push("--features");
         }
 
-        let output = Command::new("ws")
+        let output = Command::new("wsb")
             .args(&cmd_args)
             .output()
             .await
@@ -1141,7 +1141,7 @@ impl McpProtocolHandler {
             cmd_args.extend_from_slice(&["--first-task", first_task]);
         }
 
-        let output = Command::new("ws")
+        let output = Command::new("wsb")
             .args(&cmd_args)
             .output()
             .await
@@ -1171,7 +1171,7 @@ impl McpProtocolHandler {
             .unwrap_or("Automatic session end triggered by context threshold");
         cmd_args.extend_from_slice(&["--summary", summary]);
 
-        let output = Command::new("ws")
+        let output = Command::new("wsb")
             .args(&cmd_args)
             .output()
             .await
@@ -1201,7 +1201,7 @@ impl McpProtocolHandler {
 
     /// Execute consolidation after session end
     async fn exec_consolidate_session(&self) -> Result<()> {
-        let output = Command::new("ws")
+        let output = Command::new("wsb")
             .args(&["consolidate", "--preserve-complexity"])
             .output()
             .await
@@ -1445,7 +1445,7 @@ impl McpProtocolHandler {
             "src", 
             "tests",
             "docs",
-            ".ws"
+            ".wsb"
         ];
 
         for dir in &dirs {
@@ -1539,7 +1539,7 @@ Use database-based feature tracking and session management for project monitorin
 
 ---
 
-*Created by ws setup-project command*
+*Created by wsb setup-project command*
 "#, name = name, description = description, template_type = template_type))
     }
 

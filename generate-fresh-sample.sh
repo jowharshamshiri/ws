@@ -11,8 +11,8 @@ PORT="${2:-3000}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Try to find the built binary, fallback to cargo run
-if [ -f "$SCRIPT_DIR/target/debug/ws" ]; then
-    WS_BINARY="$SCRIPT_DIR/target/debug/ws"
+if [ -f "$SCRIPT_DIR/target/debug/wsb" ]; then
+    WS_BINARY="$SCRIPT_DIR/target/debug/wsb"
     WS_RUN_CMD="$WS_BINARY"
     BINARY_TYPE="built"
 elif [ -f "$SCRIPT_DIR/Cargo.toml" ]; then
@@ -74,9 +74,9 @@ cd "$PROJECT_NAME"
 echo -e "${BLUE}📊 Verifying generated data...${NC}"
 # Show some stats about what was generated (run from sample project directory)
 if [ "$BINARY_TYPE" = "cargo" ]; then
-    if [ -f "$SCRIPT_DIR/target/debug/ws" ]; then
-        TASK_COUNT=$("$SCRIPT_DIR/target/debug/ws" task list 2>/dev/null | grep -E "^  [✅🔄⏳🚫❌]" | wc -l | tr -d ' ')
-        FEATURE_OUTPUT=$("$SCRIPT_DIR/target/debug/ws" feature list 2>/dev/null | grep -o '"count":[0-9]*' | cut -d: -f2 || echo "0")
+    if [ -f "$SCRIPT_DIR/target/debug/wsb" ]; then
+        TASK_COUNT=$("$SCRIPT_DIR/target/debug/wsb" task list 2>/dev/null | grep -E "^  [✅🔄⏳🚫❌]" | wc -l | tr -d ' ')
+        FEATURE_OUTPUT=$("$SCRIPT_DIR/target/debug/wsb" feature list 2>/dev/null | grep -o '"count":[0-9]*' | cut -d: -f2 || echo "0")
     else
         TASK_COUNT=$(CARGO_TARGET_DIR="$SCRIPT_DIR/target" cargo run --manifest-path "$SCRIPT_DIR/Cargo.toml" -- task list 2>/dev/null | grep -E "^  [✅🔄⏳🚫❌]" | wc -l | tr -d ' ')
         FEATURE_OUTPUT=$(CARGO_TARGET_DIR="$SCRIPT_DIR/target" cargo run --manifest-path "$SCRIPT_DIR/Cargo.toml" -- feature list 2>/dev/null | grep -o '"count":[0-9]*' | cut -d: -f2 || echo "0")
@@ -98,8 +98,8 @@ echo ""
 # Start the web UI server (run from sample project directory to use its database)
 if [ "$BINARY_TYPE" = "cargo" ]; then
     # Try built binary first, fallback to cargo run
-    if [ -f "$SCRIPT_DIR/target/debug/ws" ]; then
-        "$SCRIPT_DIR/target/debug/ws" mcp-server --port "$PORT"
+    if [ -f "$SCRIPT_DIR/target/debug/wsb" ]; then
+        "$SCRIPT_DIR/target/debug/wsb" mcp-server --port "$PORT"
     else
         # Run cargo from the source dir but keep current working directory as sample project
         CARGO_TARGET_DIR="$SCRIPT_DIR/target" cargo run --manifest-path "$SCRIPT_DIR/Cargo.toml" -- mcp-server --port "$PORT"

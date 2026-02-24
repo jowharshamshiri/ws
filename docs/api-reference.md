@@ -5,14 +5,14 @@ title: Command Reference
 
 # Command Reference
 
-Complete reference for all `ws` command-line options and usage patterns.
+Complete reference for all `wsb` command-line options and usage patterns.
 
 ## Commands Overview
 
-All tools are subcommands of the `ws` binary:
+All tools are subcommands of the `wsb` binary:
 
 ```bash
-ws <COMMAND> [OPTIONS]
+wsb <COMMAND> [OPTIONS]
 ```
 
 | Command | Description |
@@ -21,7 +21,7 @@ ws <COMMAND> [OPTIONS]
 | `git` | Git integration and version management |
 | `template` | Tera template management |
 | `update` | Update version and render templates |
-| `wstemplate` | Cross-project `.wstemplate` version stamping |
+| `wsbtemplate` | Cross-project `.wstemplate` version stamping |
 | `version` | Database-driven version management |
 | `scrap` | Local trash can using `.scrap` folder |
 | `unscrap` | Restore files from `.scrap` folder |
@@ -44,13 +44,13 @@ ws <COMMAND> [OPTIONS]
 
 ---
 
-## ws refactor
+## wsb refactor
 
 Recursive string replacement in file names and contents with collision detection.
 
 ### Synopsis
 ```bash
-ws refactor <ROOT_DIR> <OLD_STRING> <NEW_STRING> [OPTIONS]
+wsb refactor <ROOT_DIR> <OLD_STRING> <NEW_STRING> [OPTIONS]
 ```
 
 ### Required Arguments
@@ -87,13 +87,13 @@ Only one mode flag (`--files-only`, `--dirs-only`, `--names-only`, `--content-on
 
 ### Examples
 ```bash
-ws refactor . "oldname" "newname"                          # Full replacement
-ws refactor . "oldname" "newname" --verbose                # Preview first
-ws refactor . "oldname" "newname" --include "*.rs" --backup
-ws refactor . "old.api.com" "new.api.com" --content-only
-ws refactor . "OldClass" "NewClass" --names-only
-ws refactor . "old_\\w+" "new_name" --regex
-ws refactor . "oldname" "newname" --format json            # Machine-readable output
+wsb refactor . "oldname" "newname"                          # Full replacement
+wsb refactor . "oldname" "newname" --verbose                # Preview first
+wsb refactor . "oldname" "newname" --include "*.rs" --backup
+wsb refactor . "old.api.com" "new.api.com" --content-only
+wsb refactor . "OldClass" "NewClass" --names-only
+wsb refactor . "old_\\w+" "new_name" --regex
+wsb refactor . "oldname" "newname" --format json            # Machine-readable output
 ```
 
 ### Exit Codes
@@ -109,7 +109,7 @@ ws refactor . "oldname" "newname" --format json            # Machine-readable ou
 
 ---
 
-## ws git
+## wsb git
 
 Git integration and version management via pre-commit hooks.
 
@@ -124,18 +124,18 @@ Git integration and version management via pre-commit hooks.
 
 ### Examples
 ```bash
-ws git install              # Install git hook
-ws git install --force      # Force reinstall
-ws git show                 # Show version info
-ws git status               # Check configuration
-ws git uninstall            # Remove hook
+wsb git install              # Install git hook
+wsb git install --force      # Force reinstall
+wsb git show                 # Show version info
+wsb git status               # Check configuration
+wsb git uninstall            # Remove hook
 ```
 
 ---
 
-## ws template
+## wsb template
 
-Tera template management for automatic file generation during `ws update`.
+Tera template management for automatic file generation during `wsb update`.
 
 ### Subcommands
 
@@ -150,22 +150,22 @@ Tera template management for automatic file generation during `ws update`.
 
 ### Examples
 ```bash
-ws template add version-header --template "v{{ project.version }}" --output version.h
-ws template list
-ws template show version-header
-ws template render
-ws template delete version-header
+wsb template add version-header --template "v{{ project.version }}" --output version.h
+wsb template list
+wsb template show version-header
+wsb template render
+wsb template delete version-header
 ```
 
 ---
 
-## ws update
+## wsb update
 
 Update version file and render all templates (both `.tera` and `.wstemplate`).
 
 ### Synopsis
 ```bash
-ws update [OPTIONS]
+wsb update [OPTIONS]
 ```
 
 ### Options
@@ -186,21 +186,21 @@ ws update [OPTIONS]
 
 ### Examples
 ```bash
-ws update                   # Basic update
-ws update --git-add         # Update and stage files
-ws update --no-git          # Update without git integration
+wsb update                   # Basic update
+wsb update --git-add         # Update and stage files
+wsb update --no-git          # Update without git integration
 ```
 
 ---
 
-## ws wstemplate
+## wsb wstemplate
 
 Manage `.wstemplate` file rendering for cross-project version stamping.
 
 Each project has a single wstemplate entry consisting of an **alias** (Tera identifier)
 and a **scan root** (directory tree to search). Cross-project references like
 `{{ projects.OTHER.version }}` are resolved dynamically by scanning the root for
-sibling `.ws/state.json` files.
+sibling `.wsb/state.json` files.
 
 ### Subcommands
 
@@ -248,29 +248,29 @@ When rendering, only templates satisfying at least one condition are rendered:
 ### Error Handling
 
 - **Unresolvable alias**: Hard error listing all known aliases
-- **Missing `version.txt`**: Hard error with instructions to run `ws update` in the dependency
+- **Missing `version.txt`**: Hard error with instructions to run `wsb update` in the dependency
 - **Multiple wstemplate entries in state.json**: Hard error (single-entry model enforced)
 
 ### Examples
 ```bash
-ws wstemplate add /path/to/workspace              # Set scan root
-ws wstemplate add /path/to/workspace --alias mylib # Custom alias
-ws wstemplate list-entries                         # Show current entry
-ws wstemplate list                                 # Show relevant templates
-ws wstemplate render                               # Render templates
-ws wstemplate remove mylib                         # Remove entry
+wsb wstemplate add /path/to/workspace              # Set scan root
+wsb wstemplate add /path/to/workspace --alias mylib # Custom alias
+wsb wstemplate list-entries                         # Show current entry
+wsb wstemplate list                                 # Show relevant templates
+wsb wstemplate render                               # Render templates
+wsb wstemplate remove mylib                         # Remove entry
 ```
 
 ---
 
-## ws version
+## wsb version
 
 Version management with database-driven major version and git-calculated components.
 
 ### Version Format
 
 `{major}.{minor}.{patch}` where:
-- **Major**: Set via `ws version major` (stored in database)
+- **Major**: Set via `wsb version major` (stored in database)
 - **Minor**: Total commits in the repository
 - **Patch**: Total line changes (additions + deletions)
 
@@ -285,23 +285,23 @@ Version management with database-driven major version and git-calculated compone
 
 ### Examples
 ```bash
-ws version show                          # Display version
-ws version show --verbose --format json  # Detailed JSON output
-ws version major 2                       # Set major to 2
-ws version tag                           # Create git tag
-ws version tag --prefix "release-"       # Custom tag prefix
-ws version info --include-history        # Show git history analysis
+wsb version show                          # Display version
+wsb version show --verbose --format json  # Detailed JSON output
+wsb version major 2                       # Set major to 2
+wsb version tag                           # Create git tag
+wsb version tag --prefix "release-"       # Custom tag prefix
+wsb version info --include-history        # Show git history analysis
 ```
 
 ---
 
-## ws scrap
+## wsb scrap
 
 Local trash can using a `.scrap` folder for files you want to remove safely.
 
 ### Synopsis
 ```bash
-ws scrap [PATH...] [SUBCOMMAND] [OPTIONS]
+wsb scrap [PATH...] [SUBCOMMAND] [OPTIONS]
 ```
 
 ### Subcommands
@@ -316,23 +316,23 @@ ws scrap [PATH...] [SUBCOMMAND] [OPTIONS]
 
 ### Examples
 ```bash
-ws scrap temp.txt logs/                    # Move to .scrap
-ws scrap list --sort size                  # List contents
-ws scrap find "*.log"                      # Find files
-ws scrap clean --days 30                   # Remove old items
-ws scrap archive backup.tar.gz --remove    # Archive and remove
-ws scrap purge --force                     # Empty completely
+wsb scrap temp.txt logs/                    # Move to .scrap
+wsb scrap list --sort size                  # List contents
+wsb scrap find "*.log"                      # Find files
+wsb scrap clean --days 30                   # Remove old items
+wsb scrap archive backup.tar.gz --remove    # Archive and remove
+wsb scrap purge --force                     # Empty completely
 ```
 
 ---
 
-## ws unscrap
+## wsb unscrap
 
 Restore files from `.scrap` folder to their original locations.
 
 ### Synopsis
 ```bash
-ws unscrap [NAME] [OPTIONS]
+wsb unscrap [NAME] [OPTIONS]
 ```
 
 ### Options
@@ -344,35 +344,35 @@ ws unscrap [NAME] [OPTIONS]
 
 ### Examples
 ```bash
-ws unscrap                           # Restore last item
-ws unscrap important_file.txt        # Restore specific file
-ws unscrap config.json --to backup/  # Restore to directory
-ws unscrap data.txt --force          # Overwrite existing
+wsb unscrap                           # Restore last item
+wsb unscrap important_file.txt        # Restore specific file
+wsb unscrap config.json --to backup/  # Restore to directory
+wsb unscrap data.txt --force          # Overwrite existing
 ```
 
 ---
 
-## ws ldiff
+## wsb ldiff
 
 Process input lines, replacing repeated tokens with a substitute character to highlight differences.
 
 ### Synopsis
 ```bash
-ws ldiff [SUBSTITUTE_CHAR]
+wsb ldiff [SUBSTITUTE_CHAR]
 ```
 
 Default substitute character: `░`
 
 ### Examples
 ```bash
-echo -e "hello world\nhello universe" | ws ldiff
-tail -f /var/log/syslog | ws ldiff
-cat access.log | ws ldiff "*"
+echo -e "hello world\nhello universe" | wsb ldiff
+tail -f /var/log/syslog | wsb ldiff
+cat access.log | wsb ldiff "*"
 ```
 
 ---
 
-## ws status
+## wsb status
 
 Display project status with feature metrics and progress tracking.
 
@@ -387,14 +387,14 @@ Display project status with feature metrics and progress tracking.
 
 ### Examples
 ```bash
-ws status
-ws status --include-features
-ws status --include-metrics --format json
+wsb status
+wsb status --include-features
+wsb status --include-metrics --format json
 ```
 
 ---
 
-## ws feature
+## wsb feature
 
 Feature management with state machine workflow and validation.
 
@@ -409,14 +409,14 @@ Feature management with state machine workflow and validation.
 
 ### Examples
 ```bash
-ws feature add "User authentication"
-ws feature list --state implemented
-ws feature show F00001
+wsb feature add "User authentication"
+wsb feature list --state implemented
+wsb feature show F00001
 ```
 
 ---
 
-## ws task
+## wsb task
 
 Feature-centric task management with automatic feature detection.
 
@@ -435,16 +435,16 @@ Feature-centric task management with automatic feature detection.
 
 ### Examples
 ```bash
-ws task add "Implement login" "Build the login page" --feature F00001
-ws task list --status pending
-ws task show T000001
-ws task start T000001
-ws task complete T000001 --evidence "Tests passing"
+wsb task add "Implement login" "Build the login page" --feature F00001
+wsb task list --status pending
+wsb task show T000001
+wsb task start T000001
+wsb task complete T000001 --evidence "Tests passing"
 ```
 
 ---
 
-## ws directive
+## wsb directive
 
 Project directive and rule management.
 
@@ -462,7 +462,7 @@ Project directive and rule management.
 
 ---
 
-## ws code
+## wsb code
 
 AST-based code analysis and codebase exploration.
 
@@ -485,15 +485,15 @@ AST-based code analysis and codebase exploration.
 
 ### Examples
 ```bash
-ws code                                # Show tree (default)
-ws code tree --depth 5 --sizes         # Deep tree with file sizes
-ws code tree --extensions rs,toml      # Only Rust files
-ws code search "fn main" --language rust
+wsb code                                # Show tree (default)
+wsb code tree --depth 5 --sizes         # Deep tree with file sizes
+wsb code tree --extensions rs,toml      # Only Rust files
+wsb code search "fn main" --language rust
 ```
 
 ---
 
-## ws test
+## wsb test
 
 Intelligent test runner that detects project type and runs appropriate tests.
 
@@ -506,35 +506,35 @@ Intelligent test runner that detects project type and runs appropriate tests.
 
 ### Examples
 ```bash
-ws test                     # Run tests for detected project type
-ws test --dry-run           # Show what would run
-ws test -- --nocapture      # Pass args to test runner
+wsb test                     # Run tests for detected project type
+wsb test --dry-run           # Show what would run
+wsb test -- --nocapture      # Pass args to test runner
 ```
 
 ---
 
-## ws start / ws end
+## wsb start / wsb end
 
 Session management for development workflow.
 
-### ws start
+### wsb start
 ```bash
-ws start                                # Start new session
-ws start --continue-from T000001        # Continue from task
-ws start --project-setup                # Initialize new project
-ws start "Implement auth"               # Start with first task description
+wsb start                                # Start new session
+wsb start --continue-from T000001        # Continue from task
+wsb start --project-setup                # Initialize new project
+wsb start "Implement auth"               # Start with first task description
 ```
 
-### ws end
+### wsb end
 ```bash
-ws end                                  # End session
-ws end --summary "Completed auth"       # End with summary
-ws end --skip-docs                      # Skip documentation updates
+wsb end                                  # End session
+wsb end --summary "Completed auth"       # End with summary
+wsb end --skip-docs                      # Skip documentation updates
 ```
 
 ---
 
-## ws mcp-server
+## wsb mcp-server
 
 MCP server for Claude AI integration with automatic session management.
 
@@ -548,20 +548,20 @@ MCP server for Claude AI integration with automatic session management.
 
 ### Examples
 ```bash
-ws mcp-server                    # Start on localhost:3000
-ws mcp-server --port 8080        # Custom port
-ws mcp-server --debug            # With debug logging
+wsb mcp-server                    # Start on localhost:3000
+wsb mcp-server --port 8080        # Custom port
+wsb mcp-server --debug            # With debug logging
 ```
 
 ---
 
-## ws database
+## wsb database
 
 Database backup, recovery, and maintenance operations.
 
 ---
 
-## ws continuity
+## wsb continuity
 
 Session continuity and context management.
 
@@ -574,7 +574,7 @@ Session continuity and context management.
 
 ---
 
-## ws consolidate
+## wsb consolidate
 
 Documentation consolidation with diagram management.
 
@@ -591,6 +591,6 @@ Documentation consolidation with diagram management.
 ## Getting Help
 
 ```bash
-ws --help              # Show all commands
-ws <COMMAND> --help    # Help for specific command
+wsb --help              # Show all commands
+wsb <COMMAND> --help    # Help for specific command
 ```

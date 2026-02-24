@@ -1,6 +1,6 @@
 class WebSocketService {
   constructor() {
-    this.ws = null;
+    this.wsb = null;
     this.reconnectAttempts = 0;
     this.maxReconnectAttempts = 10;
     this.reconnectDelay = 1000;
@@ -14,12 +14,12 @@ class WebSocketService {
 
   connect() {
     try {
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${window.location.host}/ws`;
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'wsb:';
+      const wsUrl = `${protocol}//${window.location.host}/wsb`;
       
-      this.ws = new WebSocket(wsUrl);
+      this.wsb = new WebSocket(wsUrl);
       
-      this.ws.onopen = () => {
+      this.wsb.onopen = () => {
         console.log('WebSocket connected');
         if (this.connectionStore) {
           this.connectionStore.set(true);
@@ -27,7 +27,7 @@ class WebSocketService {
         this.reconnectAttempts = 0;
       };
       
-      this.ws.onmessage = (event) => {
+      this.wsb.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
           this.messageHandlers.forEach(handler => handler(data));
@@ -36,7 +36,7 @@ class WebSocketService {
         }
       };
       
-      this.ws.onclose = () => {
+      this.wsb.onclose = () => {
         console.log('WebSocket disconnected');
         if (this.connectionStore) {
           this.connectionStore.set(false);
@@ -44,7 +44,7 @@ class WebSocketService {
         this.scheduleReconnect();
       };
       
-      this.ws.onerror = (error) => {
+      this.wsb.onerror = (error) => {
         console.error('WebSocket error:', error);
         if (this.connectionStore) {
           this.connectionStore.set(false);
@@ -74,17 +74,17 @@ class WebSocketService {
   }
 
   send(data) {
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify(data));
+    if (this.wsb && this.wsb.readyState === WebSocket.OPEN) {
+      this.wsb.send(JSON.stringify(data));
     } else {
       console.warn('WebSocket not connected, cannot send message');
     }
   }
 
   disconnect() {
-    if (this.ws) {
-      this.ws.close();
-      this.ws = null;
+    if (this.wsb) {
+      this.wsb.close();
+      this.wsb = null;
     }
   }
 }

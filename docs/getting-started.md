@@ -5,54 +5,54 @@ title: Getting Started
 
 # Getting Started with Workspace
 
-This guide will help you get up and running with the Workspace tool suite quickly. Learn the core concepts and basic usage patterns for all tools via the unified `ws` binary.
+This guide will help you get up and running with the Workspace tool suite quickly. Learn the core concepts and basic usage patterns for all tools via the unified `wsb` binary.
 
 ## What is Workspace?
 
 Workspace is a suite of command-line utilities for developers:
 
-- **ws refactor**: Recursive string replacement in file names and contents
-- **ws scrap**: Local trash can for files you want to remove safely
-- **ws unscrap**: File restoration from the `.scrap` folder
-- **ws git**: Git integration and version management via hooks
-- **ws template**: Tera template management and file generation
-- **ws update**: Version updates and template rendering
-- **ws wstemplate**: Cross-project version stamping with `.wstemplate` files
-- **ws version**: Database-driven version management
-- **ws ldiff**: Line difference visualization for pattern recognition
-- **ws status**: Project status with feature metrics
-- **ws feature**: Feature management with state machine workflow
-- **ws task**: Feature-centric task management
-- **ws directive**: Project directive and rule management
-- **ws code**: AST-based code analysis
-- **ws test**: Intelligent test runner based on project type
-- **ws mcp-server**: MCP server for Claude AI integration
+- **wsb refactor**: Recursive string replacement in file names and contents
+- **wsb scrap**: Local trash can for files you want to remove safely
+- **wsb unscrap**: File restoration from the `.scrap` folder
+- **wsb git**: Git integration and version management via hooks
+- **wsb template**: Tera template management and file generation
+- **wsb update**: Version updates and template rendering
+- **wsb wstemplate**: Cross-project version stamping with `.wstemplate` files
+- **wsb version**: Database-driven version management
+- **wsb ldiff**: Line difference visualization for pattern recognition
+- **wsb status**: Project status with feature metrics
+- **wsb feature**: Feature management with state machine workflow
+- **wsb task**: Feature-centric task management
+- **wsb directive**: Project directive and rule management
+- **wsb code**: AST-based code analysis
+- **wsb test**: Intelligent test runner based on project type
+- **wsb mcp-server**: MCP server for Claude AI integration
 
 ## Installation
 
 ### Easy Installation (Recommended)
 
 ```bash
-git clone https://github.com/jowharshamshiri/ws.git
+git clone https://github.com/jowharshamshiri/wsb.git
 cd workspace
 ./install.sh
 ```
 
-This installs the unified `ws` binary (containing all tools as subcommands) to `~/.local/bin`.
+This installs the unified `wsb` binary (containing all tools as subcommands) to `~/.local/bin`.
 
 ### Verify Installation
 
 ```bash
-ws --version
-ws --help
-ws refactor --help
-ws scrap --help
-ws unscrap --help
-ws git --help
-ws template --help
-ws update --help
-ws wstemplate --help
-ws ldiff --help
+wsb --version
+wsb --help
+wsb refactor --help
+wsb scrap --help
+wsb unscrap --help
+wsb git --help
+wsb template --help
+wsb update --help
+wsb wstemplate --help
+wsb ldiff --help
 ```
 
 ## Tool Overview
@@ -63,10 +63,10 @@ Performs recursive string replacement in file names and contents:
 
 ```bash
 # Basic usage
-ws refactor <DIRECTORY> <OLD_STRING> <NEW_STRING> [OPTIONS]
+wsb refactor <DIRECTORY> <OLD_STRING> <NEW_STRING> [OPTIONS]
 
 # Always preview first
-ws refactor . "oldFunction" "newFunction" --verbose
+wsb refactor . "oldFunction" "newFunction" --verbose
 ```
 
 ### Scrap - Local Trash
@@ -75,14 +75,14 @@ Local trash can for files you want to remove safely:
 
 ```bash
 # Move unwanted files to local trash can instead of deleting
-ws scrap temp_file.txt old_directory/
+wsb scrap temp_file.txt old_directory/
 
 # List what's in trash
-ws scrap list
+wsb scrap list
 
 # Find and clean up
-ws scrap find "*.log"
-ws scrap clean
+wsb scrap find "*.log"
+wsb scrap clean
 ```
 
 ### Unscrap - File Restoration
@@ -91,13 +91,13 @@ Restore files from `.scrap` folder:
 
 ```bash
 # Restore last scrapped item
-ws unscrap
+wsb unscrap
 
 # Restore specific file
-ws unscrap filename.txt
+wsb unscrap filename.txt
 
 # Restore to custom location
-ws unscrap filename.txt --to /new/path/
+wsb unscrap filename.txt --to /new/path/
 ```
 
 ### Git Integration & Templates
@@ -106,19 +106,19 @@ Automatic versioning via git hooks and template management:
 
 ```bash
 # Install git hook
-ws git install
+wsb git install
 
 # Show version info
-ws git show
+wsb git show
 
 # Check status
-ws git status
+wsb git status
 
 # Add templates for automatic file generation
-ws template add version-info --template "Version: {{ project.version }}" --output VERSION.txt
+wsb template add version-info --template "Version: {{ project.version }}" --output VERSION.txt
 
 # Manual version update
-ws update
+wsb update
 ```
 
 ### Wstemplate - Cross-Project Version Stamping
@@ -127,13 +127,13 @@ Manage `.wstemplate` files that stamp versions across projects:
 
 ```bash
 # Register this project's scan root
-ws wstemplate add /path/to/workspace
+wsb wstemplate add /path/to/workspace
 
 # List templates relevant to this project
-ws wstemplate list
+wsb wstemplate list
 
 # Render all relevant templates
-ws wstemplate render
+wsb wstemplate render
 ```
 
 A `.wstemplate` file is a Tera template that produces the corresponding output file (e.g., `Cargo.toml.wstemplate` renders to `Cargo.toml`). Templates can reference any project's version:
@@ -148,14 +148,14 @@ dep_version = "{{ projects.other_lib.version }}"
 Database-driven major version with git-calculated components:
 
 ```bash
-ws version show              # Display current version breakdown
-ws version major 2           # Set major version to 2
-ws version tag               # Create git tag with current version
-ws version info              # Show calculation details
+wsb version show              # Display current version breakdown
+wsb version major 2           # Set major version to 2
+wsb version tag               # Create git tag with current version
+wsb version info              # Show calculation details
 ```
 
 Version format: `{major}.{minor}.{patch}` where:
-- **Major**: Set via `ws version major` (stored in database)
+- **Major**: Set via `wsb version major` (stored in database)
 - **Minor**: Total commits in the repository
 - **Patch**: Total line changes (additions + deletions)
 
@@ -183,40 +183,40 @@ git commit -m "Initial commit"
 
 ```bash
 # Preview changes
-ws refactor . "oldFunction" "newFunction" --verbose
+wsb refactor . "oldFunction" "newFunction" --verbose
 
 # Apply changes
-ws refactor . "oldFunction" "newFunction"
+wsb refactor . "oldFunction" "newFunction"
 ```
 
 ### Step 3: Try Scrap (File Management)
 
 ```bash
 # Move temporary files to .scrap
-ws scrap temp.txt
+wsb scrap temp.txt
 
 # List what's in .scrap
-ws scrap list
+wsb scrap list
 ```
 
 ### Step 4: Try Unscrap (File Restoration)
 
 ```bash
 # Restore the last file moved
-ws unscrap
+wsb unscrap
 
 # Or restore specific file
-ws unscrap temp.txt
+wsb unscrap temp.txt
 ```
 
 ### Step 5: Try Git Integration & Templates
 
 ```bash
 # Install git hook for automatic versioning
-ws git install
+wsb git install
 
 # Add a template for version info
-ws template add version-file --template "Version: {{ project.version }}" --output version.txt
+wsb template add version-file --template "Version: {{ project.version }}" --output version.txt
 
 # Make some changes
 echo "// Updated code" >> main.js
@@ -224,7 +224,7 @@ git add .
 git commit -m "Update main.js"
 
 # Check version information
-ws git show
+wsb git show
 cat version.txt
 ```
 
@@ -237,49 +237,49 @@ cat version.txt
 git checkout -b feature-branch
 
 # 2. Move unwanted files to trash instead of deleting
-ws scrap temp.txt debug.log old_tests/
+wsb scrap temp.txt debug.log old_tests/
 
 # 3. Refactor code as needed
-ws refactor ./src "OldClass" "NewClass" --verbose
-ws refactor ./src "OldClass" "NewClass"
+wsb refactor ./src "OldClass" "NewClass" --verbose
+wsb refactor ./src "OldClass" "NewClass"
 
 # 4. Set up automatic versioning
-ws git install
+wsb git install
 
 # 5. If you need files back later
-ws unscrap debug.log
+wsb unscrap debug.log
 ```
 
 ### Project Maintenance
 
 ```bash
 # Clean up old temporary files
-ws scrap clean --days 30
+wsb scrap clean --days 30
 
 # Archive old items for backup
-ws scrap archive backup.tar.gz --remove
+wsb scrap archive backup.tar.gz --remove
 
 # Check version status
-ws git status
+wsb git status
 
 # Update configuration URLs
-ws refactor ./config "old.api.com" "new.api.com" --content-only
+wsb refactor ./config "old.api.com" "new.api.com" --content-only
 ```
 
 ### Refactoring Modes
 
 ```bash
 # Only rename files/directories
-ws refactor . "oldProject" "newProject" --names-only
+wsb refactor . "oldProject" "newProject" --names-only
 
 # Only change file contents
-ws refactor . "api.old.com" "api.new.com" --content-only
+wsb refactor . "api.old.com" "api.new.com" --content-only
 
 # Target specific file types
-ws refactor ./src "OldStruct" "NewStruct" --include "*.rs"
+wsb refactor ./src "OldStruct" "NewStruct" --include "*.rs"
 
 # Exclude unwanted areas
-ws refactor . "oldname" "newname" --exclude "target/*" --exclude "*.log"
+wsb refactor . "oldname" "newname" --exclude "target/*" --exclude "*.log"
 ```
 
 ## Safety Features
@@ -288,10 +288,10 @@ ws refactor . "oldname" "newname" --exclude "target/*" --exclude "*.log"
 
 ```bash
 # Preview refactor changes
-ws refactor . "oldname" "newname" --verbose
+wsb refactor . "oldname" "newname" --verbose
 
 # Check git status before installation
-ws git status
+wsb git status
 ```
 
 ### Use Version Control
@@ -302,26 +302,26 @@ git add .
 git commit -m "Before refactoring"
 
 # Use git hook to track changes automatically
-ws git install
+wsb git install
 
 # Apply refactor changes
-ws refactor . "oldname" "newname"
+wsb refactor . "oldname" "newname"
 
 # Scrap temporary files safely
-ws scrap temp_*.txt build/debug/
+wsb scrap temp_*.txt build/debug/
 ```
 
 ### Backup and Recovery
 
 ```bash
 # Create backups before refactor operations
-ws refactor . "oldname" "newname" --backup
+wsb refactor . "oldname" "newname" --backup
 
 # Archive scrap contents before cleaning
-ws scrap archive monthly-backup.tar.gz
+wsb scrap archive monthly-backup.tar.gz
 
 # Restore files if needed
-ws unscrap important_file.txt
+wsb unscrap important_file.txt
 ```
 
 ## Getting Help
@@ -329,16 +329,16 @@ ws unscrap important_file.txt
 ### Tool-Specific Help
 
 ```bash
-ws refactor --help
-ws scrap --help
-ws unscrap --help
-ws git --help
-ws wstemplate --help
-ws version --help
+wsb refactor --help
+wsb scrap --help
+wsb unscrap --help
+wsb git --help
+wsb wstemplate --help
+wsb version --help
 
 # Verbose output for debugging
-ws refactor . "old" "new" --verbose --verbose
-ws git status
+wsb refactor . "old" "new" --verbose --verbose
+wsb git status
 ```
 
 ## Next Steps
@@ -357,35 +357,35 @@ ws git status
 
 ```bash
 # === REFACTOR - String Replacement ===
-ws refactor . "old" "new" --verbose        # Preview changes
-ws refactor . "old" "new" --include "*.rs" # Specific files
-ws refactor . "old" "new" --names-only     # Rename only
+wsb refactor . "old" "new" --verbose        # Preview changes
+wsb refactor . "old" "new" --include "*.rs" # Specific files
+wsb refactor . "old" "new" --names-only     # Rename only
 
 # === SCRAP - File Management ===
-ws scrap file.txt dir/                  # Move to .scrap
-ws scrap list                           # List contents
-ws scrap find "*.log"                   # Search files
-ws scrap clean --days 30               # Remove old items
+wsb scrap file.txt dir/                  # Move to .scrap
+wsb scrap list                           # List contents
+wsb scrap find "*.log"                   # Search files
+wsb scrap clean --days 30               # Remove old items
 
 # === UNSCRAP - File Restoration ===
-ws unscrap                              # Restore last item
-ws unscrap file.txt                     # Restore specific file
-ws unscrap file.txt --to /new/path/     # Custom destination
+wsb unscrap                              # Restore last item
+wsb unscrap file.txt                     # Restore specific file
+wsb unscrap file.txt --to /new/path/     # Custom destination
 
 # === VERSION MANAGEMENT ===
-ws git install                          # Install git hook
-ws git show                             # Display version info
-ws git status                           # Check configuration
-ws version show                         # Detailed version breakdown
-ws version major 1                      # Set major version
+wsb git install                          # Install git hook
+wsb git show                             # Display version info
+wsb git status                           # Check configuration
+wsb version show                         # Detailed version breakdown
+wsb version major 1                      # Set major version
 
 # === WSTEMPLATE - Cross-Project Versioning ===
-ws wstemplate add /path/to/root         # Set scan root
-ws wstemplate list                      # Show relevant templates
-ws wstemplate render                    # Render templates
+wsb wstemplate add /path/to/root         # Set scan root
+wsb wstemplate list                      # Show relevant templates
+wsb wstemplate render                    # Render templates
 
 # === PROJECT MANAGEMENT ===
-ws status                               # Project status
-ws feature add "New feature"            # Add feature
-ws task add "Task" "Description"        # Add task
+wsb status                               # Project status
+wsb feature add "New feature"            # Add feature
+wsb task add "Task" "Description"        # Add task
 ```

@@ -20,14 +20,14 @@ use std::path::{Path, PathBuf};
 
 /// Initialize the logging system with rotation and archiving
 pub fn init_logging(workspace_root: &Path, debug_mode: bool) -> Result<()> {
-    let ws_dir = workspace_root.join(".ws");
+    let ws_dir = workspace_root.join(".wsb");
     std::fs::create_dir_all(&ws_dir)?;
     
     let log_dir = ws_dir.join("logs");
     std::fs::create_dir_all(&log_dir)?;
     
-    let log_file = log_dir.join("ws.log");
-    let archive_pattern = log_dir.join("ws.{}.log");
+    let log_file = log_dir.join("wsb.log");
+    let archive_pattern = log_dir.join("wsb.{}.log");
     
     // Log pattern with timestamp, level, target, and message
     let log_pattern = "[{d(%Y-%m-%d %H:%M:%S%.3f)} {h({l:5.5})} {t}] {m}{n}";
@@ -89,7 +89,7 @@ pub fn init_logging(workspace_root: &Path, debug_mode: bool) -> Result<()> {
     
     log4rs::init_config(config)?;
     
-    log::info!("Logging initialized: {}", log_dir.join("ws.log").display());
+    log::info!("Logging initialized: {}", log_dir.join("wsb.log").display());
     log::debug!("Debug logging enabled, console level: {:?}", console_level);
     
     Ok(())
@@ -117,11 +117,11 @@ pub fn init_simple_logging(debug_mode: bool) -> Result<()> {
 pub fn detect_workspace_root() -> Option<PathBuf> {
     let current_dir = std::env::current_dir().ok()?;
     
-    // Look for .git, .ws, or common project files
+    // Look for .git, .wsb, or common project files
     let mut dir = current_dir.as_path();
     loop {
         if dir.join(".git").exists() 
-            || dir.join(".ws").exists()
+            || dir.join(".wsb").exists()
             || dir.join("Cargo.toml").exists()
             || dir.join("package.json").exists() {
             return Some(dir.to_path_buf());

@@ -45,25 +45,25 @@ pub struct RenderedTemplate {
 /// ## Version resolution for referenced aliases
 ///
 /// For `{{ project.* }}` the version is read from `version.txt` of the project
-/// that owns the template file (identified by the closest `.ws/state.json`).
+/// that owns the template file (identified by the closest `.wsb/state.json`).
 /// For the current project (`self_alias`) the freshly-computed `current_version`
 /// is used so that the update is always current.
 ///
 /// For every other `{{ projects.ALIAS.* }}` reference the engine:
-/// 1. Walks `scan_root` to find all `.ws/state.json` files.
+/// 1. Walks `scan_root` to find all `.wsb/state.json` files.
 /// 2. Finds the one that registers alias.
 /// 3. Reads `{project_root}/version.txt` for that project.
 ///
-/// A missing `version.txt` is a hard error — run `ws update` in the dependency
+/// A missing `version.txt` is a hard error — run `wsb update` in the dependency
 /// project first.  An unresolvable alias is also a hard error.
 pub struct WstemplateEngine {
     current_version: VersionInfo,
     current_name: Option<String>,
-    /// Alias for the current project (from its `wstemplate_entry().alias`)
+    /// Alias for the current project (from its `wsbtemplate_entry().alias`)
     self_alias: String,
     /// The current project's own directory
     project_root: PathBuf,
-    /// Root to scan for `.wstemplate` files and peer `.ws/state.json` files
+    /// Root to scan for `.wstemplate` files and peer `.wsb/state.json` files
     scan_root: PathBuf,
 }
 
@@ -157,7 +157,7 @@ impl WstemplateEngine {
         discover_in(&self.scan_root)
     }
 
-    /// Build a map of `alias → project_root` by scanning all `.ws/state.json`
+    /// Build a map of `alias → project_root` by scanning all `.wsb/state.json`
     /// files in the scan root.
     pub fn discover_project_roots(&self) -> Result<HashMap<String, PathBuf>> {
         find_all_project_roots(&self.scan_root)
@@ -316,7 +316,7 @@ impl WstemplateEngine {
     }
 }
 
-/// Minimal view of `.ws/state.json` needed for alias discovery.
+/// Minimal view of `.wsb/state.json` needed for alias discovery.
 #[derive(Deserialize)]
 struct StateSnapshot {
     project_root: PathBuf,
@@ -332,7 +332,7 @@ struct StateEntry {
 }
 
 /// Walk `scan_root` and return a map of `alias → project_root` by reading
-/// every `.ws/state.json` found.
+/// every `.wsb/state.json` found.
 ///
 /// Duplicate aliases are a hard error — every alias must be unique across the
 /// workspace.
@@ -348,8 +348,8 @@ fn find_all_project_roots(scan_root: &Path) -> Result<HashMap<String, PathBuf>> 
                 return true;
             }
             let name = e.file_name().to_str().unwrap_or("");
-            // Descend into .ws dirs; skip build/vendor/VCS dirs.
-            if name.starts_with('.') && name != ".ws" {
+            // Descend into .wsb dirs; skip build/vendor/VCS dirs.
+            if name.starts_with('.') && name != ".wsb" {
                 return false;
             }
             !matches!(name, "target" | "node_modules" | "__pycache__")
@@ -367,12 +367,12 @@ fn find_all_project_roots(scan_root: &Path) -> Result<HashMap<String, PathBuf>> 
             continue;
         }
 
-        // Verify parent directory is named ".ws"
+        // Verify parent directory is named ".wsb"
         let is_in_ws = entry
             .path()
             .parent()
             .and_then(|p| p.file_name())
-            .map(|n| n == ".ws")
+            .map(|n| n == ".wsb")
             .unwrap_or(false);
         if !is_in_ws {
             continue;
@@ -419,14 +419,14 @@ fn find_most_specific_root(
 
 /// Read `version.txt` from `project_root` and parse it into a [`VersionInfo`].
 ///
-/// Fails hard if the file does not exist (meaning `ws update` has never been
+/// Fails hard if the file does not exist (meaning `wsb update` has never been
 /// run for that project) or cannot be parsed.
 pub fn read_version_from_path(project_root: &Path) -> Result<VersionInfo> {
     let version_file = project_root.join("version.txt");
     let content = fs::read_to_string(&version_file).with_context(|| {
         format!(
             "Cannot read version.txt for project at {}. \
-             Run 'ws update' in that project first.",
+             Run 'wsb update' in that project first.",
             project_root.display()
         )
     })?;
@@ -525,7 +525,7 @@ fn build_context_for_template(
             anyhow::anyhow!(
                 "Template {} references alias '{}' which cannot be resolved.\n\
                  Known aliases: [{}]\n\
-                 Either the project is missing a .ws/state.json or its alias doesn't match.",
+                 Either the project is missing a .wsb/state.json or its alias doesn't match.",
                 template_path.display(),
                 alias,
                 known.join(", "),
@@ -657,7 +657,7 @@ mod tests {
         }
     }
 
-    /// Create a minimal project directory with `.ws/state.json` and `version.txt`.
+    /// Create a minimal project directory with `.wsb/state.json` and `version.txt`.
     fn make_project(
         parent: &Path,
         name: &str,
@@ -667,7 +667,7 @@ mod tests {
     ) -> PathBuf {
         let project_dir = parent.join(name);
         fs::create_dir_all(&project_dir).unwrap();
-        fs::create_dir_all(project_dir.join(".ws")).unwrap();
+        fs::create_dir_all(project_dir.join(".wsb")).unwrap();
         fs::write(project_dir.join("version.txt"), version).unwrap();
 
         let state = serde_json::json!({
@@ -680,7 +680,7 @@ mod tests {
             ]
         });
         fs::write(
-            project_dir.join(".ws").join("state.json"),
+            project_dir.join(".wsb").join("state.json"),
             serde_json::to_string_pretty(&state).unwrap(),
         )
         .unwrap();
@@ -798,8 +798,8 @@ mod tests {
             msg
         );
         assert!(
-            msg.contains("ws update"),
-            "error must suggest ws update, got: {}",
+            msg.contains("wsb update"),
+            "error must suggest wsb update, got: {}",
             msg
         );
     }
@@ -825,7 +825,7 @@ mod tests {
         make_project(workspace.path(), "real_proj", "real_proj", "1.0.0", workspace.path());
 
         // Simulate a Cargo target directory with a stale state.json inside.
-        let target_ws = workspace.path().join("target").join(".ws");
+        let target_ws = workspace.path().join("target").join(".wsb");
         fs::create_dir_all(&target_ws).unwrap();
         let fake_state = serde_json::json!({
             "version": 1,
@@ -999,7 +999,7 @@ mod tests {
 
     #[test]
     fn test_render_root_project_does_not_clobber_subproject_versions() {
-        // When running ws update from a root project that encompasses subprojects,
+        // When running wsb update from a root project that encompasses subprojects,
         // subproject templates must get their OWN version, not the root's version.
         let workspace = TempDir::new().unwrap();
 

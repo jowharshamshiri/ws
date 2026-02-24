@@ -1,6 +1,6 @@
 [[bin]]
-name = "ws"
-path = "src/bin/ws.rs"
+name = "wsb"
+path = "src/bin/wsb.rs"
 
 [dependencies]
 anyhow = "1.0"
@@ -86,8 +86,8 @@ keywords = ["development-tools", "filesystem", "automation", "workflow"]
 license = "MIT"
 name = "wsb"
 readme = "README.md"
-repository = "https://github.com/jowharshamshiri/ws"
-version = "0.74.194059"
+repository = "https://github.com/jowharshamshiri/wsb"
+version = "0.75.194064"
 
 [profile.dev]
 debug = true

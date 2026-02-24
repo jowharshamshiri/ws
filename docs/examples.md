@@ -15,21 +15,21 @@ Learn how to use the Workspace tool suite through practical examples for common 
 
 ```bash
 # 1. Set up version tracking
-ws git install
+wsb git install
 
 # 2. Move unwanted files to local trash can
-ws scrap temp_files/ debug_logs/ old_tests/
+wsb scrap temp_files/ debug_logs/ old_tests/
 
 # 3. Preview and apply refactoring
-ws refactor ./src "UserManager" "AccountManager" --verbose
-ws refactor ./src "UserManager" "AccountManager" --include "*.rs" --include "*.toml"
+wsb refactor ./src "UserManager" "AccountManager" --verbose
+wsb refactor ./src "UserManager" "AccountManager" --include "*.rs" --include "*.toml"
 
 # 4. Commit changes (auto-bumps version)
 git add .
 git commit -m "Refactor: UserManager -> AccountManager"
 
 # 5. Check new version
-ws git show
+wsb git show
 cat version.txt
 ```
 
@@ -39,17 +39,17 @@ cat version.txt
 
 ```bash
 # 1. Backup current implementation
-ws scrap src/experimental.rs src/core.rs
+wsb scrap src/experimental.rs src/core.rs
 
 # 2. Note current version
-ws version show
+wsb version show
 
 # 3. Make experimental changes
-ws refactor ./src "old_algorithm" "new_algorithm" --content-only
+wsb refactor ./src "old_algorithm" "new_algorithm" --content-only
 
 # 4. If experiment fails, restore easily
-ws unscrap experimental.rs
-ws unscrap core.rs
+wsb unscrap experimental.rs
+wsb unscrap core.rs
 
 # 5. If experiment succeeds, commit
 git add . && git commit -m "Implement new algorithm"
@@ -61,22 +61,22 @@ git add . && git commit -m "Implement new algorithm"
 
 ```bash
 # 1. Archive old artifacts
-ws scrap find "*.tmp" "*.log" "target/debug/*"
-ws scrap archive pre-release-cleanup.tar.gz --remove
+wsb scrap find "*.tmp" "*.log" "target/debug/*"
+wsb scrap archive pre-release-cleanup.tar.gz --remove
 
 # 2. Update configuration for production
-ws refactor ./config "dev.api.com" "prod.api.com" --content-only
-ws refactor ./config "debug=true" "debug=false" --content-only
+wsb refactor ./config "dev.api.com" "prod.api.com" --content-only
+wsb refactor ./config "debug=true" "debug=false" --content-only
 
 # 3. Ensure version tracking is set up
-ws git status || ws git install
+wsb git status || wsb git install
 
 # 4. Create release commit
 git add .
 git commit -m "Prepare for production release"
 
 # 5. Tag the release
-ws version tag
+wsb version tag
 ```
 
 ---
@@ -91,17 +91,17 @@ ws version tag
 
 ```bash
 # Move unwanted files to local trash can instead of deleting
-ws scrap *.tmp *.log build/ target/debug/
+wsb scrap *.tmp *.log build/ target/debug/
 
 # List what you've scrapped
-ws scrap list --sort size
+wsb scrap list --sort size
 
 # Find specific items you remember scrapping
-ws scrap find "*.log"
-ws scrap find "test" --content
+wsb scrap find "*.log"
+wsb scrap find "test" --content
 
 # Clean up old items (older than 7 days) permanently
-ws scrap clean --days 7
+wsb scrap clean --days 7
 ```
 
 #### Safe Code Cleanup
@@ -110,14 +110,14 @@ ws scrap clean --days 7
 
 ```bash
 # Scrap old code instead of deleting (in case you need it)
-ws scrap old_implementation/ legacy_tests/
+wsb scrap old_implementation/ legacy_tests/
 
 # Archive before permanent removal
-ws scrap archive "old-code-$(date +%Y%m%d).tar.gz"
+wsb scrap archive "old-code-$(date +%Y%m%d).tar.gz"
 
 # Scrap experimental features that didn't work out
-ws scrap experimental_feature/ prototype/
-ws scrap archive --output experiments-archive.tar.gz --remove
+wsb scrap experimental_feature/ prototype/
+wsb scrap archive --output experiments-archive.tar.gz --remove
 ```
 
 ### Unscrap - File Restoration
@@ -128,16 +128,16 @@ ws scrap archive --output experiments-archive.tar.gz --remove
 
 ```bash
 # Restore the last scrapped item
-ws unscrap
+wsb unscrap
 
 # Check what's available to restore
-ws scrap list
+wsb scrap list
 
 # Restore specific file to original location
-ws unscrap important_config.json
+wsb unscrap important_config.json
 
 # Restore to a different location
-ws unscrap data.sql --to backup/
+wsb unscrap data.sql --to backup/
 ```
 
 #### Selective File Recovery
@@ -146,12 +146,12 @@ ws unscrap data.sql --to backup/
 
 ```bash
 # After cleaning workspace, need one file back
-ws scrap temp_files/ logs/ build/
+wsb scrap temp_files/ logs/ build/
 # ... realize you need a log file
-ws unscrap server.log
+wsb unscrap server.log
 
 # Restore to custom location without overwriting
-ws unscrap config.json --to ./backup/ --force
+wsb unscrap config.json --to ./backup/ --force
 ```
 
 ### Version Management
@@ -168,8 +168,8 @@ git add .
 git commit -m "Initial commit"
 
 # Install hook and set major version
-ws git install
-ws version major 1
+wsb git install
+wsb version major 1
 
 # Normal development with automatic versioning
 echo "new feature" >> main.rs
@@ -177,7 +177,7 @@ git add .
 git commit -m "Add feature"  # Version auto-incremented
 
 # Check version progression
-ws version show
+wsb version show
 cat version.txt
 ```
 
@@ -202,10 +202,10 @@ cp target/release/myapp "releases/myapp-$VERSION"
 
 ```bash
 # Preview the changes first
-ws refactor ./src "oldVariableName" "newVariableName" --verbose
+wsb refactor ./src "oldVariableName" "newVariableName" --verbose
 
 # Apply the changes
-ws refactor ./src "oldVariableName" "newVariableName"
+wsb refactor ./src "oldVariableName" "newVariableName"
 ```
 
 ### Update API Endpoints
@@ -214,10 +214,10 @@ ws refactor ./src "oldVariableName" "newVariableName"
 
 ```bash
 # Update only file contents, don't rename files
-ws refactor . "api.old-service.com" "api.new-service.com" --content-only
+wsb refactor . "api.old-service.com" "api.new-service.com" --content-only
 
 # Include only relevant file types
-ws refactor . "api.old-service.com" "api.new-service.com" \
+wsb refactor . "api.old-service.com" "api.new-service.com" \
   --content-only \
   --include "*.js" \
   --include "*.py" \
@@ -231,9 +231,9 @@ ws refactor . "api.old-service.com" "api.new-service.com" \
 **Scenario**: You're renaming your project from "MyApp" to "AwesomeApp".
 
 ```bash
-ws refactor . "MyApp" "AwesomeApp" --verbose
+wsb refactor . "MyApp" "AwesomeApp" --verbose
 
-ws refactor . "MyApp" "AwesomeApp" \
+wsb refactor . "MyApp" "AwesomeApp" \
   --exclude "node_modules/*" \
   --exclude ".git/*" \
   --exclude "target/*"
@@ -244,8 +244,8 @@ ws refactor . "MyApp" "AwesomeApp" \
 **Scenario**: Change file naming from `camelCase` to `snake_case`.
 
 ```bash
-ws refactor ./src "camelCase" "snake_case" --names-only
-ws refactor ./src "([a-z])([A-Z])" "\$1_\$2" --names-only --regex
+wsb refactor ./src "camelCase" "snake_case" --names-only
+wsb refactor ./src "([a-z])([A-Z])" "\$1_\$2" --names-only --regex
 ```
 
 ## Language-Specific Refactoring
@@ -253,11 +253,11 @@ ws refactor ./src "([a-z])([A-Z])" "\$1_\$2" --names-only --regex
 ### Rust Project Refactoring
 
 ```bash
-ws refactor ./src "OldStruct" "NewStruct" \
+wsb refactor ./src "OldStruct" "NewStruct" \
   --include "*.rs" \
   --include "*.toml"
 
-ws refactor ./src "OldStruct" "NewStruct" \
+wsb refactor ./src "OldStruct" "NewStruct" \
   --include "*.rs" \
   --backup
 ```
@@ -265,13 +265,13 @@ ws refactor ./src "OldStruct" "NewStruct" \
 ### JavaScript/TypeScript Project
 
 ```bash
-ws refactor ./src "oldFunction" "newFunction" \
+wsb refactor ./src "oldFunction" "newFunction" \
   --include "*.js" \
   --include "*.ts" \
   --include "*.jsx" \
   --include "*.tsx"
 
-ws refactor ./src "oldFunction" "newFunction" \
+wsb refactor ./src "oldFunction" "newFunction" \
   --include "*.js" \
   --include "*.ts" \
   --exclude "*test*" \
@@ -281,11 +281,11 @@ ws refactor ./src "oldFunction" "newFunction" \
 ### Python Project
 
 ```bash
-ws refactor ./project "OldClass" "NewClass" \
+wsb refactor ./project "OldClass" "NewClass" \
   --include "*.py" \
   --exclude "__pycache__/*"
 
-ws refactor ./project "old-package" "new-package" \
+wsb refactor ./project "old-package" "new-package" \
   --include "*.py" \
   --include "requirements*.txt" \
   --include "setup.py"
@@ -296,13 +296,13 @@ ws refactor ./project "old-package" "new-package" \
 ### Update Environment Variables
 
 ```bash
-ws refactor ./config "OLD_ENV_VAR" "NEW_ENV_VAR" \
+wsb refactor ./config "OLD_ENV_VAR" "NEW_ENV_VAR" \
   --include "*.env" \
   --include "*.yml" \
   --include "*.yaml" \
   --include "*.json"
 
-ws refactor ./config "staging.server.com" "production.server.com" \
+wsb refactor ./config "staging.server.com" "production.server.com" \
   --content-only \
   --include "*.env" \
   --include "*.config"
@@ -311,7 +311,7 @@ ws refactor ./config "staging.server.com" "production.server.com" \
 ### Docker and Deployment Scripts
 
 ```bash
-ws refactor ./deployment "old-service" "new-service" \
+wsb refactor ./deployment "old-service" "new-service" \
   --include "*.yml" \
   --include "*.yaml" \
   --include "Dockerfile*" \
@@ -323,11 +323,11 @@ ws refactor ./deployment "old-service" "new-service" \
 ### Update Table Names
 
 ```bash
-ws refactor ./sql "old_table" "new_table" \
+wsb refactor ./sql "old_table" "new_table" \
   --include "*.sql" \
   --include "*.migration"
 
-ws refactor ./src "old_table" "new_table" \
+wsb refactor ./src "old_table" "new_table" \
   --include "*.py" \
   --include "*.js" \
   --include "*.rb"
@@ -338,12 +338,12 @@ ws refactor ./src "old_table" "new_table" \
 ### Using Regular Expressions
 
 ```bash
-ws refactor ./docs "v1\\.\\d+\\.\\d+" "v2.0.0" \
+wsb refactor ./docs "v1\\.\\d+\\.\\d+" "v2.0.0" \
   --regex \
   --include "*.md" \
   --include "*.txt"
 
-ws refactor ./src "oldfunction" "newFunction" \
+wsb refactor ./src "oldfunction" "newFunction" \
   --regex \
   --ignore-case \
   --include "*.js"
@@ -361,7 +361,7 @@ REPLACEMENTS=(
 
 for replacement in "${REPLACEMENTS[@]}"; do
   IFS=':' read -r old new <<< "$replacement"
-  ws refactor ./src "$old" "$new" --include "*.rs" --force
+  wsb refactor ./src "$old" "$new" --include "*.rs" --force
 done
 ```
 
@@ -376,13 +376,13 @@ NEW_NAME="$2"
 PROJECT_DIR="$3"
 
 # Preview changes
-ws refactor "$PROJECT_DIR" "$OLD_NAME" "$NEW_NAME" --verbose --verbose
+wsb refactor "$PROJECT_DIR" "$OLD_NAME" "$NEW_NAME" --verbose --verbose
 
 read -p "Continue? (y/N): " confirm
 [ "$confirm" != "y" ] && exit 0
 
 # Apply with backup
-ws refactor "$PROJECT_DIR" "$OLD_NAME" "$NEW_NAME" --backup
+wsb refactor "$PROJECT_DIR" "$OLD_NAME" "$NEW_NAME" --backup
 
 # Run tests
 cargo test || npm test || python -m pytest
@@ -398,11 +398,11 @@ OLD_NAME="$1"
 NEW_NAME="$2"
 
 # 1. Clean workspace
-ws scrap target/ build/ *.log *.tmp
+wsb scrap target/ build/ *.log *.tmp
 
 # 2. Preview and apply
-ws refactor . "$OLD_NAME" "$NEW_NAME" --verbose
-ws refactor . "$OLD_NAME" "$NEW_NAME" --backup
+wsb refactor . "$OLD_NAME" "$NEW_NAME" --verbose
+wsb refactor . "$OLD_NAME" "$NEW_NAME" --backup
 
 # 3. Commit (triggers version bump)
 git add .
@@ -417,16 +417,16 @@ cat version.txt
 ```bash
 #!/bin/bash
 # 1. Clean build artifacts
-ws scrap target/ build/ *.log
-ws scrap purge --force
+wsb scrap target/ build/ *.log
+wsb scrap purge --force
 
 # 2. Update configurations
-ws refactor ./config "development" "production" --content-only
-ws refactor ./config "debug=true" "debug=false" --content-only
+wsb refactor ./config "development" "production" --content-only
+wsb refactor ./config "debug=true" "debug=false" --content-only
 
 # 3. Create release
 git add .
 git commit -m "Prepare production release"
-ws version tag
+wsb version tag
 echo "Release $(cat version.txt) prepared"
 ```

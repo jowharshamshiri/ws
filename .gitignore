@@ -87,6 +87,8 @@ __pycache__/
 node_modules
 package-lock.json
 package.json
+!/svelte-dashboard/package.json
+!/svelte-dashboard/package-lock.json
 /src/doc/rustc-dev-guide/mermaid.min.js
 
 ## Rustdoc GUI tests
@@ -108,5 +110,5 @@ temp/
 
 #svelte
 .svelte-kit
-.svelte.bak.ws/
-.ws/
+.svelte.bak.wsb/
+.wsb/

@@ -26,32 +26,32 @@ The `scrap` tool provides a local trash can using a `.scrap` folder for files yo
 
 ```bash
 # Move a single file
-ws scrap temp.log
+wsb scrap temp.log
 
 # Move multiple files (run multiple commands)
-ws scrap file1.txt file2.txt old_directory/
+wsb scrap file1.txt file2.txt old_directory/
 
 # Move with absolute paths
-ws scrap /path/to/file.txt
+wsb scrap /path/to/file.txt
 
 # Automatic conflict resolution
-ws scrap file.txt  # Creates .scrap/file.txt
-ws scrap file.txt  # Creates .scrap/file_1.txt (automatic rename)
+wsb scrap file.txt  # Creates .scrap/file.txt
+wsb scrap file.txt  # Creates .scrap/file_1.txt (automatic rename)
 ```
 
 ### Listing Contents
 
 ```bash
 # List all items (default behavior)
-ws scrap
+wsb scrap
 
 # Explicit list command
-ws scrap list
+wsb scrap list
 
 # Sort by different criteria
-ws scrap list --sort name    # Alphabetical
-ws scrap list --sort date    # Most recent first
-ws scrap list --sort size    # Largest first
+wsb scrap list --sort name    # Alphabetical
+wsb scrap list --sort date    # Most recent first
+wsb scrap list --sort size    # Largest first
 ```
 
 Example output:
@@ -69,50 +69,50 @@ Contents of .scrap folder:
 
 ```bash
 # Search by filename (supports regex)
-ws scrap find ".*\.log"           # Find all .log files
-ws scrap find "test.*"            # Find files starting with "test"
-ws scrap find "backup"            # Simple string search
+wsb scrap find ".*\.log"           # Find all .log files
+wsb scrap find "test.*"            # Find files starting with "test"
+wsb scrap find "backup"            # Simple string search
 
 # Search in file contents too
-ws scrap find "TODO" --content    # Search for "TODO" in filenames and content
-ws scrap find "bug.*fix" --content # Regex search in content
+wsb scrap find "TODO" --content    # Search for "TODO" in filenames and content
+wsb scrap find "bug.*fix" --content # Regex search in content
 ```
 
 ### Cleaning and Maintenance
 
 ```bash
 # Remove items older than 30 days (default)
-ws scrap clean
+wsb scrap clean
 
 # Remove items older than specific number of days
-ws scrap clean --days 7          # Remove items older than 1 week
-ws scrap clean --days 1          # Remove items older than 1 day
+wsb scrap clean --days 7          # Remove items older than 1 week
+wsb scrap clean --days 1          # Remove items older than 1 day
 
 # Preview what would be removed (dry run)
-ws scrap clean --days 30 --verbose
+wsb scrap clean --days 30 --verbose
 
 # Remove ALL items from .scrap folder
-ws scrap purge
+wsb scrap purge
 
 # Skip confirmation prompt
-ws scrap purge --force
+wsb scrap purge --force
 ```
 
 ### Archive and Backup
 
 ```bash
 # Archive .scrap contents to compressed file
-ws scrap archive
+wsb scrap archive
 
 # Archive with custom filename
-ws scrap archive --output backup-2024.tar.gz
-ws scrap archive --output "backup-$(date +%Y%m%d).tar.gz"
+wsb scrap archive --output backup-2024.tar.gz
+wsb scrap archive --output "backup-$(date +%Y%m%d).tar.gz"
 
 # Archive and remove original files from .scrap
-ws scrap archive --remove
+wsb scrap archive --remove
 
 # Archive with custom name and remove
-ws scrap archive --output monthly-backup.tar.gz --remove
+wsb scrap archive --output monthly-backup.tar.gz --remove
 ```
 
 ## Workflow Examples
@@ -121,48 +121,48 @@ ws scrap archive --output monthly-backup.tar.gz --remove
 
 ```bash
 # Move temporary files to .scrap
-ws scrap *.tmp *.log debug_output/
+wsb scrap *.tmp *.log debug_output/
 
 # List what's in .scrap
-ws scrap
+wsb scrap
 
 # Clean items older than a week
-ws scrap clean --days 7
+wsb scrap clean --days 7
 
 # Archive old items monthly
-ws scrap archive --output "archive-$(date +%Y-%m).tar.gz" --remove
+wsb scrap archive --output "archive-$(date +%Y-%m).tar.gz" --remove
 ```
 
 ### Project Development
 
 ```bash
 # Scrap old experimental code
-ws scrap experimental_feature/ old_tests/
+wsb scrap experimental_feature/ old_tests/
 
 # Search for specific files later
-ws scrap find "experimental.*"
+wsb scrap find "experimental.*"
 
-# Restore if needed (using ws unscrap)
-ws unscrap experimental_feature/
+# Restore if needed (using wsb unscrap)
+wsb unscrap experimental_feature/
 
 # Or clean up completely
-ws scrap purge --force
+wsb scrap purge --force
 ```
 
 ### Code Refactoring
 
 ```bash
 # Before major refactoring, scrap old implementations
-ws scrap old_implementation.rs legacy_tests/
+wsb scrap old_implementation.rs legacy_tests/
 
 # Check what you've scrapped
-ws scrap list --sort date
+wsb scrap list --sort date
 
 # If refactoring fails, restore old code
-ws unscrap old_implementation.rs
+wsb unscrap old_implementation.rs
 
 # If successful, clean up
-ws scrap clean --days 0  # Remove everything
+wsb scrap clean --days 0  # Remove everything
 ```
 
 ## Safety Features
@@ -173,8 +173,8 @@ ws scrap clean --days 0  # Remove everything
 - **Atomic operations**: File moves are atomic to prevent corruption
 
 ### Confirmation Prompts
-- **Destructive operations**: `ws scrap purge` asks for confirmation unless `--force` is used
-- **Preview mode**: `ws scrap clean --verbose` shows what would be removed
+- **Destructive operations**: `wsb scrap purge` asks for confirmation unless `--force` is used
+- **Preview mode**: `wsb scrap clean --verbose` shows what would be removed
 - **Clear feedback**: Always shows what actions were taken
 
 ### Git Integration
@@ -195,26 +195,26 @@ The scrap tool maintains detailed metadata about all operations:
 - Stored as `.scrap/.metadata.json`
 - JSON format for easy parsing
 - Automatically managed (no manual editing needed)
-- Used by `ws unscrap` for restoration
+- Used by `wsb unscrap` for restoration
 
 ## Tips and Best Practices
 
 ### Organization
 ```bash
 # Use consistent naming for temporary files
-ws scrap temp_* debug_* test_*
+wsb scrap temp_* debug_* test_*
 
 # Regular cleanup schedule
-ws scrap clean --days 14  # Weekly cleanup of old items
+wsb scrap clean --days 14  # Weekly cleanup of old items
 ```
 
 ### Backup Strategy
 ```bash
 # Monthly archives
-ws scrap archive --output "archive-$(date +%Y-%m).tar.gz" --remove
+wsb scrap archive --output "archive-$(date +%Y-%m).tar.gz" --remove
 
 # Project-specific backups
-ws scrap archive --output "project-backup-v1.0.tar.gz"
+wsb scrap archive --output "project-backup-v1.0.tar.gz"
 ```
 
 ### Performance
@@ -225,11 +225,11 @@ ws scrap archive --output "project-backup-v1.0.tar.gz"
 ### Integration with Other Tools
 ```bash
 # Combine with find
-find . -name "*.tmp" -exec ws scrap {} \;
+find . -name "*.tmp" -exec wsb scrap {} \;
 
 # Use in scripts
 if [ -f "old_config.conf" ]; then
-    ws scrap old_config.conf
+    wsb scrap old_config.conf
 fi
 ```
 

@@ -8,21 +8,21 @@ use std::path::{Path, PathBuf};
 ///
 /// Each project has exactly one entry defining:
 /// - `alias`: the identifier used in `{{ projects.ALIAS.* }}` template vars
-/// - `root`: the directory tree to scan for `.wstemplate` files on `ws update`
+/// - `root`: the directory tree to scan for `.wstemplate` files on `wsb update`
 ///
 /// All other projects referenced in a template are resolved dynamically by
-/// scanning the `root` directory for `.ws/state.json` files.
+/// scanning the `root` directory for `.wsb/state.json` files.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct WstemplateEntry {
     pub root: PathBuf,
     pub alias: String,
 }
 
-/// Per-project workspace configuration, persisted as `.ws/state.json`.
+/// Per-project workspace configuration, persisted as `.wsb/state.json`.
 ///
 /// Each project has at most one [`WstemplateEntry`] defining its alias and
 /// scan root. Cross-project references are resolved dynamically by scanning
-/// the root for sibling `.ws/state.json` files — no explicit cross-project
+/// the root for sibling `.wsb/state.json` files — no explicit cross-project
 /// entries are needed. Loading a state file with more than one entry is a
 /// hard error.
 #[derive(Debug, Serialize, Deserialize)]
@@ -54,9 +54,9 @@ impl Default for WorkspaceState {
 impl WorkspaceState {
     /// Initialize workspace state in a project directory
     pub fn initialize(project_root: &Path) -> Result<Self> {
-        let workspace_dir = project_root.join(".ws");
+        let workspace_dir = project_root.join(".wsb");
         fs::create_dir_all(&workspace_dir)
-            .context("Failed to create .ws directory")?;
+            .context("Failed to create .wsb directory")?;
 
         // Create subdirectories
         fs::create_dir_all(workspace_dir.join("templates"))
@@ -74,7 +74,7 @@ impl WorkspaceState {
 
     /// Load workspace state from project directory
     pub fn load(project_root: &Path) -> Result<Self> {
-        let state_file = project_root.join(".ws").join("state.json");
+        let state_file = project_root.join(".wsb").join("state.json");
 
         if !state_file.exists() {
             return Self::initialize(project_root);
@@ -108,9 +108,9 @@ impl WorkspaceState {
 
     /// Save workspace state to project directory
     pub fn save(&self, project_root: &Path) -> Result<()> {
-        let workspace_dir = project_root.join(".ws");
+        let workspace_dir = project_root.join(".wsb");
         fs::create_dir_all(&workspace_dir)
-            .context("Failed to create .ws directory")?;
+            .context("Failed to create .wsb directory")?;
 
         let state_file = workspace_dir.join("state.json");
         let content = serde_json::to_string_pretty(self)
@@ -124,7 +124,7 @@ impl WorkspaceState {
 
     /// Get workspace directory path
     pub fn workspace_dir(&self) -> PathBuf {
-        self.project_root.join(".ws")
+        self.project_root.join(".wsb")
     }
 
     /// Get tool-specific directory
@@ -234,9 +234,9 @@ mod tests {
 
         assert_eq!(state.version, 1);
         assert_eq!(state.project_root, temp_dir.path());
-        assert!(temp_dir.path().join(".ws").exists());
-        assert!(temp_dir.path().join(".ws").join("templates").exists());
-        assert!(temp_dir.path().join(".ws").join("state.json").exists());
+        assert!(temp_dir.path().join(".wsb").exists());
+        assert!(temp_dir.path().join(".wsb").join("templates").exists());
+        assert!(temp_dir.path().join(".wsb").join("state.json").exists());
         assert!(state.wstemplate_entries.is_empty());
         assert!(!state.completion_hint_shown);
     }
@@ -290,7 +290,7 @@ mod tests {
         // State JSON written without the wstemplate_entries field must deserialize
         // to an empty Vec (via serde default), not fail.
         let temp_dir = TempDir::new().unwrap();
-        let ws_dir = temp_dir.path().join(".ws");
+        let ws_dir = temp_dir.path().join(".wsb");
         std::fs::create_dir_all(&ws_dir).unwrap();
         let state_json = r#"{
             "version": 1,
@@ -357,7 +357,7 @@ mod tests {
     #[test]
     fn test_load_fails_hard_on_multi_entry() {
         let temp_dir = TempDir::new().unwrap();
-        let ws_dir = temp_dir.path().join(".ws");
+        let ws_dir = temp_dir.path().join(".wsb");
         fs::create_dir_all(&ws_dir).unwrap();
 
         let state_json = serde_json::json!({
@@ -446,7 +446,7 @@ version = "0.1.0"
         let temp_dir = TempDir::new().unwrap();
         let state = WorkspaceState::initialize(temp_dir.path()).unwrap();
 
-        assert_eq!(state.workspace_dir(), temp_dir.path().join(".ws"));
-        assert_eq!(state.tool_dir("st8"), temp_dir.path().join(".ws").join("st8"));
+        assert_eq!(state.workspace_dir(), temp_dir.path().join(".wsb"));
+        assert_eq!(state.tool_dir("st8"), temp_dir.path().join(".wsb").join("st8"));
     }
 }

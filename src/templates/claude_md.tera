@@ -73,7 +73,7 @@
 ## Current Architecture
 
 ```
-CLI Layer (ws binary) → Tool Implementations → Project Management (MCP Server) → Data Layer (SQLite + Templates)
+CLI Layer (wsb binary) → Tool Implementations → Project Management (MCP Server) → Data Layer (SQLite + Templates)
 ```
 
 **Core Components**:

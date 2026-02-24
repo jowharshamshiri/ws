@@ -9,7 +9,7 @@ fn test_scrap_creates_directory() {
     let temp_path = temp_dir.path();
     
     // Run scrap with no arguments
-    Command::cargo_bin("ws")
+    Command::cargo_bin("wsb")
         .unwrap()
         .arg("scrap")
         .env("WS_COMPLETIONS_LOADED", "1")
@@ -32,7 +32,7 @@ fn test_scrap_updates_gitignore() {
     fs::write(&gitignore_path, "*.log\ntarget/\n").unwrap();
     
     // Run scrap
-    Command::cargo_bin("ws")
+    Command::cargo_bin("wsb")
         .unwrap()
         .arg("scrap")
         .env("WS_COMPLETIONS_LOADED", "1")
@@ -56,7 +56,7 @@ fn test_scrap_does_not_duplicate_gitignore_entry() {
     let original_contents = fs::read_to_string(&gitignore_path).unwrap();
     
     // Run scrap
-    Command::cargo_bin("ws")
+    Command::cargo_bin("wsb")
         .unwrap()
         .arg("scrap")
         .env("WS_COMPLETIONS_LOADED", "1")
@@ -79,7 +79,7 @@ fn test_scrap_move_file() {
     fs::write(&test_file, "test content").unwrap();
     
     // Run scrap with file argument
-    Command::cargo_bin("ws")
+    Command::cargo_bin("wsb")
         .unwrap()
         .arg("scrap")
         .arg("test.txt")
@@ -109,7 +109,7 @@ fn test_scrap_move_directory() {
     fs::write(test_dir.join("file2.txt"), "content2").unwrap();
     
     // Run scrap with directory argument
-    Command::cargo_bin("ws")
+    Command::cargo_bin("wsb")
         .unwrap()
         .arg("scrap")
         .arg("testdir")
@@ -141,7 +141,7 @@ fn test_scrap_move_with_absolute_path() {
     fs::write(&test_file, "test content").unwrap();
     
     // Run scrap with absolute path
-    Command::cargo_bin("ws")
+    Command::cargo_bin("wsb")
         .unwrap()
         .arg("scrap")
         .arg(test_file.to_str().unwrap())
@@ -169,7 +169,7 @@ fn test_scrap_handles_name_conflicts() {
     fs::write(&test_file, "new content").unwrap();
     
     // Run scrap
-    Command::cargo_bin("ws")
+    Command::cargo_bin("wsb")
         .unwrap()
         .arg("scrap")
         .arg("test.txt")
@@ -203,7 +203,7 @@ fn test_scrap_multiple_name_conflicts() {
     fs::write(&test_file, "new content").unwrap();
     
     // Run scrap
-    Command::cargo_bin("ws")
+    Command::cargo_bin("wsb")
         .unwrap()
         .arg("scrap")
         .arg("test.txt")
@@ -222,7 +222,7 @@ fn test_scrap_error_on_nonexistent_file() {
     let temp_path = temp_dir.path();
     
     // Run scrap with nonexistent file
-    Command::cargo_bin("ws")
+    Command::cargo_bin("wsb")
         .unwrap()
         .arg("scrap")
         .arg("nonexistent.txt")
@@ -238,7 +238,7 @@ fn test_scrap_no_args_prints_directory() {
     let temp_path = temp_dir.path();
     
     // Run scrap with no arguments
-    Command::cargo_bin("ws")
+    Command::cargo_bin("wsb")
         .unwrap()
         .arg("scrap")
         .env("WS_COMPLETIONS_LOADED", "1")
@@ -258,7 +258,7 @@ fn test_scrap_handles_hidden_files() {
     fs::write(&hidden_file, "hidden content").unwrap();
     
     // Run scrap
-    Command::cargo_bin("ws")
+    Command::cargo_bin("wsb")
         .unwrap()
         .arg("scrap")
         .arg(".hidden")
@@ -285,7 +285,7 @@ fn test_scrap_handles_files_with_no_extension() {
     fs::write(&test_file, "new content").unwrap();
     
     // Run scrap
-    Command::cargo_bin("ws")
+    Command::cargo_bin("wsb")
         .unwrap()
         .arg("scrap")
         .arg("README")
@@ -317,7 +317,7 @@ fn test_scrap_preserves_permissions() {
         fs::set_permissions(&test_file, perms).unwrap();
         
         // Run scrap
-        Command::cargo_bin("ws")
+        Command::cargo_bin("wsb")
             .unwrap()
             .arg("scrap")
             .arg("test.sh")
@@ -349,7 +349,7 @@ fn test_scrap_handles_symlinks() {
         symlink(&target_file, &symlink_path).unwrap();
         
         // Run scrap on the symlink
-        Command::cargo_bin("ws")
+        Command::cargo_bin("wsb")
             .unwrap()
             .arg("scrap")
             .arg("link.txt")
@@ -377,7 +377,7 @@ fn test_scrap_handles_empty_directory() {
     fs::create_dir(&empty_dir).unwrap();
     
     // Run scrap
-    Command::cargo_bin("ws")
+    Command::cargo_bin("wsb")
         .unwrap()
         .arg("scrap")
         .arg("emptydir")
@@ -408,7 +408,7 @@ fn test_scrap_handles_nested_directories() {
     fs::write(nested.join("child").join("grandchild").join("file3.txt"), "content3").unwrap();
     
     // Run scrap
-    Command::cargo_bin("ws")
+    Command::cargo_bin("wsb")
         .unwrap()
         .arg("scrap")
         .arg("parent")
@@ -437,7 +437,7 @@ fn test_scrap_handles_gitignore_without_newline() {
     fs::write(&gitignore_path, "*.log").unwrap();
     
     // Run scrap
-    Command::cargo_bin("ws")
+    Command::cargo_bin("wsb")
         .unwrap()
         .arg("scrap")
         .env("WS_COMPLETIONS_LOADED", "1")
@@ -460,7 +460,7 @@ fn test_scrap_handles_empty_gitignore() {
     fs::write(&gitignore_path, "").unwrap();
     
     // Run scrap
-    Command::cargo_bin("ws")
+    Command::cargo_bin("wsb")
         .unwrap()
         .arg("scrap")
         .env("WS_COMPLETIONS_LOADED", "1")

@@ -24,7 +24,7 @@ VERBOSE=false
 usage() {
     echo "Usage: $0 [OPTIONS]"
     echo ""
-    echo "Install Workspace Tools (unified ws binary with all tools as subcommands)"
+    echo "Install Workspace Tools (unified wsb binary with all tools as subcommands)"
     echo ""
     echo "OPTIONS:"
     echo "  -d, --dir DIR        Installation directory (default: $DEFAULT_INSTALL_DIR)"
@@ -139,8 +139,8 @@ check_install_directory() {
 get_installed_version() {
     WS_VERSION=""
     
-    if command -v ws &> /dev/null; then
-        WS_VERSION=$(ws --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "unknown")
+    if command -v wsb &> /dev/null; then
+        WS_VERSION=$(wsb --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "unknown")
     fi
 }
 
@@ -165,7 +165,7 @@ check_installation_needed() {
         needs_install=true
     elif [ "$WS_VERSION" != "$PROJECT_VERSION" ]; then
         log "Installed version differs from project version"
-        log "  ws: $WS_VERSION -> $PROJECT_VERSION"
+        log "  wsb: $WS_VERSION -> $PROJECT_VERSION"
         needs_install=true
     else
         success "Workspace tools are already up to date (version $PROJECT_VERSION)"
@@ -185,9 +185,9 @@ build_project() {
         cargo build --release --quiet
     fi
     
-    # Verify ws binary was built
-    if [ ! -f "target/release/ws" ]; then
-        error "Failed to build ws binary"
+    # Verify wsb binary was built
+    if [ ! -f "target/release/wsb" ]; then
+        error "Failed to build wsb binary"
         exit 1
     fi
     
@@ -196,11 +196,11 @@ build_project() {
 
 # Install the binary
 install_binary() {
-    log "Installing ws binary to $INSTALL_DIR"
+    log "Installing wsb binary to $INSTALL_DIR"
     
-    verbose_log "Installing ws..."
-    cp "target/release/ws" "$INSTALL_DIR/"
-    chmod +x "$INSTALL_DIR/ws"
+    verbose_log "Installing wsb..."
+    cp "target/release/wsb" "$INSTALL_DIR/"
+    chmod +x "$INSTALL_DIR/wsb"
     
     success "Installation completed successfully"
 }
@@ -209,12 +209,12 @@ install_binary() {
 verify_installation() {
     log "Verifying installation..."
     
-    if [ -x "$INSTALL_DIR/ws" ]; then
-        local version=$("$INSTALL_DIR/ws" --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "unknown")
-        success "ws installed successfully (version $version)"
-        success "All tools available as subcommands: ws refactor, ws git, ws scrap, ws unscrap, ws ldiff"
+    if [ -x "$INSTALL_DIR/wsb" ]; then
+        local version=$("$INSTALL_DIR/wsb" --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "unknown")
+        success "wsb installed successfully (version $version)"
+        success "All tools available as subcommands: wsb refactor, wsb git, wsb scrap, wsb unscrap, wsb ldiff"
     else
-        error "ws installation failed"
+        error "wsb installation failed"
         exit 1
     fi
 }
@@ -252,27 +252,27 @@ main() {
         
         echo ""
         success "🎉 Workspace Tools installation completed!"
-        success "Unified binary installed: ws (includes all tools as subcommands)"
+        success "Unified binary installed: wsb (includes all tools as subcommands)"
         success "Version: $PROJECT_VERSION"
         success "Location: $INSTALL_DIR"
         
         echo ""
         log "Quick start:"
-        log "  ws refactor . \"oldname\" \"newname\" --assume-yes  # Replace strings (auto-confirm)"
-        log "  cat /var/log/system.log | ws ldiff                # Analyze log patterns"
-        log "  ws scrap temp_file.txt                            # Move file to .scrap folder"
-        log "  ws scrap list                                     # List .scrap contents"
-        log "  ws unscrap                                        # Restore last scrapped item"
-        log "  ws git install                                    # Install git hook for version bumping"
+        log "  wsb refactor . \"oldname\" \"newname\" --assume-yes  # Replace strings (auto-confirm)"
+        log "  cat /var/log/system.log | wsb ldiff                # Analyze log patterns"
+        log "  wsb scrap temp_file.txt                            # Move file to .scrap folder"
+        log "  wsb scrap list                                     # List .scrap contents"
+        log "  wsb unscrap                                        # Restore last scrapped item"
+        log "  wsb git install                                    # Install git hook for version bumping"
         
         echo ""
         log "For more information:"
-        log "  ws --help"
-        log "  ws refactor --help"
-        log "  ws ldiff --help"
-        log "  ws scrap --help"
-        log "  ws unscrap --help"
-        log "  ws git --help"
+        log "  wsb --help"
+        log "  wsb refactor --help"
+        log "  wsb ldiff --help"
+        log "  wsb scrap --help"
+        log "  wsb unscrap --help"
+        log "  wsb git --help"
     fi
 }
 

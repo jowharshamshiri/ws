@@ -35,7 +35,7 @@ impl Default for St8Config {
 
 impl St8Config {
     pub fn load(repo_root: &Path) -> Result<Self> {
-        let db_path = repo_root.join(".ws/project.db");
+        let db_path = repo_root.join(".wsb/project.db");
         let rt = tokio::runtime::Runtime::new()?;
         rt.block_on(async {
             load_st8_config_from_db(&db_path).await
@@ -43,7 +43,7 @@ impl St8Config {
     }
 
     pub fn save(&self, repo_root: &Path) -> Result<()> {
-        let db_path = repo_root.join(".ws/project.db");
+        let db_path = repo_root.join(".wsb/project.db");
         let rt = tokio::runtime::Runtime::new()?;
         rt.block_on(async {
             save_st8_config_to_db(&db_path, self).await

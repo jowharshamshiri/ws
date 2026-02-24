@@ -26,7 +26,7 @@ INSERT INTO projects (
 ) VALUES (
     'P001',
     'Workspace - AI-Assisted Development Suite',
-    'Comprehensive multi-tool CLI suite with AI-assisted development capabilities: Safety-first architecture with refac, scrap, st8, ldiff commands unified under ws binary. Real-time project dashboard with entity-driven management and SQLite backend. MCP server integration with API endpoints for Claude AI assistance. Professional ADE interface with Appwrite-style design.',
+    'Comprehensive multi-tool CLI suite with AI-assisted development capabilities: Safety-first architecture with refac, scrap, st8, ldiff commands unified under wsb binary. Real-time project dashboard with entity-driven management and SQLite backend. MCP server integration with API endpoints for Claude AI assistance. Professional ADE interface with Appwrite-style design.',
     'active',
     'Final completion phase - 2 features remaining for 100% milestone',
     'https://github.com/user/workspace',
@@ -44,7 +44,7 @@ INSERT INTO features (
     implementation_notes, test_status, priority, effort_estimate, 
     created_at, updated_at, metadata
 ) VALUES 
-('F00001', 'P001', 'Unified Command Line Interface', 'Single ws binary consolidating all tool functionalities', 'Core Tool Features', 'implemented_tested', 'Command structure: ws refactor|git|template|update|scrap|unscrap|ldiff', 'passing', 'high', 'large', datetime('now'), datetime('now'), '{"complexity": "high", "dependencies": []}'),
+('F00001', 'P001', 'Unified Command Line Interface', 'Single wsb binary consolidating all tool functionalities', 'Core Tool Features', 'implemented_tested', 'Command structure: wsb refactor|git|template|update|scrap|unscrap|ldiff', 'passing', 'high', 'large', datetime('now'), datetime('now'), '{"complexity": "high", "dependencies": []}'),
 ('F00002', 'P001', 'Shell Completion System', 'Automatic shell completion setup for bash, zsh, fish, PowerShell', 'Core Tool Features', 'implemented_tested', 'Auto-detection and installation on first run', 'passing', 'medium', 'medium', datetime('now'), datetime('now'), '{"shells_supported": ["bash", "zsh", "fish", "powershell"]}'),
 ('F00003', 'P001', 'Git Hook Integration Detection', 'Smart detection to prevent completion setup interference', 'Core Tool Features', 'implemented_tested', 'Checks GIT_DIR, GIT_INDEX_FILE environment variables', 'passing', 'medium', 'small', datetime('now'), datetime('now'), '{}'),
 ('F00004', 'P001', 'Cross-Platform Binary Distribution', 'Single binary with optimized release profile', 'Core Tool Features', 'implemented_tested', 'LTO enabled, stripped binaries, panic=abort for size', 'passing', 'high', 'medium', datetime('now'), datetime('now'), '{"optimization": "lto", "size_optimized": true}');
