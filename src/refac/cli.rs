@@ -164,9 +164,20 @@ impl Args {
             return Err("Substitute cannot be empty".to_string());
         }
 
-        // Check for path separators in substitute (only when processing names)
-        if self.should_process_names() && (self.substitute.contains('/') || self.substitute.contains('\\')) {
-            return Err("Substitute cannot contain path separators (/ or \\) when processing names".to_string());
+        // Check for path-unsafe characters in substitute (only when processing names)
+        // These characters are problematic in file/directory names across different OS:
+        // - / and \ : path separators (Unix/Windows)
+        // - : : drive separator on Windows, special meaning on macOS
+        // - * ? " < > | : wildcards and special characters (Windows)
+        // - null byte : terminator
+        if self.should_process_names() {
+            let invalid_chars = ['/', '\\', ':', '*', '?', '"', '<', '>', '|', '\0'];
+            if let Some(ch) = self.substitute.chars().find(|c| invalid_chars.contains(c)) {
+                return Err(format!(
+                    "Substitute cannot contain path-unsafe characters ({}) when processing names. Use --content-only to replace in file contents only.",
+                    ch
+                ));
+            }
         }
 
         // Validate thread count
@@ -255,19 +266,21 @@ mod tests {
         assert!(args.validate().is_err());
         args.substitute = "new".to_string();
 
-        // Path separator in substitute should fail when processing names
-        args.substitute = "new/path".to_string();
-        assert!(args.validate().is_err());
-        args.substitute = "new\\path".to_string();
-        assert!(args.validate().is_err());
+        // Path-unsafe characters in substitute should fail when processing names
+        let invalid_chars = vec!["new/path", "new\\path", "new:path", "new*path", "new?path",
+                                  "new\"path", "new<path", "new>path", "new|path"];
+        for invalid in &invalid_chars {
+            args.substitute = invalid.to_string();
+            assert!(args.validate().is_err(), "Should reject: {}", invalid);
+        }
         args.substitute = "new".to_string();
 
-        // Path separator should be allowed with content-only mode
+        // Path-unsafe characters should be allowed with content-only mode
         args.content_only = true;
-        args.substitute = "new/path".to_string();
-        assert!(args.validate().is_ok());
-        args.substitute = "new\\path".to_string();
-        assert!(args.validate().is_ok());
+        for valid_in_content in &invalid_chars {
+            args.substitute = valid_in_content.to_string();
+            assert!(args.validate().is_ok(), "Should allow in content-only mode: {}", valid_in_content);
+        }
         args.substitute = "new".to_string();
         args.content_only = false;
 

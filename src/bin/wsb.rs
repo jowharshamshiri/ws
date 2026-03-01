@@ -1677,7 +1677,7 @@ fn install_hook(force: bool) -> Result<()> {
         .context("Failed to get current executable path")?;
     
     let st8_block = format!(
-        "#!/bin/bash\n# === WS BLOCK START ===\n# DO NOT EDIT THIS BLOCK MANUALLY\n# Use 'wsb git uninstall' to remove this hook\n{} wsb update --git-add\n# === WS BLOCK END ===\n",
+        "#!/bin/bash\n# === WS BLOCK START ===\n# DO NOT EDIT THIS BLOCK MANUALLY\n# Use 'wsb git uninstall' to remove this hook\n{} update --git-add\n# === WS BLOCK END ===\n",
         current_exe.display()
     );
     
